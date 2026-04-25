@@ -1,6 +1,7 @@
 {
 	"$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
 	"name": "tradelovin",
+	"account_id": "3776aaf92edc5404ea26d4f815ac0c32",
 	"main": ".open-next/worker.js",
 	"compatibility_date": "2026-04-24",
 	"compatibility_flags": ["nodejs_compat"],
