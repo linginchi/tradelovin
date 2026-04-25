@@ -8,11 +8,5 @@
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
-	},
-	"routes": [
-		{
-			"pattern": "tradelovin.com/*",
-			"custom_domain": true
-		}
-	]
+	}
 }
