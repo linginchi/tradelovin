@@ -42,3 +42,7 @@ next-env.d.ts
 
 # OpenNext
 .open-next
+
+# Wrangler local dev / secrets (never commit)
+.wrangler/
+.dev.vars
