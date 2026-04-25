@@ -25,6 +25,13 @@ jobs:
       - name: OpenNext Cloudflare build
         run: npm run build:cloudflare
 
+      - name: Debug - List .open-next/assets/_next/static contents
+        run: |
+          echo "=== Listing .open-next/assets/_next/static ==="
+          ls -la .open-next/assets/_next/static/ || echo "Directory not found"
+          echo "=== Listing chunks subdirectory ==="
+          ls -la .open-next/assets/_next/static/chunks/ || echo "Chunks not found"
+
       # 需在仓库 Settings → Secrets and variables → Actions 中设置 CLOUDFLARE_API_TOKEN
       #（Workers 写权限的 API 令牌；未设置时本步骤会失败，可先只保留上方构建任务）
       - name: Deploy to Cloudflare Workers
