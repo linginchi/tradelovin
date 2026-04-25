@@ -12,7 +12,7 @@
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 		"preview:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-		"deploy:cloudflare": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+		"deploy:cloudflare": "npm run build:cloudflare && npx wrangler deploy",
 		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
 		"cf-typegen": "wrangler types --config wrangler.jsonc --env-interface CloudflareEnv cloudflare-env.d.ts"
 	},
