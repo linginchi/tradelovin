@@ -7,8 +7,6 @@ import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { verifyOtp } from "@/lib/auth/admin-otp";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const bodySchema = z.object({
 	email: z.string().email(),
 	code: z.string().regex(/^\d{6}$/),

@@ -4,8 +4,6 @@ import { z } from "zod";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const postSchema = z.object({
 	course_id: z.string().uuid(),
 	student_record_id: z.string().uuid(),

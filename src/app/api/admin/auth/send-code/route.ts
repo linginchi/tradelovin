@@ -5,8 +5,6 @@ import { z } from "zod";
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const bodySchema = z.object({
 	email: z.string().email(),
 });

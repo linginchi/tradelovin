@@ -7,8 +7,6 @@ import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { sendAdminEmail } from "@/lib/email/admin-mail";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const bodySchema = z.discriminatedUnion("action", [
 	z.object({
 		action: z.literal("approve"),

@@ -4,8 +4,6 @@ import { z } from "zod";
 import { requireSuperAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const postSchema = z.object({
 	email: z.string().email(),
 });

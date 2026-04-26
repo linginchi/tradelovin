@@ -4,8 +4,6 @@ import { z } from "zod";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const patchSchema = z
 	.object({
 		payment_status: z.enum(["paid", "unpaid", "refunded"]).optional(),

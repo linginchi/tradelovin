@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 function aggregatePayment(rows: { payment_status: string }[]): "paid" | "unpaid" | "refunded" {
 	if (rows.length === 0) return "unpaid";
 	const allPaid = rows.every((r) => r.payment_status === "paid");

@@ -3,8 +3,6 @@ import { NextResponse } from "next/server";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 type RegRow = Record<string, unknown>;
 
 function normEmail(e: string | null | undefined): string {

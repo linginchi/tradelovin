@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 
 import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 
-export const runtime = "edge";
-
 /** 允许未登录调用，用于清除已过期的 HttpOnly cookie */
 export async function POST() {
 	const res = NextResponse.json({ ok: true });

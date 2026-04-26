@@ -5,8 +5,6 @@ import { nextBdStudentId } from "@/lib/admin/student-code";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const patchSchema = z
 	.object({
 		real_name: z.string().nullable().optional(),

@@ -4,8 +4,6 @@ import { z } from "zod";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-export const runtime = "edge";
-
 const postSchema = z.object({
 	session_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 	start_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/),
