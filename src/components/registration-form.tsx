@@ -82,7 +82,7 @@ const registrationSchema = z.object({
 		.array(tradingStyleValueEnum)
 		.max(3, "最多选择 3 项"),
 	learning_goals: z.string().optional(),
-	willing_to_be_recommended: z.enum(recommendValues),
+	willing_to_recommend: z.enum(recommendValues),
 });
 
 export type RegistrationFormValues = z.infer<typeof registrationSchema>;
@@ -117,7 +117,7 @@ export function RegistrationForm() {
 			trading_experience: "none",
 			trading_style_preferences: [],
 			learning_goals: "",
-			willing_to_be_recommended: "later",
+			willing_to_recommend: "later",
 		}),
 		[],
 	);
@@ -158,7 +158,7 @@ export function RegistrationForm() {
 				email: flat.email?.[0],
 				trading_experience: flat.trading_experience?.[0],
 				trading_style_preferences: flat.trading_style_preferences?.[0],
-				willing_to_be_recommended: flat.willing_to_be_recommended?.[0],
+				willing_to_recommend: flat.willing_to_recommend?.[0],
 			});
 			return;
 		}
@@ -180,7 +180,7 @@ export function RegistrationForm() {
 			trading_experience: parsed.data.trading_experience,
 			trading_style_preferences: parsed.data.trading_style_preferences,
 			learning_goals: parsed.data.learning_goals?.trim() || null,
-			willing_to_be_recommended: parsed.data.willing_to_be_recommended,
+			willing_to_recommend: parsed.data.willing_to_recommend,
 		};
 
 		const { error } = await supabase.from("registrations").insert(row);
@@ -370,15 +370,15 @@ export function RegistrationForm() {
 								type="radio"
 								value={v}
 								className="text-primary"
-								{...register("willing_to_be_recommended")}
+								{...register("willing_to_recommend")}
 							/>
 							{recommendLabels[v]}
 						</label>
 					))}
 				</div>
-				{fieldErrors.willing_to_be_recommended && (
+				{fieldErrors.willing_to_recommend && (
 					<p className="text-destructive text-xs">
-						{fieldErrors.willing_to_be_recommended}
+						{fieldErrors.willing_to_recommend}
 					</p>
 				)}
 			</fieldset>
