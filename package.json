@@ -21,6 +21,7 @@
 		"@hookform/resolvers": "^5.2.2",
 		"@opennextjs/cloudflare": "^1.19.4",
 		"@supabase/supabase-js": "^2.104.1",
+		"@swc/helpers": "^0.5.21",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"framer-motion": "^12.38.0",
