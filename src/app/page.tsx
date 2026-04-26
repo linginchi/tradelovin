@@ -58,11 +58,15 @@ export default function Home() {
 						豹仔乐园 — 挖掘你的交易天赋
 					</h1>
 					<p className="text-muted-foreground max-w-2xl text-pretty text-sm leading-relaxed md:text-base">
-						用关卡、徽章与排行榜，把枯燥的训练变成可持续进步的游戏。适合想系统入门、又讨厌死记硬背的你。
+						没有什么能够阻挡你成为大交易员的向往
 					</p>
 					<div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-						<Button size="lg" render={<Link href="/trade" />}>
-							进入交易系统
+						<Button
+							type="button"
+							size="lg"
+							onClick={() => alert("待连接")}
+						>
+							进入教学交易系统
 						</Button>
 						<Link
 							href="/register"
@@ -71,7 +75,7 @@ export default function Home() {
 								"border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10",
 							)}
 						>
-							立即注册
+							立即报名
 						</Link>
 					</div>
 				</motion.div>
