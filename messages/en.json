@@ -275,6 +275,7 @@
 			}
 		],
 		"myCoursesLink": "My schedule",
+		"courseCardScheduleCta": "View schedule",
 		"adminLink": "Admin"
 	},
 	"MyScores": {

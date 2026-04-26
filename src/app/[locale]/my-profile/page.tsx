@@ -140,7 +140,7 @@ export default async function MyProfilePage({ params }: Props) {
 						{enrolled.map((c) => (
 							<li
 								key={c.name}
-								className="border-border/60 rounded-xl border bg-black/20 px-4 py-3"
+								className="border-border/60 flex flex-col rounded-xl border bg-black/20 px-4 py-3"
 							>
 								<div className="flex flex-wrap items-center justify-between gap-2">
 									<p className="text-sm font-medium">{c.name}</p>
@@ -149,6 +149,17 @@ export default async function MyProfilePage({ params }: Props) {
 									</span>
 								</div>
 								<p className="text-muted-foreground mt-1 text-xs">{c.progress}</p>
+								<div className="mt-3 flex justify-end border-border/40 border-t pt-3">
+									<Link
+										href="/my-courses"
+										className={cn(
+											buttonVariants({ variant: "outline", size: "sm" }),
+											"shrink-0",
+										)}
+									>
+										{t("courseCardScheduleCta")}
+									</Link>
+								</div>
 							</li>
 						))}
 					</ul>
