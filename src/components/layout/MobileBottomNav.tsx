@@ -48,7 +48,7 @@ export default function MobileBottomNav() {
 									)}
 									aria-hidden
 								/>
-								<span className="max-[380px]:sr-only">{label}</span>
+								<span className="hidden sm:inline">{label}</span>
 							</Link>
 						</li>
 					);
