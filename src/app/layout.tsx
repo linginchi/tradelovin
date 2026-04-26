@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-	title: "TradeLovin",
-	description: "Next.js on Cloudflare（OpenNext）+ shadcn/ui 深色主题",
+	title: "豹仔乐园 — 挖掘你的交易天赋",
+	description:
+		"游戏化交易学习：课程、演练与即时反馈，在豹仔乐园挖掘你的交易天赋。",
 };
 
 export default function RootLayout({
