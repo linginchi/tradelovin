@@ -299,44 +299,67 @@
 	},
 	"MyCourses": {
 		"title": "My schedule",
-		"subtitle": "Upcoming classes for the signed‑in student (demo data, sorted by date).",
+		"subtitle": "Enrolled courses and every class session (demo data). Sessions are sorted by date within each course.",
 		"modeOnline": "Online",
 		"modeOffline": "Offline",
+		"statusInProgress": "In progress",
+		"statusPending": "Not started",
+		"sessionsHeading": "Class times",
 		"date": "Date",
 		"time": "Time",
 		"instructor": "Instructor",
 		"location": "Room / link",
-		"empty": "No classes scheduled.",
-		"schedule": [
+		"empty": "No enrolled courses yet.",
+		"enrolledCourses": [
 			{
-				"id": "1",
-				"courseName": "Intraday structure · foundations",
-				"mode": "online",
-				"date": "2026-04-28",
-				"startTime": "19:00",
-				"endTime": "21:00",
-				"instructor": "Lin Ce",
-				"location": "Tencent Meeting · details TBA"
+				"id": "c1",
+				"name": "Intraday foundations",
+				"status": "in_progress",
+				"schedules": [
+					{
+						"id": "c1-s1",
+						"date": "2026-05-05",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "online",
+						"location": "https://zoom.us/j/example-foundations-1",
+						"instructor": "Lin Ce"
+					},
+					{
+						"id": "c1-s2",
+						"date": "2026-05-12",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "online",
+						"location": "https://zoom.us/j/example-foundations-2",
+						"instructor": "Lin Ce"
+					},
+					{
+						"id": "c1-s3",
+						"date": "2026-05-19",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "offline",
+						"location": "Kowloon Bay Trade Centre, 3F Training Room",
+						"instructor": "Lin Ce"
+					}
+				]
 			},
 			{
-				"id": "2",
-				"courseName": "Live execution lab",
-				"mode": "offline",
-				"date": "2026-05-02",
-				"startTime": "14:00",
-				"endTime": "17:00",
-				"instructor": "Shen Lan",
-				"location": "Shanghai · Lab room A"
-			},
-			{
-				"id": "3",
-				"courseName": "Risk & position management",
-				"mode": "online",
-				"date": "2026-05-05",
-				"startTime": "19:30",
-				"endTime": "21:30",
-				"instructor": "Zhou Yan",
-				"location": "Zoom · link emailed before class"
+				"id": "c2",
+				"name": "Live execution lab",
+				"status": "pending",
+				"schedules": [
+					{
+						"id": "c2-s1",
+						"date": "2026-06-10",
+						"startTime": "14:00",
+						"endTime": "18:00",
+						"mode": "offline",
+						"location": "Central · trading floor classroom",
+						"instructor": "Shen Lan"
+					}
+				]
 			}
 		]
 	},

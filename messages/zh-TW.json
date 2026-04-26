@@ -360,44 +360,67 @@
 	},
 	"MyCourses": {
 		"title": "我的課程表",
-		"subtitle": "當前登錄學員的上課安排（演示數據，按日期升序）。",
+		"subtitle": "已報名課程及全部課次（演示數據）。每門課下的課次按日期排序。",
 		"modeOnline": "線上",
 		"modeOffline": "線下",
+		"statusInProgress": "進行中",
+		"statusPending": "未開課",
+		"sessionsHeading": "上課時間表",
 		"date": "日期",
 		"time": "時間",
 		"instructor": "講師",
 		"location": "教室 / 鏈接",
-		"empty": "暫無課程安排。",
-		"schedule": [
+		"empty": "暫無已報名課程。",
+		"enrolledCourses": [
 			{
-				"id": "1",
-				"courseName": "日內結構與關鍵位 · 基礎",
-				"mode": "online",
-				"date": "2026-04-28",
-				"startTime": "19:00",
-				"endTime": "21:00",
-				"instructor": "林策",
-				"location": "騰訊會議 · 課前通知"
+				"id": "c1",
+				"name": "日內基礎入門",
+				"status": "in_progress",
+				"schedules": [
+					{
+						"id": "c1-s1",
+						"date": "2026-05-05",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "online",
+						"location": "https://zoom.us/j/example-foundations-1",
+						"instructor": "林策"
+					},
+					{
+						"id": "c1-s2",
+						"date": "2026-05-12",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "online",
+						"location": "https://zoom.us/j/example-foundations-2",
+						"instructor": "林策"
+					},
+					{
+						"id": "c1-s3",
+						"date": "2026-05-19",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "offline",
+						"location": "九龍灣貿易中心 3F 培訓室",
+						"instructor": "林策"
+					}
+				]
 			},
 			{
-				"id": "2",
-				"courseName": "模擬盤執行演練",
-				"mode": "offline",
-				"date": "2026-05-02",
-				"startTime": "14:00",
-				"endTime": "17:00",
-				"instructor": "沈瀾",
-				"location": "上海 · 實訓教室 A"
-			},
-			{
-				"id": "3",
-				"courseName": "風控與倉位管理",
-				"mode": "online",
-				"date": "2026-05-05",
-				"startTime": "19:30",
-				"endTime": "21:30",
-				"instructor": "周硯",
-				"location": "Zoom · 鏈接將發送至郵箱"
+				"id": "c2",
+				"name": "實戰進階營",
+				"status": "pending",
+				"schedules": [
+					{
+						"id": "c2-s1",
+						"date": "2026-06-10",
+						"startTime": "14:00",
+						"endTime": "18:00",
+						"mode": "offline",
+						"location": "中環交易樓層",
+						"instructor": "沈瀾"
+					}
+				]
 			}
 		]
 	},

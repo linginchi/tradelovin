@@ -299,44 +299,67 @@
 	},
 	"MyCourses": {
 		"title": "我的课程表",
-		"subtitle": "当前登录学员的上课安排（演示数据，按日期升序）。",
+		"subtitle": "已报名课程及全部课次（演示数据）。每门课下的课次按日期排序。",
 		"modeOnline": "线上",
 		"modeOffline": "线下",
+		"statusInProgress": "进行中",
+		"statusPending": "未开课",
+		"sessionsHeading": "上课时间表",
 		"date": "日期",
 		"time": "时间",
 		"instructor": "讲师",
 		"location": "教室 / 链接",
-		"empty": "暂无课程安排。",
-		"schedule": [
+		"empty": "暂无已报名课程。",
+		"enrolledCourses": [
 			{
-				"id": "1",
-				"courseName": "日内结构与关键位 · 基础",
-				"mode": "online",
-				"date": "2026-04-28",
-				"startTime": "19:00",
-				"endTime": "21:00",
-				"instructor": "林策",
-				"location": "腾讯会议 · 课前通知"
+				"id": "c1",
+				"name": "日内基础入门",
+				"status": "in_progress",
+				"schedules": [
+					{
+						"id": "c1-s1",
+						"date": "2026-05-05",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "online",
+						"location": "https://zoom.us/j/example-foundations-1",
+						"instructor": "林策"
+					},
+					{
+						"id": "c1-s2",
+						"date": "2026-05-12",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "online",
+						"location": "https://zoom.us/j/example-foundations-2",
+						"instructor": "林策"
+					},
+					{
+						"id": "c1-s3",
+						"date": "2026-05-19",
+						"startTime": "19:00",
+						"endTime": "21:00",
+						"mode": "offline",
+						"location": "九龙湾贸易中心 3F 培训室",
+						"instructor": "林策"
+					}
+				]
 			},
 			{
-				"id": "2",
-				"courseName": "模拟盘执行演练",
-				"mode": "offline",
-				"date": "2026-05-02",
-				"startTime": "14:00",
-				"endTime": "17:00",
-				"instructor": "沈澜",
-				"location": "上海 · 实训教室 A"
-			},
-			{
-				"id": "3",
-				"courseName": "风控与仓位管理",
-				"mode": "online",
-				"date": "2026-05-05",
-				"startTime": "19:30",
-				"endTime": "21:30",
-				"instructor": "周砚",
-				"location": "Zoom · 链接将发送至邮箱"
+				"id": "c2",
+				"name": "实战进阶营",
+				"status": "pending",
+				"schedules": [
+					{
+						"id": "c2-s1",
+						"date": "2026-06-10",
+						"startTime": "14:00",
+						"endTime": "18:00",
+						"mode": "offline",
+						"location": "中环交易楼层",
+						"instructor": "沈澜"
+					}
+				]
 			}
 		]
 	},
