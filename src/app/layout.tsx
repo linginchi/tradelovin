@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { BottomNavShell } from "@/components/layout/BottomNavShell";
+
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,7 +33,10 @@ export default function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className="min-h-full flex flex-col bg-background text-foreground">
-				{children}
+				<div className="flex min-h-full flex-1 flex-col pb-[calc(4.75rem+env(safe-area-inset-bottom))] lg:pb-[calc(5.25rem+env(safe-area-inset-bottom))]">
+					{children}
+				</div>
+				<BottomNavShell />
 			</body>
 		</html>
 	);
