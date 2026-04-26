@@ -22,8 +22,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # NEXT_PUBLIC_* 在 next build 时写入浏览器包；仅向 Worker 设 secret 不会更新已打包的 JS，必须在构建步骤提供。
       - name: OpenNext Cloudflare build
         run: npm run build:cloudflare
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Debug - List .open-next/assets/_next/static contents
         run: |
@@ -39,6 +43,8 @@ jobs:
         run: npm run deploy:cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       # wrangler 4.x 无 --once；HTTP 500 时 invocation 仍可能 outcome=ok，勿仅用 --status=error
       - name: Test Worker and capture wrangler tail logs
