@@ -11,7 +11,7 @@ create table if not exists public.registrations (
 	trading_experience text not null,
 	trading_style_preferences text[] not null default '{}',
 	learning_goals text,
-	willing_to_recommend text not null
+	willing_to_recommend boolean not null default false
 );
 
 create index if not exists registrations_email_idx on public.registrations (lower(email));

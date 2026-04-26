@@ -70,7 +70,7 @@ const experienceValues = [
 	"professional",
 ] as const;
 
-const recommendValues = ["yes", "no", "later"] as const;
+const recommendValues = ["yes", "no"] as const;
 
 const registrationSchema = z.object({
 	real_name: z.string().optional(),
@@ -98,7 +98,6 @@ const experienceLabels: Record<(typeof experienceValues)[number], string> = {
 const recommendLabels: Record<(typeof recommendValues)[number], string> = {
 	yes: "愿意",
 	no: "不愿意",
-	later: "再考虑",
 };
 
 export function RegistrationForm() {
@@ -117,7 +116,7 @@ export function RegistrationForm() {
 			trading_experience: "none",
 			trading_style_preferences: [],
 			learning_goals: "",
-			willing_to_recommend: "later",
+			willing_to_recommend: "no",
 		}),
 		[],
 	);
@@ -180,7 +179,7 @@ export function RegistrationForm() {
 			trading_experience: parsed.data.trading_experience,
 			trading_style_preferences: parsed.data.trading_style_preferences,
 			learning_goals: parsed.data.learning_goals?.trim() || null,
-			willing_to_recommend: parsed.data.willing_to_recommend,
+			willing_to_recommend: parsed.data.willing_to_recommend === "yes",
 		};
 
 		const { error } = await supabase.from("registrations").insert(row);
