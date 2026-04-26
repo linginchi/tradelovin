@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const postSchema = z.object({
 	title: z.string().min(1),
@@ -13,10 +15,8 @@ const postSchema = z.object({
 });
 
 export async function GET() {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -40,19 +40,33 @@ export async function GET() {
 		countByCourse.set(cid, (countByCourse.get(cid) ?? 0) + 1);
 	}
 
+	const instructorIds = [
+		...new Set((courses ?? []).map((c) => c.instructor_id as string | null).filter(Boolean)),
+	] as string[];
+	const instructorName = new Map<string, string>();
+	if (instructorIds.length > 0) {
+		const { data: ins } = await supabase
+			.from("profiles")
+			.select("id, full_name, nickname")
+			.in("id", instructorIds);
+		for (const row of ins ?? []) {
+			const label = ((row.full_name ?? row.nickname) as string) || "—";
+			instructorName.set(row.id as string, label);
+		}
+	}
+
 	const withCounts = (courses ?? []).map((c) => ({
 		...c,
 		enrollment_count: countByCourse.get(c.id) ?? 0,
+		instructor_name: c.instructor_id ? (instructorName.get(c.instructor_id as string) ?? null) : null,
 	}));
 
 	return NextResponse.json({ courses: withCounts });
 }
 
 export async function POST(req: Request) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {

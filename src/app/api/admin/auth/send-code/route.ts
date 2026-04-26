@@ -5,6 +5,8 @@ import { z } from "zod";
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
+export const runtime = "edge";
+
 const bodySchema = z.object({
 	email: z.string().email(),
 });
@@ -48,7 +50,7 @@ export async function POST(req: Request) {
 	}
 
 	const code = generateOtpCode();
-	const codeHash = hashOtp(email, code);
+	const codeHash = await hashOtp(email, code);
 	const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
 	await supabase.from("admin_otp_challenges").delete().eq("email", email);

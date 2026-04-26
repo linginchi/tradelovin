@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const patchSchema = z
 	.object({
@@ -14,10 +16,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 /** id = profiles.id（正式学员）；将名下所有选课记录批量更新为同一缴费状态 */
 export async function PATCH(req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {

@@ -1,0 +1,555 @@
+{
+	"Metadata": {
+		"siteTitle": "豹仔樂園 — 挖掘你的交易天賦",
+		"siteDescription": "遊戲化交易學習：課程、演練與即時反饋，在豹仔樂園挖掘你的交易天賦。",
+		"registerTitle": "課程報名 · 豹仔樂園",
+		"registerDescription": "填寫報名信息，加入豹仔樂園日內交易學習。"
+	},
+	"Nav": {
+		"mainLabel": "主導航",
+		"about": "關於我們",
+		"myScores": "我的成績",
+		"myProfile": "我的"
+	},
+	"LanguageSwitcher": {
+		"label": "語言",
+		"zh": "簡體",
+		"zhTW": "繁體",
+		"en": "English"
+	},
+	"Common": {
+		"brand": "豹仔樂園",
+		"backHome": "返回首頁",
+		"comingSoon": "待連接"
+	},
+	"Home": {
+		"badge": "豹仔樂園 · 遊戲化交易學習",
+		"title": "豹仔樂園 — 挖掘你的交易天賦",
+		"subtitle": "沒有什麼能夠阻擋你成為大交易員的嚮往",
+		"ctaTrading": "進入教學交易系統",
+		"ctaRegister": "立即報名",
+		"promoKicker": "核心亮點",
+		"promoTitle": "課程體系與導師團隊",
+		"promoSubtitle": "深色毛玻璃卡片，懸浮動效；小屏可用 Tab 切換，大屏並排展示。",
+		"promoTablist": "宣傳區切換",
+		"honorTitle": "畢業豹仔榮譽榜",
+		"honorSubtitle": "畢業學員的優秀出路與崗位（示例展示）",
+		"honorInitial": "豹",
+		"courseCardTitle": "課程介紹",
+		"courseCardSubtitle": "核心課程體系",
+		"mentorCardTitle": "導師介紹",
+		"mentorCardSubtitle": "實戰派帶教",
+		"highlights": [
+			{
+				"title": "結構化課程",
+				"desc": "從基礎到進階的路徑設計，把複雜概念拆成可執行的小步練習。",
+				"tag": "體系化"
+			},
+			{
+				"title": "實戰演練",
+				"desc": "模擬盤與情境任務結合，在低風險環境裡反覆試錯、形成肌肉記憶。",
+				"tag": "可練習"
+			},
+			{
+				"title": "即時反饋",
+				"desc": "每一次操作都有清晰評分與提示，知道自己強在哪、下一步該練什麼。",
+				"tag": "可量化"
+			}
+		],
+		"promoTabs": [
+			{
+				"id": "courses",
+				"label": "課程體系"
+			},
+			{
+				"id": "mentors",
+				"label": "導師團隊"
+			}
+		],
+		"courseTracks": [
+			{
+				"title": "基礎入門",
+				"desc": "術語、圖表、節奏與風險邊界，建立可重複的交易日流程。"
+			},
+			{
+				"title": "實戰進階",
+				"desc": "情境任務與模擬盤聯動，訓練執行、倉位與覆盤閉環。"
+			},
+			{
+				"title": "大師班",
+				"desc": "高階策略拆解與實盤思維陪練，面向穩定盈利與資金管理。"
+			}
+		],
+		"mentors": [
+			{
+				"name": "林策",
+				"role": "首席教研 · 日內結構",
+				"bio": "十年+衍生品與日內經驗，擅長把行情結構講成可練的「關卡」。",
+				"skills": [
+					"關鍵位",
+					"波動節奏",
+					"覆盤方法"
+				],
+				"initials": "林"
+			},
+			{
+				"name": "周硯",
+				"role": "風控顧問 · 倉位與執行",
+				"bio": "專注交易心理與執行紀律，幫學員把規則固化成肌肉記憶。",
+				"skills": [
+					"倉位管理",
+					"執行紀律",
+					"回撤控制"
+				],
+				"initials": "周"
+			},
+			{
+				"name": "沈瀾",
+				"role": "實戰導師 · 情境演練",
+				"bio": "設計高強度模擬任務，讓錯誤發生在課堂裡而不是真實賬戶。",
+				"skills": [
+					"模擬演練",
+					"情境壓力",
+					"反饋閉環"
+				],
+				"initials": "沈"
+			}
+		],
+		"honorGraduates": [
+			{
+				"name": "學員 · 青嵐",
+				"destination": "某頭部自營交易臺",
+				"role": "日內交易員",
+				"achievement": "三個月內通過考核並獨立操盤小組策略"
+			},
+			{
+				"name": "學員 · 北辰",
+				"destination": "資管公司 · 量化研究部",
+				"role": "分析師（衍生品方向）",
+				"achievement": "參與期貨套利與波動率策略研究項目"
+			},
+			{
+				"name": "學員 · 琥珀",
+				"destination": "自主創業 · 獨立交易",
+				"role": "獨立交易員",
+				"achievement": "建立自有風控體系，穩定運行兩個季度"
+			},
+			{
+				"name": "學員 · 黎川",
+				"destination": "家族辦公室",
+				"role": "投資助理（全球宏觀）",
+				"achievement": "協助搭建日內與波段結合的戰術組合"
+			},
+			{
+				"name": "學員 · 星渚",
+				"destination": "券商自營部門",
+				"role": "做市與套利助理",
+				"achievement": "完成實盤輪崗並通過內部風控認證"
+			}
+		]
+	},
+	"RegisterPage": {
+		"back": "← 返回首頁"
+	},
+	"Registration": {
+		"title": "課程報名",
+		"intro": "填寫信息後我們會與你聯繫。標 * 為必填。",
+		"realName": "真實姓名",
+		"realNameHint": "（選填，鼓勵填寫）",
+		"nickname": "暱稱",
+		"nicknameHint": "（站內顯示）",
+		"email": "郵箱",
+		"phone": "手機號",
+		"phoneHint": "（選填）",
+		"experienceLegend": "交易經驗",
+		"stylesLegend": "交易風格偏好",
+		"stylesHint": "（多選，選填；最多 3 項）",
+		"stylesCounter": "日內交易專項策略：已選 {count} / 3，最多可選 3 項。",
+		"learningGoals": "學習目標",
+		"learningGoalsHint": "（選填）",
+		"learningGoalsPlaceholder": "例如：希望三個月內建立穩定的日內覆盤習慣……",
+		"recommendLegend": "是否願意被推薦相關課程 / 活動",
+		"submit": "提交報名",
+		"submitting": "提交中…",
+		"success": "提交成功，感謝報名！",
+		"errors": {
+			"nicknameRequired": "請填寫暱稱（將用於站內展示）",
+			"emailRequired": "請填寫郵箱",
+			"emailInvalid": "請輸入有效郵箱",
+			"stylesMax": "最多選擇 3 項",
+			"supabaseMissing": "未配置 Supabase：請在環境變量中設置 NEXT_PUBLIC_SUPABASE_URL 與 NEXT_PUBLIC_SUPABASE_ANON_KEY。",
+			"submitFailed": "提交失敗。請確認 Supabase 已創建表 registrations，且列與類型匹配。"
+		},
+		"experience": {
+			"none": "無實盤經驗",
+			"lt_1y": "少於 1 年",
+			"y1_3": "1–3 年",
+			"gt_3": "3 年以上",
+			"professional": "從業 / 相關專業背景"
+		},
+		"recommend": {
+			"yes": "願意",
+			"no": "不願意"
+		},
+		"styles": [
+			{
+				"value": "trend_following",
+				"label": "趨勢追蹤",
+				"description": "順勢而為，捕捉日內單邊行情"
+			},
+			{
+				"value": "reversal",
+				"label": "反轉策略",
+				"description": "尋找超買超賣區域的拐點機會"
+			},
+			{
+				"value": "breakout",
+				"label": "突破交易",
+				"description": "關鍵價格區間突破時跟進"
+			},
+			{
+				"value": "range_bound",
+				"label": "區間震盪",
+				"description": "壓力支撐位之間高拋低吸"
+			},
+			{
+				"value": "scalping",
+				"label": "高頻/剝頭皮",
+				"description": "快速進出，賺取微小价差"
+			},
+			{
+				"value": "order_book",
+				"label": "盤口分析",
+				"description": "基於訂單流和盤口數據的決策"
+			},
+			{
+				"value": "quant",
+				"label": "量化/程序化",
+				"description": "用代碼和模型輔助交易決策"
+			},
+			{
+				"value": "undecided",
+				"label": "還不確定",
+				"description": "暫時沒有明確偏好"
+			}
+		]
+	},
+	"About": {
+		"kicker": "豹仔樂園",
+		"title": "關於我們",
+		"p1Before": "豹仔樂園專注",
+		"p1Strong": "日內交易培訓",
+		"p1After": "，把枯燥的行情與規則做成可闖關、可量化的學習路徑。我們相信交易能力可以像遊戲一樣「練級」——通過結構化課程、情境演練與即時反饋，幫助學員在低風險環境中形成穩定執行與風控習慣。",
+		"p2Before": "平臺強調",
+		"p2Tech": "科技感",
+		"p2And": "與",
+		"p2Game": "遊戲化學習",
+		"p2After": "：進度可視、成就可感，讓每一次練習都有方向。無論你是剛入門還是準備進階，都能在這裡找到適合自己的訓練節奏。",
+		"teamTitle": "團隊與理念",
+		"teamBody": "核心團隊由交易員、教研與產品組成，持續迭代課程內容與演練工具。我們重視覆盤文化、風險邊界與執行力——不承諾暴富，只交付可重複訓練的方法論。",
+		"contactTitle": "聯繫方式",
+		"contactPrefix": "商務與合作：",
+		"contactNote": "（示例郵箱，後續可替換）"
+	},
+	"MyProfile": {
+		"title": "我的",
+		"subtitle": "個人資料、課程與求職進度（演示數據）",
+		"profileTitle": "個人資料",
+		"nickname": "暱稱",
+		"email": "郵箱",
+		"phone": "手機號",
+		"coursesTitle": "報名課程",
+		"jobTitle": "求職進度",
+		"demoNickname": "雪豹學員 · Demo",
+		"demoEmail": "demo@tradelovin.example",
+		"demoPhone": "138****0000",
+		"enrolled": [
+			{
+				"name": "日內基礎入門",
+				"progress": "進行中 · 第 4 周",
+				"status": "學習中"
+			},
+			{
+				"name": "實戰進階營",
+				"progress": "未開課",
+				"status": "待開始"
+			}
+		],
+		"jobs": [
+			{
+				"company": "某自營交易臺",
+				"steps": [
+					"簡歷初篩",
+					"交易考核",
+					"面試",
+					"Offer"
+				],
+				"current": 2
+			},
+			{
+				"company": "資管公司 A",
+				"steps": [
+					"簡歷初篩",
+					"筆試",
+					"面試"
+				],
+				"current": 1
+			},
+			{
+				"company": "獨立交易員路徑",
+				"steps": [
+					"方案提交",
+					"模擬盤複核",
+					"簽約意向"
+				],
+				"current": 0
+			}
+		],
+		"myCoursesLink": "我的課程表",
+		"adminLink": "管理後臺"
+	},
+	"MyScores": {
+		"title": "我的成績",
+		"subtitle": "以下為演示數據，用於頁面結構預覽。後續接入登錄與真實成績接口後，將僅對本人展示。",
+		"profileTitle": "能力畫像",
+		"profileHint": "雷達圖 + 維度進度條（Mock）",
+		"radarLabel": "能力畫像雷達圖（演示數據）",
+		"examTitle": "考試成績",
+		"axes": [
+			{
+				"key": "技術面",
+				"value": 85
+			},
+			{
+				"key": "風控",
+				"value": 72
+			},
+			{
+				"key": "心態",
+				"value": 68
+			},
+			{
+				"key": "執行",
+				"value": 90
+			},
+			{
+				"key": "覆盤",
+				"value": 79
+			}
+		],
+		"exams": [
+			{
+				"name": "日內結構與關鍵位",
+				"score": 88,
+				"grade": "優良",
+				"date": "2026-04-12"
+			},
+			{
+				"name": "風控與倉位管理",
+				"score": 76,
+				"grade": "良好",
+				"date": "2026-04-01"
+			},
+			{
+				"name": "執行紀律模擬測",
+				"score": 92,
+				"grade": "優秀",
+				"date": "2026-03-18"
+			}
+		]
+	},
+	"MyCourses": {
+		"title": "我的課程表",
+		"subtitle": "當前登錄學員的上課安排（演示數據，按日期升序）。",
+		"modeOnline": "線上",
+		"modeOffline": "線下",
+		"date": "日期",
+		"time": "時間",
+		"instructor": "講師",
+		"location": "教室 / 鏈接",
+		"empty": "暫無課程安排。",
+		"schedule": [
+			{
+				"id": "1",
+				"courseName": "日內結構與關鍵位 · 基礎",
+				"mode": "online",
+				"date": "2026-04-28",
+				"startTime": "19:00",
+				"endTime": "21:00",
+				"instructor": "林策",
+				"location": "騰訊會議 · 課前通知"
+			},
+			{
+				"id": "2",
+				"courseName": "模擬盤執行演練",
+				"mode": "offline",
+				"date": "2026-05-02",
+				"startTime": "14:00",
+				"endTime": "17:00",
+				"instructor": "沈瀾",
+				"location": "上海 · 實訓教室 A"
+			},
+			{
+				"id": "3",
+				"courseName": "風控與倉位管理",
+				"mode": "online",
+				"date": "2026-05-05",
+				"startTime": "19:30",
+				"endTime": "21:30",
+				"instructor": "周硯",
+				"location": "Zoom · 鏈接將發送至郵箱"
+			}
+		]
+	},
+	"Admin": {
+		"title": "管理後臺",
+		"subtitle": "內部運營：學員與管理員（需登錄）。",
+		"registrations": "報名記錄",
+		"registrationsHint": "在「學員管理」中查看與編輯 registrations 數據。",
+		"schedules": "課程排期",
+		"schedulesHint": "排課與教室分配可在後續版本中接入。",
+		"back": "返回站點首頁",
+		"navDashboard": "概覽",
+		"navMenu": "後臺菜單",
+		"navStudents": "學員管理",
+		"navAdmins": "管理員",
+		"logout": "退出",
+		"editRegistration": "編輯報名記錄",
+		"studentsTitle": "學員管理",
+		"studentsSubtitle": "搜索、篩選並編輯報名信息；可為已入學學員分配學號。",
+		"searchPlaceholder": "姓名、暱稱、郵箱或學號…",
+		"filterStatus": "報名狀態",
+		"filterAll": "全部",
+		"status_pending": "待審核",
+		"status_approved": "已通過",
+		"status_rejected": "已駁回",
+		"payment_paid": "已繳費",
+		"payment_unpaid": "未繳費",
+		"payment_refunded": "已退款",
+		"colCreated": "報名時間",
+		"colNickname": "暱稱",
+		"colRealName": "姓名",
+		"colEmail": "郵箱",
+		"colPhone": "電話",
+		"colStudentId": "學號",
+		"colStatus": "狀態",
+		"actions": "操作",
+		"edit": "編輯",
+		"save": "保存",
+		"cancel": "取消",
+		"address": "地址",
+		"learningGoals": "學習目標",
+		"loadError": "加載失敗",
+		"saveError": "保存失敗",
+		"saved": "已保存",
+		"empty": "暫無記錄",
+		"adminsTitle": "管理員",
+		"adminsSubtitle": "超級管理員可新增或移除管理員賬號。",
+		"addAdmin": "添加管理員",
+		"inviteTitle": "邀請新管理員",
+		"inviteSubtitle": "新管理員僅有 admin 權限；超級管理員由預設郵箱首次登錄自動提升。",
+		"confirmRemoveTitle": "移除管理員？",
+		"confirmRemoveBody": "將刪除 {email} 的後臺訪問權限，操作不可撤銷。",
+		"adminEmail": "郵箱",
+		"roleField": "角色",
+		"roleAdmin": "管理員",
+		"roleSuper": "超級管理員",
+		"remove": "移除",
+		"confirmRemove": "確定移除此管理員？",
+		"confirmDelete": "確定刪除此項？",
+		"forbiddenAdmins": "僅超級管理員可訪問此頁。",
+		"navReviews": "報名審核",
+		"navCourses": "課程",
+		"navInstructors": "講師",
+		"navFees": "收費通知",
+		"reviewsTitle": "報名審核",
+		"reviewsSubtitle": "處理待審核報名：通過後自動生成學號（BDxxxx）並同步到學員表。",
+		"approve": "通過",
+		"reject": "駁回",
+		"rejectReason": "駁回原因",
+		"rejectDialogDesc": "提交後該報名將標記為已駁回，並記錄原因。",
+		"colRejection": "駁回說明",
+		"coursesTitle": "課程編排",
+		"coursesFormDesc": "創建課程後可進入詳情排課、分配講師與選課。",
+		"coursesSubtitle": "維護課程、排課與講師，查看報名人數。",
+		"newCourse": "新建課程",
+		"courseName": "課程名稱",
+		"courseDesc": "描述",
+		"courseMode": "類型",
+		"modeOnline": "線上",
+		"modeOffline": "線下",
+		"capacity": "容量",
+		"enrollmentCount": "報名人數",
+		"goDetail": "排課 / 詳情",
+		"sessionDate": "日期",
+		"sessionStart": "開始",
+		"sessionEnd": "結束",
+		"location": "教室 / 鏈接",
+		"addSession": "添加場次",
+		"sessionsTitle": "排課",
+		"assignInstructors": "已分配講師",
+		"enrollTitle": "選課（正式學員）",
+		"enrollAdd": "加入課程",
+		"removeEnrollment": "移除",
+		"instructorsTitle": "師資管理",
+		"instructorsSubtitle": "添加講師並在課程詳情中分配。",
+		"instructorName": "姓名",
+		"instructorBio": "簡介",
+		"specialties": "擅長領域（逗號分隔）",
+		"addInstructor": "添加講師",
+		"feesTitle": "收費通知",
+		"feesSubtitle": "勾選已入庫學員，編輯郵件內容後批量發送（Resend）；發送時間會寫入學員記錄。",
+		"feeSubject": "郵件主題",
+		"feeBody": "正文（純文本，必填）",
+		"feeHtml": "HTML 正文（可選）",
+		"feeCardDesc": "編輯郵件正文後，在下方表格中勾選學員併發送。",
+		"sendFeeConfirmTitle": "確認發送繳費郵件？",
+		"sendFeeConfirmDesc": "將向選中的 {count} 位學員發送郵件。",
+		"sendFee": "發送郵件",
+		"feeResult": "已發送 {sent} 封，失敗 {failed} 封",
+		"colPayment": "繳費",
+		"markPaid": "標記已繳費",
+		"markUnpaid": "標記未繳費",
+		"colAvatar": "頭像",
+		"colEmergency": "緊急聯繫人電話",
+		"assignStudentId": "分配學號",
+		"tabPendingReviews": "待審核",
+		"tabReviewHistory": "已審核記錄",
+		"colReviewedAt": "審核時間",
+		"colExp": "交易經驗",
+		"colStyle": "風格偏好",
+		"colCourse": "課程",
+		"colEnrolledAt": "選課時間",
+		"filterCourse": "課程",
+		"filterPayment": "繳費狀態",
+		"dateFrom": "開始日期",
+		"dateTo": "結束日期",
+		"markRefunded": "標記退款",
+		"refundReasonLabel": "退款原因",
+		"refundDialogTitle": "確認退款",
+		"instructorEmail": "聯繫郵箱",
+		"assignCourses": "分配課程",
+		"saveCoursesAssignment": "保存課程分配",
+		"colInstructor": "講師",
+		"changeRole": "更改角色",
+		"applyRole": "應用",
+		"allCourses": "全部課程",
+		"envHint": "配置 SUPABASE_SERVICE_ROLE_KEY、RESEND_API_KEY、RESEND_FROM_EMAIL、ADMIN_JWT_SECRET 後方可使用登錄與 API。"
+	},
+	"AdminAuth": {
+		"title": "管理員登錄",
+		"subtitle": "使用管理員郵箱接收驗證碼（Resend）。",
+		"emailLabel": "郵箱",
+		"sendCode": "發送驗證碼",
+		"sending": "發送中…",
+		"codeSentHint": "若該郵箱已授權為管理員，您將收到一封郵件。",
+		"codeHint": "請輸入發送至 {email} 的 6 位驗證碼。",
+		"codeLabel": "驗證碼",
+		"verify": "驗證並登錄",
+		"verifying": "驗證中…",
+		"back": "更換郵箱",
+		"backSite": "返回首頁",
+		"errorGeneric": "請求失敗，請稍後重試。",
+		"invalidCode": "驗證碼無效或已過期。"
+	}
+}

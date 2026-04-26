@@ -1,6 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 
-import { AdminNav } from "@/components/admin/AdminNav";
+import { AdminShell } from "@/components/admin/AdminShell";
 import { getAdminSession } from "@/lib/auth/admin-session";
 import { redirect } from "@/i18n/navigation";
 
@@ -27,9 +27,10 @@ export default async function ProtectedAdminLayout({ children, params }: Props) 
 			>
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_45%_at_50%_0%,oklch(0.52_0.16_200/0.22),transparent)]" />
 			</div>
-			<AdminNav role={session.role} email={session.email} />
-			<div className="relative z-10 mx-auto w-full max-w-6xl flex-1 px-4 py-6 md:px-6 md:py-8">
-				{children}
+			<div className="relative z-10 flex min-h-full flex-1">
+				<AdminShell role={session.role} email={session.email}>
+					<div className="mx-auto w-full max-w-6xl px-4 py-6 md:px-6 md:py-8">{children}</div>
+				</AdminShell>
 			</div>
 		</div>
 	);

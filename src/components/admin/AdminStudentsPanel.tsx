@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
+import { type ColumnDef, DataTable } from "@/components/admin/data-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -14,20 +15,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
 export type RegistrationRow = {
 	id: string;
 	created_at: string;
+	reviewed_at?: string | null;
 	real_name: string | null;
 	nickname: string;
 	email: string;
@@ -40,6 +34,9 @@ export type RegistrationRow = {
 	address?: string | null;
 	status?: string | null;
 	rejection_reason?: string | null;
+	avatar_url?: string | null;
+	emergency_phone?: string | null;
+	profile_id?: string | null;
 };
 
 const STATUSES = ["pending", "approved", "rejected"] as const;
@@ -51,6 +48,7 @@ type EditState = {
 	phone: string;
 	address: string;
 	student_id: string;
+	emergency_phone: string;
 	status: (typeof STATUSES)[number];
 	learning_goals: string;
 };
@@ -107,6 +105,7 @@ export function AdminStudentsPanel() {
 			phone: row.phone ?? "",
 			address: row.address ?? "",
 			student_id: row.student_id ?? "",
+			emergency_phone: row.emergency_phone ?? "",
 			status: (STATUSES.includes(row.status as (typeof STATUSES)[number])
 				? row.status
 				: "pending") as (typeof STATUSES)[number],
@@ -129,6 +128,7 @@ export function AdminStudentsPanel() {
 			body.address = edit.address.trim() || null;
 			body.student_id = edit.student_id.trim() || null;
 			body.learning_goals = edit.learning_goals.trim() || null;
+			body.emergency_phone = edit.emergency_phone.trim() || null;
 
 			const res = await fetch(`/api/admin/students/${id}`, {
 				method: "PATCH",
@@ -152,6 +152,30 @@ export function AdminStudentsPanel() {
 		}
 	}
 
+	async function assignStudentId(id: string) {
+		setSaving(true);
+		setToast(null);
+		try {
+			const res = await fetch(`/api/admin/students/${id}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ assign_student_id: true }),
+			});
+			const data = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setToast(data.error ?? t("saveError"));
+				return;
+			}
+			setToast(t("saved"));
+			void load();
+		} catch {
+			setToast(t("saveError"));
+		} finally {
+			setSaving(false);
+		}
+	}
+
 	function statusLabel(s: string | null | undefined) {
 		if (!s) return "—";
 		if (STATUSES.includes(s as (typeof STATUSES)[number])) {
@@ -159,6 +183,82 @@ export function AdminStudentsPanel() {
 		}
 		return s;
 	}
+
+	const columns: ColumnDef<RegistrationRow>[] = [
+		{
+			id: "avatar",
+			header: t("colAvatar"),
+			cell: ({ row }) =>
+				row.original.avatar_url ? (
+					<img
+						src={row.original.avatar_url}
+						alt=""
+						className="size-8 rounded-full object-cover ring-1 ring-border"
+					/>
+				) : (
+					<span className="text-muted-foreground text-xs">—</span>
+				),
+		},
+		{
+			accessorKey: "created_at",
+			header: t("colCreated"),
+			cell: ({ row }) => (
+				<span className="text-muted-foreground font-mono text-xs tabular-nums">
+					{row.original.created_at?.slice(0, 10)}
+				</span>
+			),
+		},
+		{ accessorKey: "nickname", header: t("colNickname") },
+		{
+			accessorKey: "real_name",
+			header: t("colRealName"),
+			cell: ({ row }) => <span className="hidden lg:table-cell">{row.original.real_name ?? "—"}</span>,
+		},
+		{
+			accessorKey: "email",
+			header: t("colEmail"),
+			cell: ({ row }) => (
+				<span className="max-w-[160px] truncate font-mono text-xs">{row.original.email}</span>
+			),
+		},
+		{
+			accessorKey: "phone",
+			header: t("colPhone"),
+			cell: ({ row }) => <span className="hidden md:table-cell">{row.original.phone ?? "—"}</span>,
+		},
+		{
+			accessorKey: "student_id",
+			header: t("colStudentId"),
+			cell: ({ row }) => <span className="font-mono text-xs">{row.original.student_id ?? "—"}</span>,
+		},
+		{
+			id: "status",
+			header: t("colStatus"),
+			cell: ({ row }) => statusLabel(row.original.status),
+		},
+		{
+			id: "actions",
+			header: () => <span className="sr-only">{t("actions")}</span>,
+			cell: ({ row }) => (
+				<div className="flex flex-wrap justify-end gap-1">
+					{!row.original.student_id && (
+						<Button
+							type="button"
+							variant="secondary"
+							size="sm"
+							disabled={saving}
+							onClick={() => void assignStudentId(row.original.id)}
+						>
+							{t("assignStudentId")}
+						</Button>
+					)}
+					<Button type="button" variant="outline" size="sm" onClick={() => startEdit(row.original)}>
+						{t("edit")}
+					</Button>
+				</div>
+			),
+		},
+	];
 
 	return (
 		<div className="space-y-4">
@@ -208,56 +308,13 @@ export function AdminStudentsPanel() {
 			)}
 			{error && <p className="text-destructive text-sm">{error}</p>}
 
-			<div className="rounded-xl border border-border/60 bg-card/25 ring-1 ring-foreground/5">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>{t("colCreated")}</TableHead>
-							<TableHead>{t("colNickname")}</TableHead>
-							<TableHead className="hidden lg:table-cell">{t("colRealName")}</TableHead>
-							<TableHead className="min-w-[120px]">{t("colEmail")}</TableHead>
-							<TableHead className="hidden md:table-cell">{t("colPhone")}</TableHead>
-							<TableHead>{t("colStudentId")}</TableHead>
-							<TableHead>{t("colStatus")}</TableHead>
-							<TableHead className="text-right">{t("actions")}</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{loading ? (
-							<TableRow>
-								<TableCell colSpan={8} className="text-muted-foreground py-10 text-center">
-									…
-								</TableCell>
-							</TableRow>
-						) : students.length === 0 ? (
-							<TableRow>
-								<TableCell colSpan={8} className="text-muted-foreground py-10 text-center">
-									{t("empty")}
-								</TableCell>
-							</TableRow>
-						) : (
-							students.map((row) => (
-								<TableRow key={row.id}>
-									<TableCell className="text-muted-foreground font-mono text-xs tabular-nums">
-										{row.created_at?.slice(0, 10)}
-									</TableCell>
-									<TableCell>{row.nickname}</TableCell>
-									<TableCell className="hidden lg:table-cell">{row.real_name ?? "—"}</TableCell>
-									<TableCell className="max-w-[160px] truncate font-mono text-xs">{row.email}</TableCell>
-									<TableCell className="hidden md:table-cell">{row.phone ?? "—"}</TableCell>
-									<TableCell className="font-mono text-xs">{row.student_id ?? "—"}</TableCell>
-									<TableCell>{statusLabel(row.status)}</TableCell>
-									<TableCell className="text-right">
-										<Button type="button" variant="outline" size="sm" onClick={() => startEdit(row)}>
-											{t("edit")}
-										</Button>
-									</TableCell>
-								</TableRow>
-							))
-						)}
-					</TableBody>
-				</Table>
-			</div>
+			<DataTable
+				columns={columns}
+				data={loading ? [] : students}
+				pageSize={15}
+				toolbar={undefined}
+				empty={loading ? "…" : t("empty")}
+			/>
 
 			<Dialog
 				open={editingRow !== null && edit !== null}
@@ -326,6 +383,15 @@ export function AdminStudentsPanel() {
 									id="e-addr"
 									value={edit.address}
 									onChange={(e) => setEdit({ ...edit, address: e.target.value })}
+									className="h-10"
+								/>
+							</div>
+							<div className="space-y-2 sm:col-span-2">
+								<Label htmlFor="e-emg">{t("colEmergency")}</Label>
+								<Input
+									id="e-emg"
+									value={edit.emergency_phone}
+									onChange={(e) => setEdit({ ...edit, emergency_phone: e.target.value })}
 									className="h-10"
 								/>
 							</div>

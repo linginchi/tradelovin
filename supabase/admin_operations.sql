@@ -196,3 +196,6 @@ create table if not exists public.fee_email_logs (
 );
 
 alter table public.fee_email_logs enable row level security;
+
+-- 单笔选课退款原因（收费管理）
+alter table public.student_courses add column if not exists refund_reason text;

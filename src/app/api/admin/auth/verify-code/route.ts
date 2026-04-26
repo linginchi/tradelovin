@@ -7,6 +7,8 @@ import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { verifyOtp } from "@/lib/auth/admin-otp";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
+export const runtime = "edge";
+
 const bodySchema = z.object({
 	email: z.string().email(),
 	code: z.string().regex(/^\d{6}$/),
@@ -59,7 +61,7 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Code expired" }, { status: 401 });
 	}
 
-	if (!verifyOtp(email, code, row.code_hash)) {
+	if (!(await verifyOtp(email, code, row.code_hash))) {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 

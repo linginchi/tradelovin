@@ -21,9 +21,15 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 			? "rounded-md px-2 py-1 text-[11px] font-medium"
 			: "rounded-lg px-2.5 py-1.5 text-xs font-medium";
 
+	const sep = (
+		<span className="text-muted-foreground px-0.5 text-[10px]" aria-hidden>
+			|
+		</span>
+	);
+
 	return (
 		<div
-			className={cn("flex items-center gap-1", className)}
+			className={cn("flex flex-wrap items-center gap-1", className)}
 			role="group"
 			aria-label={t("label")}
 		>
@@ -40,9 +46,21 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 			>
 				{t("zh")}
 			</button>
-			<span className="text-muted-foreground px-0.5 text-[10px]" aria-hidden>
-				|
-			</span>
+			{sep}
+			<button
+				type="button"
+				onClick={() => router.replace(pathname, { locale: "zh-TW" })}
+				className={cn(
+					btn,
+					"transition-colors",
+					locale === "zh-TW"
+						? "bg-cyan-500/20 text-cyan-200 shadow-[0_0_0_1px_oklch(0.72_0.12_195/0.35)]"
+						: "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+				)}
+			>
+				{t("zhTW")}
+			</button>
+			{sep}
 			<button
 				type="button"
 				onClick={() => router.replace(pathname, { locale: "en" })}

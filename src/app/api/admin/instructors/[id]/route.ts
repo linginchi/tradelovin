@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const patchSchema = z
 	.object({
 		name: z.string().min(1).optional(),
+		email: z.string().email().nullable().optional(),
 		bio: z.string().nullable().optional(),
 		specialties: z.array(z.string()).optional(),
 	})
@@ -15,10 +18,8 @@ const patchSchema = z
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -44,6 +45,9 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
 	const updates: Record<string, unknown> = {};
 	if (parsed.data.name !== undefined) updates.full_name = parsed.data.name.trim();
+	if (parsed.data.email !== undefined) {
+		updates.email = parsed.data.email === null || parsed.data.email === "" ? null : parsed.data.email.trim().toLowerCase();
+	}
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio === "" ? null : parsed.data.bio;
 	if (parsed.data.specialties !== undefined) updates.specialties = parsed.data.specialties;
 
@@ -74,6 +78,8 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		id: string;
 		full_name: string | null;
 		nickname: string | null;
+		email: string | null;
+		avatar_url: string | null;
 		bio: string | null;
 		specialties: string[];
 	};
@@ -82,6 +88,8 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		instructor: {
 			id: row.id,
 			name: row.full_name ?? row.nickname ?? "—",
+			email: row.email,
+			avatar_url: row.avatar_url,
 			bio: row.bio,
 			specialties: row.specialties ?? [],
 		},
@@ -89,10 +97,8 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 }
 
 export async function DELETE(_req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {

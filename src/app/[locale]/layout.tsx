@@ -45,7 +45,8 @@ export default async function LocaleLayout({ children, params }: Props) {
 	setRequestLocale(locale);
 
 	const messages = await getMessages();
-	const htmlLang = locale === "zh" ? "zh-CN" : "en";
+	const htmlLang =
+		locale === "zh" ? "zh-CN" : locale === "zh-TW" ? "zh-Hant" : "en";
 
 	return (
 		<html

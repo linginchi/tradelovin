@@ -1,4 +1,4 @@
-import { createHmac, randomInt, timingSafeEqual } from "crypto";
+/** Edge-safe OTP（Web Crypto），与 Node createHmac('sha256') 结果一致，便于 Cloudflare/Edge 运行。 */
 
 function getPepper(): string {
 	const p = process.env.ADMIN_OTP_PEPPER || process.env.ADMIN_JWT_SECRET;
@@ -6,20 +6,37 @@ function getPepper(): string {
 	return p;
 }
 
+function toHex(buf: ArrayBuffer): string {
+	return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export function generateOtpCode(): string {
-	return String(randomInt(100_000, 1_000_000));
+	const u = new Uint32Array(1);
+	crypto.getRandomValues(u);
+	return String(100_000 + (u[0] % 900_000));
 }
 
-export function hashOtp(email: string, code: string): string {
+export async function hashOtp(email: string, code: string): Promise<string> {
 	const normalized = email.trim().toLowerCase();
-	return createHmac("sha256", getPepper())
-		.update(`${normalized}:${code}`)
-		.digest("hex");
+	const pepper = getPepper();
+	const enc = new TextEncoder();
+	const key = await crypto.subtle.importKey(
+		"raw",
+		enc.encode(pepper),
+		{ name: "HMAC", hash: "SHA-256" },
+		false,
+		["sign"],
+	);
+	const sig = await crypto.subtle.sign("HMAC", key, enc.encode(`${normalized}:${code}`));
+	return toHex(sig);
 }
 
-export function verifyOtp(email: string, code: string, codeHash: string): boolean {
-	const a = Buffer.from(hashOtp(email, code), "hex");
-	const b = Buffer.from(codeHash, "hex");
-	if (a.length !== b.length) return false;
-	return timingSafeEqual(a, b);
+export async function verifyOtp(email: string, code: string, codeHash: string): Promise<boolean> {
+	const expect = await hashOtp(email, code);
+	if (expect.length !== codeHash.length) return false;
+	let ok = 0;
+	for (let i = 0; i < expect.length; i++) {
+		ok |= expect.charCodeAt(i) ^ codeHash.charCodeAt(i);
+	}
+	return ok === 0;
 }

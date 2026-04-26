@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const postSchema = z.object({
 	name: z.string().min(1),
+	email: z.string().email().nullable().optional(),
 	bio: z.string().nullable().optional(),
 	specialties: z.array(z.string()).optional(),
 });
 
 export async function GET() {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -23,7 +24,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from("profiles")
-		.select("id, full_name, nickname, bio, specialties")
+		.select("id, full_name, nickname, email, avatar_url, bio, specialties")
 		.eq("is_instructor", true)
 		.order("created_at", { ascending: true });
 
@@ -34,6 +35,8 @@ export async function GET() {
 	const instructors = (data ?? []).map((row) => ({
 		id: row.id as string,
 		name: ((row.full_name ?? row.nickname) as string) || "—",
+		email: (row.email as string | null) ?? null,
+		avatar_url: (row.avatar_url as string | null) ?? null,
 		bio: row.bio as string | null,
 		specialties: (row.specialties as string[]) ?? [],
 	}));
@@ -42,10 +45,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -64,15 +65,18 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 	}
 
-	const { data, error } = await supabase
-		.from("profiles")
-		.insert({
-			full_name: parsed.data.name.trim(),
-			bio: parsed.data.bio?.trim() || null,
-			specialties: parsed.data.specialties ?? [],
-			is_instructor: true,
-			role: "user",
-		})
+	const insert: Record<string, unknown> = {
+		full_name: parsed.data.name.trim(),
+		bio: parsed.data.bio?.trim() || null,
+		specialties: parsed.data.specialties ?? [],
+		is_instructor: true,
+		role: "user",
+	};
+	if (parsed.data.email) {
+		insert.email = parsed.data.email.trim().toLowerCase();
+	}
+
+	const { data, error } = await supabase.from("profiles").insert(insert)
 		.select()
 		.maybeSingle();
 
@@ -84,6 +88,8 @@ export async function POST(req: Request) {
 		id: string;
 		full_name: string | null;
 		nickname: string | null;
+		email: string | null;
+		avatar_url: string | null;
 		bio: string | null;
 		specialties: string[];
 	};
@@ -92,6 +98,8 @@ export async function POST(req: Request) {
 		instructor: {
 			id: row.id,
 			name: row.full_name ?? row.nickname ?? "—",
+			email: row.email,
+			avatar_url: row.avatar_url,
 			bio: row.bio,
 			specialties: row.specialties ?? [],
 		},

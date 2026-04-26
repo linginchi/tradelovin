@@ -3,8 +3,11 @@ import { z } from "zod";
 
 import { nextBdStudentId } from "@/lib/admin/student-code";
 import { getReviewerProfileId } from "@/lib/admin/reviewer-profile";
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { sendAdminEmail } from "@/lib/email/admin-mail";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const bodySchema = z.discriminatedUnion("action", [
 	z.object({
@@ -19,10 +22,9 @@ const bodySchema = z.discriminatedUnion("action", [
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
+	const { session } = gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -76,6 +78,22 @@ export async function POST(req: Request, ctx: RouteContext) {
 
 		if (error) {
 			return NextResponse.json({ error: error.message }, { status: 500 });
+		}
+
+		const to = String(reg.email ?? "").trim();
+		if (to) {
+			const sent = await sendAdminEmail({
+				to,
+				subject: "报名审核未通过 · 豹仔乐园",
+				text: `您好，\n\n很抱歉，您的课程报名未通过审核。\n\n原因：${parsed.data.reason}\n\n如有疑问请回复本邮件联系工作人员。\n`,
+			});
+			if (!sent.ok) {
+				return NextResponse.json({
+					ok: true,
+					registration: { id, status: "rejected" },
+					emailWarning: sent.message,
+				});
+			}
 		}
 
 		return NextResponse.json({ ok: true, registration: { id, status: "rejected" } });

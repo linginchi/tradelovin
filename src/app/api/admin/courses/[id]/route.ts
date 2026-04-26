@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const patchSchema = z
 	.object({
@@ -17,10 +19,8 @@ const patchSchema = z
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -113,10 +113,8 @@ export async function GET(_req: Request, ctx: RouteContext) {
 }
 
 export async function PATCH(req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -159,10 +157,8 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 }
 
 export async function DELETE(_req: Request, ctx: RouteContext) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {

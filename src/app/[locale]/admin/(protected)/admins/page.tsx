@@ -11,8 +11,13 @@ export default async function AdminAdminsPage({ params }: Props) {
 	setRequestLocale(locale);
 
 	const session = await getAdminSession();
-	if (session?.role !== "super_admin") {
+	if (!session) {
+		redirect({ href: "/admin/login", locale });
+		return null;
+	}
+	if (session.role !== "super_admin") {
 		redirect({ href: "/admin", locale });
+		return null;
 	}
 
 	const t = await getTranslations("Admin");
@@ -23,7 +28,7 @@ export default async function AdminAdminsPage({ params }: Props) {
 				<h1 className="text-2xl font-semibold tracking-tight">{t("adminsTitle")}</h1>
 				<p className="text-muted-foreground mt-2 max-w-2xl text-sm">{t("adminsSubtitle")}</p>
 			</header>
-			<AdminAdminsPanel />
+			<AdminAdminsPanel currentEmail={session.email} />
 		</main>
 	);
 }

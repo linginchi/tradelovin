@@ -25,6 +25,7 @@ export type CourseListRow = {
 	mode: "online" | "offline";
 	capacity: number;
 	enrollment_count: number;
+	instructor_name?: string | null;
 };
 
 export function AdminCoursesPanel() {
@@ -159,19 +160,20 @@ export function AdminCoursesPanel() {
 							<TableHead>{t("courseMode")}</TableHead>
 							<TableHead>{t("capacity")}</TableHead>
 							<TableHead>{t("enrollmentCount")}</TableHead>
+							<TableHead className="hidden md:table-cell">{t("colInstructor")}</TableHead>
 							<TableHead className="text-right">{t("actions")}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{loading ? (
 							<TableRow>
-								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
 									…
 								</TableCell>
 							</TableRow>
 						) : courses.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
 									{t("empty")}
 								</TableCell>
 							</TableRow>
@@ -182,6 +184,9 @@ export function AdminCoursesPanel() {
 									<TableCell>{c.mode === "online" ? t("modeOnline") : t("modeOffline")}</TableCell>
 									<TableCell className="tabular-nums">{c.capacity}</TableCell>
 									<TableCell className="tabular-nums">{c.enrollment_count}</TableCell>
+									<TableCell className="text-muted-foreground hidden text-sm md:table-cell">
+										{c.instructor_name ?? "—"}
+									</TableCell>
 									<TableCell className="text-right">
 										<Link
 											href={`/admin/courses/${c.id}`}

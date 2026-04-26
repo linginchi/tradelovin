@@ -25,40 +25,77 @@ import {
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
-type RosterRow = {
-	id: string;
-	student_id: string;
+type EnrollRow = {
+	enrollment_id: string;
+	student_profile_id: string;
+	student_code: string;
 	nickname: string | null;
 	email: string;
+	course_id: string;
+	course_title: string;
 	payment_status: "paid" | "unpaid" | "refunded";
+	refund_reason: string | null;
+	enrolled_at: string;
 };
+
+type CourseOpt = { id: string; title: string };
 
 export function AdminFeesPanel() {
 	const t = useTranslations("Admin");
-	const [roster, setRoster] = useState<RosterRow[]>([]);
+	const [enrollments, setEnrollments] = useState<EnrollRow[]>([]);
+	const [courses, setCourses] = useState<CourseOpt[]>([]);
 	const [selected, setSelected] = useState<Set<string>>(new Set());
 	const [subject, setSubject] = useState("缴费通知");
 	const [body, setBody] = useState(
 		"您好，\n\n请按后续说明完成缴费。\n\n此邮件由系统自动发送。",
 	);
 	const [html, setHtml] = useState("");
+	const [courseFilter, setCourseFilter] = useState("");
+	const [payFilter, setPayFilter] = useState("");
+	const [dateFrom, setDateFrom] = useState("");
+	const [dateTo, setDateTo] = useState("");
 	const [loading, setLoading] = useState(true);
 	const [sending, setSending] = useState(false);
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [result, setResult] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [refundFor, setRefundFor] = useState<EnrollRow | null>(null);
+	const [refundReason, setRefundReason] = useState("");
 
 	const load = useCallback(async () => {
 		setLoading(true);
 		try {
-			const res = await fetch("/api/admin/roster", { credentials: "include" });
-			const data = (await res.json()) as { students?: RosterRow[] };
-			if (res.ok) setRoster(data.students ?? []);
+			const q = new URLSearchParams();
+			q.set("view", "enrollment");
+			if (courseFilter) q.set("course_id", courseFilter);
+			if (payFilter === "paid" || payFilter === "unpaid" || payFilter === "refunded") {
+				q.set("payment_status", payFilter);
+			}
+			if (dateFrom) q.set("from", dateFrom);
+			if (dateTo) q.set("to", dateTo);
+			const res = await fetch(`/api/admin/roster?${q}`, { credentials: "include" });
+			const data = (await res.json()) as { enrollments?: EnrollRow[]; error?: string };
+			if (res.ok) {
+				setEnrollments((data.enrollments ?? []) as EnrollRow[]);
+			}
 		} finally {
 			setLoading(false);
 		}
+	}, [courseFilter, payFilter, dateFrom, dateTo]);
+
+	const loadCourses = useCallback(async () => {
+		const res = await fetch("/api/admin/courses", { credentials: "include" });
+		const data = (await res.json()) as { courses?: { id: string; title: string }[] };
+		if (res.ok) {
+			setCourses((data.courses ?? []).map((c) => ({ id: c.id, title: c.title })));
+		}
 	}, []);
+
+	useEffect(() => {
+		void loadCourses();
+	}, [loadCourses]);
 
 	useEffect(() => {
 		void load();
@@ -85,7 +122,7 @@ export function AdminFeesPanel() {
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
 				body: JSON.stringify({
-					student_record_ids: Array.from(selected),
+					enrollment_ids: Array.from(selected),
 					subject: subject.trim(),
 					body: body.trim(),
 					...(html.trim() ? { html: html.trim() } : {}),
@@ -103,6 +140,7 @@ export function AdminFeesPanel() {
 				return;
 			}
 			setResult(t("feeResult", { sent: data.sent ?? 0, failed: data.failed ?? 0 }));
+			setSelected(new Set());
 			void load();
 		} catch {
 			setError(t("saveError"));
@@ -111,14 +149,28 @@ export function AdminFeesPanel() {
 		}
 	}
 
-	async function togglePayment(id: string, next: "paid" | "unpaid") {
-		await fetch(`/api/admin/student-records/${id}`, {
+	async function patchEnrollment(eid: string, payment_status: EnrollRow["payment_status"], refund_reason?: string) {
+		const res = await fetch(`/api/admin/student-courses/${eid}`, {
 			method: "PATCH",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",
-			body: JSON.stringify({ payment_status: next }),
+			body: JSON.stringify({
+				payment_status,
+				...(refund_reason !== undefined ? { refund_reason } : {}),
+			}),
 		});
+		if (!res.ok) {
+			const j = (await res.json()) as { error?: string };
+			setError(j.error ?? t("saveError"));
+			return;
+		}
 		void load();
+	}
+
+	function payLabel(s: string) {
+		if (s === "paid") return t("payment_paid");
+		if (s === "refunded") return t("payment_refunded");
+		return t("payment_unpaid");
 	}
 
 	return (
@@ -129,6 +181,58 @@ export function AdminFeesPanel() {
 					<CardDescription>{t("feeCardDesc")}</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
+					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+						<div className="space-y-2">
+							<Label htmlFor="bill-course">{t("filterCourse")}</Label>
+							<select
+								id="bill-course"
+								value={courseFilter}
+								onChange={(e) => setCourseFilter(e.target.value)}
+								className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm dark:bg-input/30"
+							>
+								<option value="">{t("allCourses")}</option>
+								{courses.map((c) => (
+									<option key={c.id} value={c.id}>
+										{c.title}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="bill-pay">{t("filterPayment")}</Label>
+							<select
+								id="bill-pay"
+								value={payFilter}
+								onChange={(e) => setPayFilter(e.target.value)}
+								className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm dark:bg-input/30"
+							>
+								<option value="">{t("filterAll")}</option>
+								<option value="unpaid">{t("payment_unpaid")}</option>
+								<option value="paid">{t("payment_paid")}</option>
+								<option value="refunded">{t("payment_refunded")}</option>
+							</select>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="bill-from">{t("dateFrom")}</Label>
+							<Input
+								id="bill-from"
+								type="date"
+								value={dateFrom}
+								onChange={(e) => setDateFrom(e.target.value)}
+								className="h-10"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="bill-to">{t("dateTo")}</Label>
+							<Input
+								id="bill-to"
+								type="date"
+								value={dateTo}
+								onChange={(e) => setDateTo(e.target.value)}
+								className="h-10"
+							/>
+						</div>
+					</div>
 					<div className="space-y-2">
 						<Label htmlFor="fee-subject">{t("feeSubject")}</Label>
 						<Input
@@ -168,44 +272,54 @@ export function AdminFeesPanel() {
 				</CardContent>
 			</Card>
 
-			<div className="rounded-xl border border-border/60 bg-card/25 ring-1 ring-foreground/5">
+			<div className="rounded-xl border border-border/60 bg-card/25 ring-1 ring-foreground/5 overflow-x-auto">
 				<Table>
 					<TableHeader>
 						<TableRow>
 							<TableHead className="w-10" />
+							<TableHead>{t("colCourse")}</TableHead>
 							<TableHead>{t("colStudentId")}</TableHead>
 							<TableHead>{t("colNickname")}</TableHead>
 							<TableHead>{t("colEmail")}</TableHead>
+							<TableHead>{t("colEnrolledAt")}</TableHead>
 							<TableHead>{t("colPayment")}</TableHead>
+							<TableHead className="hidden lg:table-cell">{t("refundReasonLabel")}</TableHead>
 							<TableHead className="text-right">{t("actions")}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{loading ? (
 							<TableRow>
-								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={9} className="text-muted-foreground py-10 text-center">
 									…
 								</TableCell>
 							</TableRow>
+						) : enrollments.length === 0 ? (
+							<TableRow>
+								<TableCell colSpan={9} className="text-muted-foreground py-10 text-center">
+									{t("empty")}
+								</TableCell>
+							</TableRow>
 						) : (
-							roster.map((s) => (
-								<TableRow key={s.id}>
+							enrollments.map((s) => (
+								<TableRow key={s.enrollment_id}>
 									<TableCell>
 										<Checkbox
-											checked={selected.has(s.id)}
-											onCheckedChange={() => toggle(s.id)}
-											aria-label={`select ${s.student_id}`}
+											checked={selected.has(s.enrollment_id)}
+											onCheckedChange={() => toggle(s.enrollment_id)}
+											aria-label={`select ${s.student_code}`}
 										/>
 									</TableCell>
-									<TableCell className="font-mono text-xs">{s.student_id}</TableCell>
+									<TableCell className="max-w-[140px] truncate text-sm">{s.course_title}</TableCell>
+									<TableCell className="font-mono text-xs">{s.student_code}</TableCell>
 									<TableCell>{s.nickname ?? "—"}</TableCell>
-									<TableCell className="font-mono text-xs">{s.email}</TableCell>
-									<TableCell>
-										{s.payment_status === "paid"
-											? t("payment_paid")
-											: s.payment_status === "refunded"
-												? t("payment_refunded")
-												: t("payment_unpaid")}
+									<TableCell className="max-w-[140px] truncate font-mono text-xs">{s.email}</TableCell>
+									<TableCell className="text-muted-foreground font-mono text-xs tabular-nums">
+										{s.enrolled_at?.slice(0, 10)}
+									</TableCell>
+									<TableCell>{payLabel(s.payment_status)}</TableCell>
+									<TableCell className="text-muted-foreground hidden max-w-[160px] truncate text-xs lg:table-cell">
+										{s.refund_reason ?? "—"}
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex flex-wrap justify-end gap-1">
@@ -214,19 +328,32 @@ export function AdminFeesPanel() {
 													type="button"
 													variant="outline"
 													size="sm"
-													onClick={() => void togglePayment(s.id, "paid")}
+													onClick={() => void patchEnrollment(s.enrollment_id, "paid")}
 												>
 													{t("markPaid")}
 												</Button>
 											)}
-											{s.payment_status !== "unpaid" && (
+											{s.payment_status !== "unpaid" && s.payment_status !== "refunded" && (
 												<Button
 													type="button"
 													variant="outline"
 													size="sm"
-													onClick={() => void togglePayment(s.id, "unpaid")}
+													onClick={() => void patchEnrollment(s.enrollment_id, "unpaid")}
 												>
 													{t("markUnpaid")}
+												</Button>
+											)}
+											{s.payment_status !== "refunded" && (
+												<Button
+													type="button"
+													variant="outline"
+													size="sm"
+													onClick={() => {
+														setRefundFor(s);
+														setRefundReason("");
+													}}
+												>
+													{t("markRefunded")}
 												</Button>
 											)}
 										</div>
@@ -252,6 +379,45 @@ export function AdminFeesPanel() {
 						</Button>
 						<Button type="button" disabled={sending} onClick={() => void send()}>
 							{sending ? "…" : t("sendFee")}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={refundFor !== null}
+				onOpenChange={(o) => {
+					if (!o) {
+						setRefundFor(null);
+						setRefundReason("");
+					}
+				}}
+			>
+				<DialogContent className="sm:max-w-md" showCloseButton>
+					<DialogHeader>
+						<DialogTitle>{t("refundDialogTitle")}</DialogTitle>
+						<DialogDescription>{t("refundReasonLabel")}</DialogDescription>
+					</DialogHeader>
+					<Textarea
+						value={refundReason}
+						onChange={(e) => setRefundReason(e.target.value)}
+						className={cn("min-h-[100px]", !refundReason.trim() && "border-destructive/50")}
+					/>
+					<DialogFooter className="border-t-0 bg-transparent p-0 sm:justify-end">
+						<Button type="button" variant="outline" onClick={() => setRefundFor(null)}>
+							{t("cancel")}
+						</Button>
+						<Button
+							type="button"
+							disabled={!refundReason.trim() || !refundFor}
+							onClick={() => {
+								if (!refundFor) return;
+								void patchEnrollment(refundFor.enrollment_id, "refunded", refundReason.trim());
+								setRefundFor(null);
+								setRefundReason("");
+							}}
+						>
+							{t("markRefunded")}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

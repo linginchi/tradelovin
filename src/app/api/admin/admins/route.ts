@@ -1,18 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getAdminSession, isSuperAdmin } from "@/lib/auth/admin-session";
+import { requireSuperAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+export const runtime = "edge";
 
 const postSchema = z.object({
 	email: z.string().email(),
 });
 
 export async function GET() {
-	const session = await getAdminSession();
-	if (!session || !isSuperAdmin(session)) {
-		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-	}
+	const gated = await requireSuperAdminSession();
+	if (gated instanceof NextResponse) return gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -32,10 +32,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-	const session = await getAdminSession();
-	if (!session || !isSuperAdmin(session)) {
-		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-	}
+	const gated = await requireSuperAdminSession();
+	if (gated instanceof NextResponse) return gated;
+	const { session } = gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -76,11 +75,69 @@ export async function POST(req: Request) {
 	return NextResponse.json({ admin: data });
 }
 
-export async function DELETE(req: Request) {
-	const session = await getAdminSession();
-	if (!session || !isSuperAdmin(session)) {
-		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+const patchSchema = z.object({
+	email: z.string().email(),
+	role: z.enum(["admin", "super_admin"]),
+});
+
+export async function PATCH(req: Request) {
+	const gated = await requireSuperAdminSession();
+	if (gated instanceof NextResponse) return gated;
+	const { session } = gated;
+
+	const supabase = getServiceSupabase();
+	if (!supabase) {
+		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
+
+	let json: unknown;
+	try {
+		json = await req.json();
+	} catch {
+		return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+	}
+
+	const parsed = patchSchema.safeParse(json);
+	if (!parsed.success) {
+		return NextResponse.json({ error: "Invalid body" }, { status: 400 });
+	}
+
+	const email = parsed.data.email.trim().toLowerCase();
+
+	if (email === session.email && parsed.data.role !== "super_admin") {
+		return NextResponse.json({ error: "Cannot demote yourself" }, { status: 400 });
+	}
+
+	const { data: target } = await supabase.from("admins").select("role").eq("email", email).maybeSingle();
+
+	if (!target) {
+		return NextResponse.json({ error: "Not found" }, { status: 404 });
+	}
+
+	if (target.role === "super_admin" && parsed.data.role === "admin") {
+		const { count } = await supabase
+			.from("admins")
+			.select("email", { count: "exact", head: true })
+			.eq("role", "super_admin");
+
+		if ((count ?? 0) <= 1) {
+			return NextResponse.json({ error: "Cannot demote the last super admin" }, { status: 400 });
+		}
+	}
+
+	const { error } = await supabase.from("admins").update({ role: parsed.data.role }).eq("email", email);
+
+	if (error) {
+		return NextResponse.json({ error: error.message }, { status: 500 });
+	}
+
+	return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(req: Request) {
+	const gated = await requireSuperAdminSession();
+	if (gated instanceof NextResponse) return gated;
+	const { session } = gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {

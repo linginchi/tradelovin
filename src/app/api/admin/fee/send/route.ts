@@ -2,21 +2,27 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 
-import { getAdminSession } from "@/lib/auth/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
-const bodySchema = z.object({
-	student_record_ids: z.array(z.string().uuid()).min(1),
-	subject: z.string().min(1),
-	body: z.string().min(1),
-	html: z.string().optional(),
-});
+export const runtime = "edge";
+
+const bodySchema = z
+	.object({
+		student_record_ids: z.array(z.string().uuid()).optional(),
+		enrollment_ids: z.array(z.string().uuid()).optional(),
+		subject: z.string().min(1),
+		body: z.string().min(1),
+		html: z.string().optional(),
+	})
+	.refine((b) => (b.student_record_ids?.length ?? 0) + (b.enrollment_ids?.length ?? 0) > 0, {
+		message: "student_record_ids or enrollment_ids required",
+	});
 
 export async function POST(req: Request) {
-	const session = await getAdminSession();
-	if (!session) {
-		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-	}
+	const gated = await requireAdminSession();
+	if (gated instanceof NextResponse) return gated;
+	const { session } = gated;
 
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -41,10 +47,22 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 	}
 
+	let profileIds = parsed.data.student_record_ids ?? [];
+	if (parsed.data.enrollment_ids?.length) {
+		const { data: scRows, error: scErr } = await supabase
+			.from("student_courses")
+			.select("student_id")
+			.in("id", parsed.data.enrollment_ids);
+		if (scErr) {
+			return NextResponse.json({ error: scErr.message }, { status: 500 });
+		}
+		profileIds = [...new Set([...profileIds, ...(scRows ?? []).map((r) => r.student_id as string)])];
+	}
+
 	const { data: rows, error: qErr } = await supabase
 		.from("profiles")
 		.select("id, email")
-		.in("id", parsed.data.student_record_ids)
+		.in("id", profileIds)
 		.not("student_id", "is", null);
 
 	if (qErr) {
