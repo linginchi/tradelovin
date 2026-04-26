@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
 import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
 	// 关键：明确告诉 Next.js 生产环境下所有静态资源的绝对 URL 前缀
@@ -16,4 +19,4 @@ const nextConfig: NextConfig = {
 
 initOpenNextCloudflareForDev();
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

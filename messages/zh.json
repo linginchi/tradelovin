@@ -1,0 +1,469 @@
+{
+	"Metadata": {
+		"siteTitle": "豹仔乐园 — 挖掘你的交易天赋",
+		"siteDescription": "游戏化交易学习：课程、演练与即时反馈，在豹仔乐园挖掘你的交易天赋。",
+		"registerTitle": "课程报名 · 豹仔乐园",
+		"registerDescription": "填写报名信息，加入豹仔乐园日内交易学习。"
+	},
+	"Nav": {
+		"mainLabel": "主导航",
+		"about": "关于我们",
+		"myScores": "我的成绩",
+		"myProfile": "我的"
+	},
+	"LanguageSwitcher": {
+		"label": "语言",
+		"zh": "简体",
+		"en": "English"
+	},
+	"Common": {
+		"brand": "豹仔乐园",
+		"backHome": "返回首页",
+		"comingSoon": "待连接"
+	},
+	"Home": {
+		"badge": "豹仔乐园 · 游戏化交易学习",
+		"title": "豹仔乐园 — 挖掘你的交易天赋",
+		"subtitle": "没有什么能够阻挡你成为大交易员的向往",
+		"ctaTrading": "进入教学交易系统",
+		"ctaRegister": "立即报名",
+		"promoKicker": "核心亮点",
+		"promoTitle": "课程体系与导师团队",
+		"promoSubtitle": "深色毛玻璃卡片，悬浮动效；小屏可用 Tab 切换，大屏并排展示。",
+		"promoTablist": "宣传区切换",
+		"honorTitle": "毕业豹仔荣誉榜",
+		"honorSubtitle": "毕业学员的优秀出路与岗位（示例展示）",
+		"honorInitial": "豹",
+		"courseCardTitle": "课程介绍",
+		"courseCardSubtitle": "核心课程体系",
+		"mentorCardTitle": "导师介绍",
+		"mentorCardSubtitle": "实战派带教",
+		"highlights": [
+			{
+				"title": "结构化课程",
+				"desc": "从基础到进阶的路径设计，把复杂概念拆成可执行的小步练习。",
+				"tag": "体系化"
+			},
+			{
+				"title": "实战演练",
+				"desc": "模拟盘与情境任务结合，在低风险环境里反复试错、形成肌肉记忆。",
+				"tag": "可练习"
+			},
+			{
+				"title": "即时反馈",
+				"desc": "每一次操作都有清晰评分与提示，知道自己强在哪、下一步该练什么。",
+				"tag": "可量化"
+			}
+		],
+		"promoTabs": [
+			{ "id": "courses", "label": "课程体系" },
+			{ "id": "mentors", "label": "导师团队" }
+		],
+		"courseTracks": [
+			{
+				"title": "基础入门",
+				"desc": "术语、图表、节奏与风险边界，建立可重复的交易日流程。"
+			},
+			{
+				"title": "实战进阶",
+				"desc": "情境任务与模拟盘联动，训练执行、仓位与复盘闭环。"
+			},
+			{
+				"title": "大师班",
+				"desc": "高阶策略拆解与实盘思维陪练，面向稳定盈利与资金管理。"
+			}
+		],
+		"mentors": [
+			{
+				"name": "林策",
+				"role": "首席教研 · 日内结构",
+				"bio": "十年+衍生品与日内经验，擅长把行情结构讲成可练的「关卡」。",
+				"skills": ["关键位", "波动节奏", "复盘方法"],
+				"initials": "林"
+			},
+			{
+				"name": "周砚",
+				"role": "风控顾问 · 仓位与执行",
+				"bio": "专注交易心理与执行纪律，帮学员把规则固化成肌肉记忆。",
+				"skills": ["仓位管理", "执行纪律", "回撤控制"],
+				"initials": "周"
+			},
+			{
+				"name": "沈澜",
+				"role": "实战导师 · 情境演练",
+				"bio": "设计高强度模拟任务，让错误发生在课堂里而不是真实账户。",
+				"skills": ["模拟演练", "情境压力", "反馈闭环"],
+				"initials": "沈"
+			}
+		],
+		"honorGraduates": [
+			{
+				"name": "学员 · 青岚",
+				"destination": "某头部自营交易台",
+				"role": "日内交易员",
+				"achievement": "三个月内通过考核并独立操盘小组策略"
+			},
+			{
+				"name": "学员 · 北辰",
+				"destination": "资管公司 · 量化研究部",
+				"role": "分析师（衍生品方向）",
+				"achievement": "参与期货套利与波动率策略研究项目"
+			},
+			{
+				"name": "学员 · 琥珀",
+				"destination": "自主创业 · 独立交易",
+				"role": "独立交易员",
+				"achievement": "建立自有风控体系，稳定运行两个季度"
+			},
+			{
+				"name": "学员 · 黎川",
+				"destination": "家族办公室",
+				"role": "投资助理（全球宏观）",
+				"achievement": "协助搭建日内与波段结合的战术组合"
+			},
+			{
+				"name": "学员 · 星渚",
+				"destination": "券商自营部门",
+				"role": "做市与套利助理",
+				"achievement": "完成实盘轮岗并通过内部风控认证"
+			}
+		]
+	},
+	"RegisterPage": {
+		"back": "← 返回首页"
+	},
+	"Registration": {
+		"title": "课程报名",
+		"intro": "填写信息后我们会与你联系。标 * 为必填。",
+		"realName": "真实姓名",
+		"realNameHint": "（选填，鼓励填写）",
+		"nickname": "昵称",
+		"nicknameHint": "（站内显示）",
+		"email": "邮箱",
+		"phone": "手机号",
+		"phoneHint": "（选填）",
+		"experienceLegend": "交易经验",
+		"stylesLegend": "交易风格偏好",
+		"stylesHint": "（多选，选填；最多 3 项）",
+		"stylesCounter": "日内交易专项策略：已选 {count} / 3，最多可选 3 项。",
+		"learningGoals": "学习目标",
+		"learningGoalsHint": "（选填）",
+		"learningGoalsPlaceholder": "例如：希望三个月内建立稳定的日内复盘习惯……",
+		"recommendLegend": "是否愿意被推荐相关课程 / 活动",
+		"submit": "提交报名",
+		"submitting": "提交中…",
+		"success": "提交成功，感谢报名！",
+		"errors": {
+			"nicknameRequired": "请填写昵称（将用于站内展示）",
+			"emailRequired": "请填写邮箱",
+			"emailInvalid": "请输入有效邮箱",
+			"stylesMax": "最多选择 3 项",
+			"supabaseMissing": "未配置 Supabase：请在环境变量中设置 NEXT_PUBLIC_SUPABASE_URL 与 NEXT_PUBLIC_SUPABASE_ANON_KEY。",
+			"submitFailed": "提交失败。请确认 Supabase 已创建表 registrations，且列与类型匹配。"
+		},
+		"experience": {
+			"none": "无实盘经验",
+			"lt_1y": "少于 1 年",
+			"y1_3": "1–3 年",
+			"gt_3": "3 年以上",
+			"professional": "从业 / 相关专业背景"
+		},
+		"recommend": {
+			"yes": "愿意",
+			"no": "不愿意"
+		},
+		"styles": [
+			{
+				"value": "trend_following",
+				"label": "趋势追踪",
+				"description": "顺势而为，捕捉日内单边行情"
+			},
+			{
+				"value": "reversal",
+				"label": "反转策略",
+				"description": "寻找超买超卖区域的拐点机会"
+			},
+			{
+				"value": "breakout",
+				"label": "突破交易",
+				"description": "关键价格区间突破时跟进"
+			},
+			{
+				"value": "range_bound",
+				"label": "区间震荡",
+				"description": "压力支撑位之间高抛低吸"
+			},
+			{
+				"value": "scalping",
+				"label": "高频/剥头皮",
+				"description": "快速进出，赚取微小价差"
+			},
+			{
+				"value": "order_book",
+				"label": "盘口分析",
+				"description": "基于订单流和盘口数据的决策"
+			},
+			{
+				"value": "quant",
+				"label": "量化/程序化",
+				"description": "用代码和模型辅助交易决策"
+			},
+			{
+				"value": "undecided",
+				"label": "还不确定",
+				"description": "暂时没有明确偏好"
+			}
+		]
+	},
+	"About": {
+		"kicker": "豹仔乐园",
+		"title": "关于我们",
+		"p1Before": "豹仔乐园专注",
+		"p1Strong": "日内交易培训",
+		"p1After": "，把枯燥的行情与规则做成可闯关、可量化的学习路径。我们相信交易能力可以像游戏一样「练级」——通过结构化课程、情境演练与即时反馈，帮助学员在低风险环境中形成稳定执行与风控习惯。",
+		"p2Before": "平台强调",
+		"p2Tech": "科技感",
+		"p2And": "与",
+		"p2Game": "游戏化学习",
+		"p2After": "：进度可视、成就可感，让每一次练习都有方向。无论你是刚入门还是准备进阶，都能在这里找到适合自己的训练节奏。",
+		"teamTitle": "团队与理念",
+		"teamBody": "核心团队由交易员、教研与产品组成，持续迭代课程内容与演练工具。我们重视复盘文化、风险边界与执行力——不承诺暴富，只交付可重复训练的方法论。",
+		"contactTitle": "联系方式",
+		"contactPrefix": "商务与合作：",
+		"contactNote": "（示例邮箱，后续可替换）"
+	},
+	"MyProfile": {
+		"title": "我的",
+		"subtitle": "个人资料、课程与求职进度（演示数据）",
+		"profileTitle": "个人资料",
+		"nickname": "昵称",
+		"email": "邮箱",
+		"phone": "手机号",
+		"coursesTitle": "报名课程",
+		"jobTitle": "求职进度",
+		"demoNickname": "雪豹学员 · Demo",
+		"demoEmail": "demo@tradelovin.example",
+		"demoPhone": "138****0000",
+		"enrolled": [
+			{
+				"name": "日内基础入门",
+				"progress": "进行中 · 第 4 周",
+				"status": "学习中"
+			},
+			{
+				"name": "实战进阶营",
+				"progress": "未开课",
+				"status": "待开始"
+			}
+		],
+		"jobs": [
+			{
+				"company": "某自营交易台",
+				"steps": ["简历初筛", "交易考核", "面试", "Offer"],
+				"current": 2
+			},
+			{
+				"company": "资管公司 A",
+				"steps": ["简历初筛", "笔试", "面试"],
+				"current": 1
+			},
+			{
+				"company": "独立交易员路径",
+				"steps": ["方案提交", "模拟盘复核", "签约意向"],
+				"current": 0
+			}
+		],
+		"myCoursesLink": "我的课程表",
+		"adminLink": "管理后台"
+	},
+	"MyScores": {
+		"title": "我的成绩",
+		"subtitle": "以下为演示数据，用于页面结构预览。后续接入登录与真实成绩接口后，将仅对本人展示。",
+		"profileTitle": "能力画像",
+		"profileHint": "雷达图 + 维度进度条（Mock）",
+		"radarLabel": "能力画像雷达图（演示数据）",
+		"examTitle": "考试成绩",
+		"axes": [
+			{ "key": "技术面", "value": 85 },
+			{ "key": "风控", "value": 72 },
+			{ "key": "心态", "value": 68 },
+			{ "key": "执行", "value": 90 },
+			{ "key": "复盘", "value": 79 }
+		],
+		"exams": [
+			{ "name": "日内结构与关键位", "score": 88, "grade": "优良", "date": "2026-04-12" },
+			{ "name": "风控与仓位管理", "score": 76, "grade": "良好", "date": "2026-04-01" },
+			{ "name": "执行纪律模拟测", "score": 92, "grade": "优秀", "date": "2026-03-18" }
+		]
+	},
+	"MyCourses": {
+		"title": "我的课程表",
+		"subtitle": "当前登录学员的上课安排（演示数据，按日期升序）。",
+		"modeOnline": "线上",
+		"modeOffline": "线下",
+		"date": "日期",
+		"time": "时间",
+		"instructor": "讲师",
+		"location": "教室 / 链接",
+		"empty": "暂无课程安排。",
+		"schedule": [
+			{
+				"id": "1",
+				"courseName": "日内结构与关键位 · 基础",
+				"mode": "online",
+				"date": "2026-04-28",
+				"startTime": "19:00",
+				"endTime": "21:00",
+				"instructor": "林策",
+				"location": "腾讯会议 · 课前通知"
+			},
+			{
+				"id": "2",
+				"courseName": "模拟盘执行演练",
+				"mode": "offline",
+				"date": "2026-05-02",
+				"startTime": "14:00",
+				"endTime": "17:00",
+				"instructor": "沈澜",
+				"location": "上海 · 实训教室 A"
+			},
+			{
+				"id": "3",
+				"courseName": "风控与仓位管理",
+				"mode": "online",
+				"date": "2026-05-05",
+				"startTime": "19:30",
+				"endTime": "21:30",
+				"instructor": "周砚",
+				"location": "Zoom · 链接将发送至邮箱"
+			}
+		]
+	},
+	"Admin": {
+		"title": "管理后台",
+		"subtitle": "内部运营：学员与管理员（需登录）。",
+		"registrations": "报名记录",
+		"registrationsHint": "在「学员管理」中查看与编辑 registrations 数据。",
+		"schedules": "课程排期",
+		"schedulesHint": "排课与教室分配可在后续版本中接入。",
+		"back": "返回站点首页",
+		"navDashboard": "概览",
+		"navMenu": "后台菜单",
+		"navStudents": "学员管理",
+		"navAdmins": "管理员",
+		"logout": "退出",
+		"editRegistration": "编辑报名记录",
+		"studentsTitle": "学员管理",
+		"studentsSubtitle": "搜索、筛选并编辑报名信息；可为已入学学员分配学号。",
+		"searchPlaceholder": "姓名、昵称或邮箱…",
+		"filterStatus": "报名状态",
+		"filterAll": "全部",
+		"status_pending": "待审核",
+		"status_approved": "已通过",
+		"status_rejected": "已驳回",
+		"payment_paid": "已缴费",
+		"payment_unpaid": "未缴费",
+		"payment_refunded": "已退款",
+		"colCreated": "报名时间",
+		"colNickname": "昵称",
+		"colRealName": "姓名",
+		"colEmail": "邮箱",
+		"colPhone": "电话",
+		"colStudentId": "学号",
+		"colStatus": "状态",
+		"actions": "操作",
+		"edit": "编辑",
+		"save": "保存",
+		"cancel": "取消",
+		"address": "地址",
+		"learningGoals": "学习目标",
+		"loadError": "加载失败",
+		"saveError": "保存失败",
+		"saved": "已保存",
+		"empty": "暂无记录",
+		"adminsTitle": "管理员",
+		"adminsSubtitle": "超级管理员可新增或移除管理员账号。",
+		"addAdmin": "添加管理员",
+		"inviteTitle": "邀请新管理员",
+		"inviteSubtitle": "新管理员仅有 admin 权限；超级管理员由预设邮箱首次登录自动提升。",
+		"confirmRemoveTitle": "移除管理员？",
+		"confirmRemoveBody": "将删除 {email} 的后台访问权限，操作不可撤销。",
+		"adminEmail": "邮箱",
+		"roleField": "角色",
+		"roleAdmin": "管理员",
+		"roleSuper": "超级管理员",
+		"remove": "移除",
+		"confirmRemove": "确定移除此管理员？",
+		"confirmDelete": "确定删除此项？",
+		"forbiddenAdmins": "仅超级管理员可访问此页。",
+		"navReviews": "报名审核",
+		"navCourses": "课程",
+		"navInstructors": "讲师",
+		"navFees": "收费通知",
+		"reviewsTitle": "报名审核",
+		"reviewsSubtitle": "处理待审核报名：通过后自动生成学号（BDxxxx）并同步到学员表。",
+		"approve": "通过",
+		"reject": "驳回",
+		"rejectReason": "驳回原因",
+		"rejectDialogDesc": "提交后该报名将标记为已驳回，并记录原因。",
+		"colRejection": "驳回说明",
+		"coursesTitle": "课程编排",
+		"coursesFormDesc": "创建课程后可进入详情排课、分配讲师与选课。",
+		"coursesSubtitle": "维护课程、排课与讲师，查看报名人数。",
+		"newCourse": "新建课程",
+		"courseName": "课程名称",
+		"courseDesc": "描述",
+		"courseMode": "类型",
+		"modeOnline": "线上",
+		"modeOffline": "线下",
+		"capacity": "容量",
+		"enrollmentCount": "报名人数",
+		"goDetail": "排课 / 详情",
+		"sessionDate": "日期",
+		"sessionStart": "开始",
+		"sessionEnd": "结束",
+		"location": "教室 / 链接",
+		"addSession": "添加场次",
+		"sessionsTitle": "排课",
+		"assignInstructors": "已分配讲师",
+		"enrollTitle": "选课（正式学员）",
+		"enrollAdd": "加入课程",
+		"removeEnrollment": "移除",
+		"instructorsTitle": "师资管理",
+		"instructorsSubtitle": "添加讲师并在课程详情中分配。",
+		"instructorName": "姓名",
+		"instructorBio": "简介",
+		"specialties": "擅长领域（逗号分隔）",
+		"addInstructor": "添加讲师",
+		"feesTitle": "收费通知",
+		"feesSubtitle": "勾选已入库学员，编辑邮件内容后批量发送（Resend）；发送时间会写入学员记录。",
+		"feeSubject": "邮件主题",
+		"feeBody": "正文（纯文本，必填）",
+		"feeHtml": "HTML 正文（可选）",
+		"feeCardDesc": "编辑邮件正文后，在下方表格中勾选学员并发送。",
+		"sendFeeConfirmTitle": "确认发送缴费邮件？",
+		"sendFeeConfirmDesc": "将向选中的 {count} 位学员发送邮件。",
+		"sendFee": "发送邮件",
+		"feeResult": "已发送 {sent} 封，失败 {failed} 封",
+		"colPayment": "缴费",
+		"markPaid": "标记已缴费",
+		"markUnpaid": "标记未缴费",
+		"envHint": "配置 SUPABASE_SERVICE_ROLE_KEY、RESEND_API_KEY、RESEND_FROM_EMAIL、ADMIN_JWT_SECRET 后方可使用登录与 API。"
+	},
+	"AdminAuth": {
+		"title": "管理员登录",
+		"subtitle": "使用管理员邮箱接收验证码（Resend）。",
+		"emailLabel": "邮箱",
+		"sendCode": "发送验证码",
+		"sending": "发送中…",
+		"codeSentHint": "若该邮箱已授权为管理员，您将收到一封邮件。",
+		"codeHint": "请输入发送至 {email} 的 6 位验证码。",
+		"codeLabel": "验证码",
+		"verify": "验证并登录",
+		"verifying": "验证中…",
+		"back": "更换邮箱",
+		"backSite": "返回首页",
+		"errorGeneric": "请求失败，请稍后重试。",
+		"invalidCode": "验证码无效或已过期。"
+	}
+}

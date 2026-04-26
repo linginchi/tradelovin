@@ -1,0 +1,469 @@
+{
+	"Metadata": {
+		"siteTitle": "Tradelovin — Unlock Your Trading Talent",
+		"siteDescription": "Gamified trading education: courses, drills, and instant feedback to help you grow.",
+		"registerTitle": "Course Registration · Tradelovin",
+		"registerDescription": "Submit your details to join our intraday trading program."
+	},
+	"Nav": {
+		"mainLabel": "Main navigation",
+		"about": "About",
+		"myScores": "My Scores",
+		"myProfile": "Profile"
+	},
+	"LanguageSwitcher": {
+		"label": "Language",
+		"zh": "简体",
+		"en": "English"
+	},
+	"Common": {
+		"brand": "Tradelovin",
+		"backHome": "Back to home",
+		"comingSoon": "Coming soon"
+	},
+	"Home": {
+		"badge": "Tradelovin · Gamified trading learning",
+		"title": "Tradelovin — Unlock your trading talent",
+		"subtitle": "Nothing can stop your drive to become a great trader",
+		"ctaTrading": "Open learning terminal",
+		"ctaRegister": "Register now",
+		"promoKicker": "Highlights",
+		"promoTitle": "Curriculum & mentors",
+		"promoSubtitle": "Glassmorphism cards with hover motion; tabs on small screens, side‑by‑side on desktop.",
+		"promoTablist": "Promo tabs",
+		"honorTitle": "Alumni spotlight",
+		"honorSubtitle": "Sample outcomes and roles (demo content)",
+		"honorInitial": "T",
+		"courseCardTitle": "Programs",
+		"courseCardSubtitle": "Core tracks",
+		"mentorCardTitle": "Mentors",
+		"mentorCardSubtitle": "Practice‑first coaching",
+		"highlights": [
+			{
+				"title": "Structured curriculum",
+				"desc": "A clear path from basics to advanced topics—big ideas broken into small, actionable steps.",
+				"tag": "Systematic"
+			},
+			{
+				"title": "Hands‑on drills",
+				"desc": "Simulations and scenario tasks so you can rehearse execution with limited risk.",
+				"tag": "Practice"
+			},
+			{
+				"title": "Instant feedback",
+				"desc": "Every action gets a clear score and guidance—know your strengths and what to train next.",
+				"tag": "Measurable"
+			}
+		],
+		"promoTabs": [
+			{ "id": "courses", "label": "Curriculum" },
+			{ "id": "mentors", "label": "Mentors" }
+		],
+		"courseTracks": [
+			{
+				"title": "Foundations",
+				"desc": "Terminology, charts, rhythm, and risk boundaries—build a repeatable daily workflow."
+			},
+			{
+				"title": "Live drills",
+				"desc": "Scenarios plus simulation—train sizing, execution, and review loops together."
+			},
+			{
+				"title": "Masterclass",
+				"desc": "Advanced playbooks and live‑market thinking for consistency and capital management."
+			}
+		],
+		"mentors": [
+			{
+				"name": "Lin Ce",
+				"role": "Head of curriculum · Intraday structure",
+				"bio": "10+ years in derivatives and intraday—turns market structure into leveled, trainable drills.",
+				"skills": ["Key levels", "Volatility rhythm", "Review methods"],
+				"initials": "LC"
+			},
+			{
+				"name": "Zhou Yan",
+				"role": "Risk advisor · Sizing & execution",
+				"bio": "Focus on psychology and discipline—helping rules become muscle memory.",
+				"skills": ["Position sizing", "Execution discipline", "Drawdown control"],
+				"initials": "ZY"
+			},
+			{
+				"name": "Shen Lan",
+				"role": "Drill coach · Scenarios",
+				"bio": "Designs high‑intensity simulations so mistakes happen in class—not in real accounts.",
+				"skills": ["Simulations", "Pressure scenarios", "Feedback loops"],
+				"initials": "SL"
+			}
+		],
+		"honorGraduates": [
+			{
+				"name": "Student · Qinglan",
+				"destination": "Top proprietary desk",
+				"role": "Intraday trader",
+				"achievement": "Passed evaluation in 3 months and runs a desk strategy pod"
+			},
+			{
+				"name": "Student · Beichen",
+				"destination": "Asset manager · Quant research",
+				"role": "Analyst (derivatives)",
+				"achievement": "Contributed to futures arbitrage and vol research projects"
+			},
+			{
+				"name": "Student · Hupo",
+				"destination": "Independent trading",
+				"role": "Independent trader",
+				"achievement": "Built a personal risk framework, stable for two quarters"
+			},
+			{
+				"name": "Student · Lichuan",
+				"destination": "Family office",
+				"role": "Investment associate (macro)",
+				"achievement": "Helped build intraday + swing tactical portfolios"
+			},
+			{
+				"name": "Student · Xingzhu",
+				"destination": "Brokerage proprietary desk",
+				"role": "Market making & arb assistant",
+				"achievement": "Completed live rotation and internal risk certification"
+			}
+		]
+	},
+	"RegisterPage": {
+		"back": "← Back to home"
+	},
+	"Registration": {
+		"title": "Course registration",
+		"intro": "We’ll reach out after you submit. Fields marked * are required.",
+		"realName": "Legal name",
+		"realNameHint": "(optional, encouraged)",
+		"nickname": "Nickname",
+		"nicknameHint": "(shown in the app)",
+		"email": "Email",
+		"phone": "Phone",
+		"phoneHint": "(optional)",
+		"experienceLegend": "Trading experience",
+		"stylesLegend": "Style preferences",
+		"stylesHint": "(multi‑select, optional; up to 3)",
+		"stylesCounter": "Intraday style picks: {count} / 3 selected (max 3).",
+		"learningGoals": "Learning goals",
+		"learningGoalsHint": "(optional)",
+		"learningGoalsPlaceholder": "e.g. Build a stable intraday review habit within 3 months…",
+		"recommendLegend": "May we recommend related courses or events?",
+		"submit": "Submit",
+		"submitting": "Submitting…",
+		"success": "Submitted—thank you!",
+		"errors": {
+			"nicknameRequired": "Please enter a nickname (used in the app)",
+			"emailRequired": "Please enter your email",
+			"emailInvalid": "Please enter a valid email",
+			"stylesMax": "Choose at most 3 styles",
+			"supabaseMissing": "Supabase is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+			"submitFailed": "Submit failed. Ensure the registrations table exists and columns match."
+		},
+		"experience": {
+			"none": "No live experience",
+			"lt_1y": "Less than 1 year",
+			"y1_3": "1–3 years",
+			"gt_3": "3+ years",
+			"professional": "Professional / related background"
+		},
+		"recommend": {
+			"yes": "Yes",
+			"no": "No"
+		},
+		"styles": [
+			{
+				"value": "trend_following",
+				"label": "Trend following",
+				"description": "Trade with momentum on intraday trends"
+			},
+			{
+				"value": "reversal",
+				"label": "Mean reversion",
+				"description": "Look for turns around stretched levels"
+			},
+			{
+				"value": "breakout",
+				"label": "Breakout",
+				"description": "Follow decisive breaks of key ranges"
+			},
+			{
+				"value": "range_bound",
+				"label": "Range trading",
+				"description": "Fade extremes between support and resistance"
+			},
+			{
+				"value": "scalping",
+				"label": "Scalping",
+				"description": "Very short holds targeting small edges"
+			},
+			{
+				"value": "order_book",
+				"label": "Order flow",
+				"description": "Decisions based on depth and tape behavior"
+			},
+			{
+				"value": "quant",
+				"label": "Quant / systematic",
+				"description": "Models and automation to assist decisions"
+			},
+			{
+				"value": "undecided",
+				"label": "Not sure yet",
+				"description": "No clear preference for now"
+			}
+		]
+	},
+	"About": {
+		"kicker": "Tradelovin",
+		"title": "About us",
+		"p1Before": "Tradelovin focuses on ",
+		"p1Strong": "intraday trading education",
+		"p1After": "—turning charts and rules into leveled, measurable learning. We believe trading skill can be “leveled up” like a game—through structured lessons, drills, and instant feedback, learners build execution and risk habits in a low‑risk environment.",
+		"p2Before": "We emphasize a ",
+		"p2Tech": "modern product feel",
+		"p2And": " and ",
+		"p2Game": "gamified learning",
+		"p2After": ": visible progress and tangible wins so every practice session has direction—whether you’re new or leveling up.",
+		"teamTitle": "Team & philosophy",
+		"teamBody": "Our core team blends traders, educators, and product builders—continuously iterating on content and drill tools. We value review culture, risk boundaries, and execution—we don’t promise get‑rich shortcuts; we teach repeatable training methods.",
+		"contactTitle": "Contact",
+		"contactPrefix": "Business & partnerships:",
+		"contactNote": "(placeholder email—replace later)"
+	},
+	"MyProfile": {
+		"title": "Profile",
+		"subtitle": "Account, courses, and job pipeline (demo data)",
+		"profileTitle": "Account",
+		"nickname": "Nickname",
+		"email": "Email",
+		"phone": "Phone",
+		"coursesTitle": "Enrolled courses",
+		"jobTitle": "Job pipeline",
+		"demoNickname": "Snow Leopard Student · Demo",
+		"demoEmail": "demo@tradelovin.example",
+		"demoPhone": "138****0000",
+		"enrolled": [
+			{
+				"name": "Intraday foundations",
+				"progress": "In progress · week 4",
+				"status": "Learning"
+			},
+			{
+				"name": "Advanced live lab",
+				"progress": "Not started",
+				"status": "Upcoming"
+			}
+		],
+		"jobs": [
+			{
+				"company": "Prop desk (sample)",
+				"steps": ["Resume screen", "Trading eval", "Interview", "Offer"],
+				"current": 2
+			},
+			{
+				"company": "Asset manager A",
+				"steps": ["Resume screen", "Written test", "Interview"],
+				"current": 1
+			},
+			{
+				"company": "Independent path",
+				"steps": ["Plan submission", "Sim review", "Intent to sign"],
+				"current": 0
+			}
+		],
+		"myCoursesLink": "My schedule",
+		"adminLink": "Admin"
+	},
+	"MyScores": {
+		"title": "My scores",
+		"subtitle": "Demo data for layout preview. After login and API integration, only you will see real results.",
+		"profileTitle": "Skill profile",
+		"profileHint": "Radar + dimension bars (mock)",
+		"radarLabel": "Skill radar (demo data)",
+		"examTitle": "Exam results",
+		"axes": [
+			{ "key": "Technical", "value": 85 },
+			{ "key": "Risk", "value": 72 },
+			{ "key": "Mindset", "value": 68 },
+			{ "key": "Execution", "value": 90 },
+			{ "key": "Review", "value": 79 }
+		],
+		"exams": [
+			{ "name": "Intraday structure & levels", "score": 88, "grade": "Strong", "date": "2026-04-12" },
+			{ "name": "Risk & position sizing", "score": 76, "grade": "Good", "date": "2026-04-01" },
+			{ "name": "Execution discipline sim", "score": 92, "grade": "Excellent", "date": "2026-03-18" }
+		]
+	},
+	"MyCourses": {
+		"title": "My schedule",
+		"subtitle": "Upcoming classes for the signed‑in student (demo data, sorted by date).",
+		"modeOnline": "Online",
+		"modeOffline": "Offline",
+		"date": "Date",
+		"time": "Time",
+		"instructor": "Instructor",
+		"location": "Room / link",
+		"empty": "No classes scheduled.",
+		"schedule": [
+			{
+				"id": "1",
+				"courseName": "Intraday structure · foundations",
+				"mode": "online",
+				"date": "2026-04-28",
+				"startTime": "19:00",
+				"endTime": "21:00",
+				"instructor": "Lin Ce",
+				"location": "Tencent Meeting · details TBA"
+			},
+			{
+				"id": "2",
+				"courseName": "Live execution lab",
+				"mode": "offline",
+				"date": "2026-05-02",
+				"startTime": "14:00",
+				"endTime": "17:00",
+				"instructor": "Shen Lan",
+				"location": "Shanghai · Lab room A"
+			},
+			{
+				"id": "3",
+				"courseName": "Risk & position management",
+				"mode": "online",
+				"date": "2026-05-05",
+				"startTime": "19:30",
+				"endTime": "21:30",
+				"instructor": "Zhou Yan",
+				"location": "Zoom · link emailed before class"
+			}
+		]
+	},
+	"Admin": {
+		"title": "Admin",
+		"subtitle": "Operations: students and admins (sign-in required).",
+		"registrations": "Registrations",
+		"registrationsHint": "View and edit registrations under Students.",
+		"schedules": "Scheduling",
+		"schedulesHint": "Room assignment and scheduling can be integrated in a later release.",
+		"back": "Back to site home",
+		"navDashboard": "Overview",
+		"navMenu": "Admin menu",
+		"navStudents": "Students",
+		"navAdmins": "Admins",
+		"logout": "Sign out",
+		"editRegistration": "Edit registration",
+		"studentsTitle": "Students",
+		"studentsSubtitle": "Search, filter, and edit registrations; assign student IDs after enrollment.",
+		"searchPlaceholder": "Name, nickname, or email…",
+		"filterStatus": "Status",
+		"filterAll": "All",
+		"status_pending": "Pending",
+		"status_approved": "Approved",
+		"status_rejected": "Rejected",
+		"payment_paid": "Paid",
+		"payment_unpaid": "Unpaid",
+		"payment_refunded": "Refunded",
+		"colCreated": "Submitted",
+		"colNickname": "Nickname",
+		"colRealName": "Legal name",
+		"colEmail": "Email",
+		"colPhone": "Phone",
+		"colStudentId": "Student ID",
+		"colStatus": "Status",
+		"actions": "Actions",
+		"edit": "Edit",
+		"save": "Save",
+		"cancel": "Cancel",
+		"address": "Address",
+		"learningGoals": "Learning goals",
+		"loadError": "Failed to load",
+		"saveError": "Failed to save",
+		"saved": "Saved",
+		"empty": "No rows",
+		"adminsTitle": "Administrators",
+		"adminsSubtitle": "Super admins can add or remove admin accounts.",
+		"addAdmin": "Add admin",
+		"inviteTitle": "Invite administrator",
+		"inviteSubtitle": "New accounts are created as admin only. Super admin is assigned on first login for the bootstrap email.",
+		"confirmRemoveTitle": "Remove administrator?",
+		"confirmRemoveBody": "This revokes admin access for {email}. This cannot be undone.",
+		"adminEmail": "Email",
+		"roleField": "Role",
+		"roleAdmin": "Admin",
+		"roleSuper": "Super admin",
+		"remove": "Remove",
+		"confirmRemove": "Remove this administrator?",
+		"confirmDelete": "Delete this item?",
+		"forbiddenAdmins": "Super admin only.",
+		"navReviews": "Reviews",
+		"navCourses": "Courses",
+		"navInstructors": "Faculty",
+		"navFees": "Fees",
+		"reviewsTitle": "Registration review",
+		"reviewsSubtitle": "Pending applications: approving generates student ID (BDxxxx) and creates the student record.",
+		"approve": "Approve",
+		"reject": "Reject",
+		"rejectReason": "Reason",
+		"rejectDialogDesc": "The registration will be marked as rejected with this note.",
+		"colRejection": "Rejection note",
+		"coursesTitle": "Courses",
+		"coursesSubtitle": "Manage courses, sessions, faculty, and enrollment counts.",
+		"coursesFormDesc": "After creating a course, open its detail page for sessions, instructor, and roster.",
+		"newCourse": "New course",
+		"courseName": "Name",
+		"courseDesc": "Description",
+		"courseMode": "Mode",
+		"modeOnline": "Online",
+		"modeOffline": "Offline",
+		"capacity": "Capacity",
+		"enrollmentCount": "Enrolled",
+		"goDetail": "Schedule / detail",
+		"sessionDate": "Date",
+		"sessionStart": "Start",
+		"sessionEnd": "End",
+		"location": "Room / link",
+		"addSession": "Add session",
+		"sessionsTitle": "Schedule",
+		"assignInstructors": "Assigned faculty",
+		"enrollTitle": "Enroll students",
+		"enrollAdd": "Add to course",
+		"removeEnrollment": "Remove",
+		"instructorsTitle": "Faculty",
+		"instructorsSubtitle": "Maintain instructors and assign them on each course page.",
+		"instructorName": "Name",
+		"instructorBio": "Bio",
+		"specialties": "Specialties (comma-separated)",
+		"addInstructor": "Add instructor",
+		"feesTitle": "Fee notices",
+		"feesSubtitle": "Select enrolled students, edit the message, and send via Resend. Sent time is stored on the student record.",
+		"feeSubject": "Subject",
+		"feeBody": "Plain text (required)",
+		"feeHtml": "HTML body (optional)",
+		"feeCardDesc": "Compose the message, select students in the table below, then send.",
+		"sendFeeConfirmTitle": "Send fee notice emails?",
+		"sendFeeConfirmDesc": "This will email {count} selected student(s).",
+		"sendFee": "Send emails",
+		"feeResult": "Sent {sent}, failed {failed}",
+		"colPayment": "Payment",
+		"markPaid": "Mark paid",
+		"markUnpaid": "Mark unpaid",
+		"envHint": "Set SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, and ADMIN_JWT_SECRET for login and APIs."
+	},
+	"AdminAuth": {
+		"title": "Admin sign-in",
+		"subtitle": "Email one-time code via Resend.",
+		"emailLabel": "Email",
+		"sendCode": "Send code",
+		"sending": "Sending…",
+		"codeSentHint": "If your email is authorized, you will receive a message.",
+		"codeHint": "Enter the 6-digit code sent to {email}.",
+		"codeLabel": "Code",
+		"verify": "Verify & sign in",
+		"verifying": "Verifying…",
+		"back": "Change email",
+		"backSite": "Back to home",
+		"errorGeneric": "Something went wrong. Try again.",
+		"invalidCode": "Invalid or expired code."
+	}
+}

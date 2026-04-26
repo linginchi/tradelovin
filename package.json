@@ -18,6 +18,7 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.4.1",
+		"@hookform/resolvers": "^5.2.2",
 		"@opennextjs/cloudflare": "^1.19.4",
 		"@supabase/supabase-js": "^2.104.1",
 		"class-variance-authority": "^0.7.1",
@@ -26,6 +27,7 @@
 		"jose": "^6.2.2",
 		"lucide-react": "^1.9.0",
 		"next": "16.2.4",
+		"next-intl": "^4.9.1",
 		"react": "19.2.4",
 		"react-dom": "19.2.4",
 		"react-hook-form": "^7.73.1",

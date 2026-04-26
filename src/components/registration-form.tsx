@@ -2,54 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslations } from "next-intl";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
-
-export const TRADING_STYLE_OPTIONS = [
-	{
-		value: "trend_following",
-		label: "趋势追踪",
-		description: "顺势而为，捕捉日内单边行情",
-	},
-	{
-		value: "reversal",
-		label: "反转策略",
-		description: "寻找超买超卖区域的拐点机会",
-	},
-	{
-		value: "breakout",
-		label: "突破交易",
-		description: "关键价格区间突破时跟进",
-	},
-	{
-		value: "range_bound",
-		label: "区间震荡",
-		description: "压力支撑位之间高抛低吸",
-	},
-	{
-		value: "scalping",
-		label: "高频/剥头皮",
-		description: "快速进出，赚取微小价差",
-	},
-	{
-		value: "order_book",
-		label: "盘口分析",
-		description: "基于订单流和盘口数据的决策",
-	},
-	{
-		value: "quant",
-		label: "量化/程序化",
-		description: "用代码和模型辅助交易决策",
-	},
-	{
-		value: "undecided",
-		label: "还不确定",
-		description: "暂时没有明确偏好",
-	},
-] as const;
 
 const tradingStyleValueEnum = z.enum([
 	"trend_following",
@@ -72,40 +30,52 @@ const experienceValues = [
 
 const recommendValues = ["yes", "no"] as const;
 
-const registrationSchema = z.object({
-	real_name: z.string().optional(),
-	nickname: z.string().min(1, "请填写昵称（将用于站内展示）"),
-	email: z.string().min(1, "请填写邮箱").email("请输入有效邮箱"),
-	phone: z.string().optional(),
-	trading_experience: z.enum(experienceValues),
-	trading_style_preferences: z
-		.array(tradingStyleValueEnum)
-		.max(3, "最多选择 3 项"),
-	learning_goals: z.string().optional(),
-	willing_to_recommend: z.enum(recommendValues),
-});
-
-export type RegistrationFormValues = z.infer<typeof registrationSchema>;
-
-const experienceLabels: Record<(typeof experienceValues)[number], string> = {
-	none: "无实盘经验",
-	lt_1y: "少于 1 年",
-	y1_3: "1–3 年",
-	gt_3: "3 年以上",
-	professional: "从业 / 相关专业背景",
+export type RegistrationFormValues = {
+	real_name?: string;
+	nickname: string;
+	email: string;
+	phone?: string;
+	trading_experience: (typeof experienceValues)[number];
+	trading_style_preferences: Array<z.infer<typeof tradingStyleValueEnum>>;
+	learning_goals?: string;
+	willing_to_recommend: (typeof recommendValues)[number];
 };
 
-const recommendLabels: Record<(typeof recommendValues)[number], string> = {
-	yes: "愿意",
-	no: "不愿意",
-};
+function buildRegistrationSchema(t: (key: string) => string) {
+	return z.object({
+		real_name: z.string().optional(),
+		nickname: z.string().min(1, t("errors.nicknameRequired")),
+		email: z.string().min(1, t("errors.emailRequired")).email(t("errors.emailInvalid")),
+		phone: z.string().optional(),
+		trading_experience: z.enum(experienceValues),
+		trading_style_preferences: z
+			.array(tradingStyleValueEnum)
+			.max(3, t("errors.stylesMax")),
+		learning_goals: z.string().optional(),
+		willing_to_recommend: z.enum(recommendValues),
+	});
+}
 
 export function RegistrationForm() {
+	const t = useTranslations("Registration");
+	const tExp = useTranslations("Registration.experience");
+	const tRec = useTranslations("Registration.recommend");
 	const [submitError, setSubmitError] = useState<string | null>(null);
 	const [submitOk, setSubmitOk] = useState(false);
 	const [fieldErrors, setFieldErrors] = useState<
 		Partial<Record<keyof RegistrationFormValues, string>>
 	>({});
+
+	const registrationSchema = useMemo(() => buildRegistrationSchema(t), [t]);
+	const styleOptions = useMemo(
+		() =>
+			t.raw("styles") as Array<{
+				value: z.infer<typeof tradingStyleValueEnum>;
+				label: string;
+				description: string;
+			}>,
+		[t],
+	);
 
 	const defaultValues = useMemo<RegistrationFormValues>(
 		() => ({
@@ -131,7 +101,7 @@ export function RegistrationForm() {
 
 	const selectedStyles = watch("trading_style_preferences") ?? [];
 
-	const toggleStyle = (value: (typeof TRADING_STYLE_OPTIONS)[number]["value"]) => {
+	const toggleStyle = (value: z.infer<typeof tradingStyleValueEnum>) => {
 		const next = new Set(selectedStyles);
 		if (next.has(value)) {
 			next.delete(value);
@@ -165,9 +135,7 @@ export function RegistrationForm() {
 
 		const supabase = getSupabaseBrowserClient();
 		if (!supabase) {
-			setSubmitError(
-				"未配置 Supabase：请在环境变量中设置 NEXT_PUBLIC_SUPABASE_URL 与 NEXT_PUBLIC_SUPABASE_ANON_KEY。",
-			);
+			setSubmitError(t("errors.supabaseMissing"));
 			return;
 		}
 
@@ -180,15 +148,13 @@ export function RegistrationForm() {
 			trading_style_preferences: parsed.data.trading_style_preferences,
 			learning_goals: parsed.data.learning_goals?.trim() || null,
 			willing_to_recommend: parsed.data.willing_to_recommend === "yes",
+			status: "pending" as const,
 		};
 
 		const { error } = await supabase.from("registrations").insert(row);
 
 		if (error) {
-			setSubmitError(
-				error.message ||
-					"提交失败。请确认 Supabase 已创建表 registrations，且列与类型匹配。",
-			);
+			setSubmitError(error.message || t("errors.submitFailed"));
 			return;
 		}
 
@@ -202,16 +168,14 @@ export function RegistrationForm() {
 			noValidate
 		>
 			<div className="space-y-1">
-				<h1 className="text-xl font-semibold tracking-tight">课程报名</h1>
-				<p className="text-muted-foreground text-sm">
-					填写信息后我们会与你联系。标 * 为必填。
-				</p>
+				<h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
+				<p className="text-muted-foreground text-sm">{t("intro")}</p>
 			</div>
 
 			<div className="space-y-2">
 				<label className="text-sm font-medium" htmlFor="real_name">
-					真实姓名{" "}
-					<span className="text-muted-foreground font-normal">（选填，鼓励填写）</span>
+					{t("realName")}{" "}
+					<span className="text-muted-foreground font-normal">{t("realNameHint")}</span>
 				</label>
 				<input
 					id="real_name"
@@ -224,8 +188,8 @@ export function RegistrationForm() {
 
 			<div className="space-y-2">
 				<label className="text-sm font-medium" htmlFor="nickname">
-					昵称 <span className="text-destructive">*</span>
-					<span className="text-muted-foreground font-normal">（站内显示）</span>
+					{t("nickname")} <span className="text-destructive">*</span>
+					<span className="text-muted-foreground font-normal">{t("nicknameHint")}</span>
 				</label>
 				<input
 					id="nickname"
@@ -241,7 +205,7 @@ export function RegistrationForm() {
 
 			<div className="space-y-2">
 				<label className="text-sm font-medium" htmlFor="email">
-					邮箱 <span className="text-destructive">*</span>
+					{t("email")} <span className="text-destructive">*</span>
 				</label>
 				<input
 					id="email"
@@ -257,8 +221,8 @@ export function RegistrationForm() {
 
 			<div className="space-y-2">
 				<label className="text-sm font-medium" htmlFor="phone">
-					手机号{" "}
-					<span className="text-muted-foreground font-normal">（选填）</span>
+					{t("phone")}{" "}
+					<span className="text-muted-foreground font-normal">{t("phoneHint")}</span>
 				</label>
 				<input
 					id="phone"
@@ -271,7 +235,7 @@ export function RegistrationForm() {
 
 			<fieldset className="space-y-3">
 				<legend className="text-sm font-medium">
-					交易经验 <span className="text-destructive">*</span>
+					{t("experienceLegend")} <span className="text-destructive">*</span>
 				</legend>
 				<div className="flex flex-col gap-2">
 					{experienceValues.map((v) => (
@@ -285,7 +249,7 @@ export function RegistrationForm() {
 								className="text-primary"
 								{...register("trading_experience")}
 							/>
-							{experienceLabels[v]}
+							{tExp(v)}
 						</label>
 					))}
 				</div>
@@ -296,16 +260,14 @@ export function RegistrationForm() {
 
 			<fieldset className="space-y-3">
 				<legend className="text-sm font-medium">
-					交易风格偏好{" "}
-					<span className="text-muted-foreground font-normal">
-						（多选，选填；最多 3 项）
-					</span>
+					{t("stylesLegend")}{" "}
+					<span className="text-muted-foreground font-normal">{t("stylesHint")}</span>
 				</legend>
 				<p className="text-muted-foreground text-xs">
-					日内交易专项策略：已选 {selectedStyles.length} / 3，最多可选 3 项。
+					{t("stylesCounter", { count: selectedStyles.length })}
 				</p>
 				<div className="flex flex-col gap-2">
-					{TRADING_STYLE_OPTIONS.map((opt) => {
+					{styleOptions.map((opt) => {
 						const checked = selectedStyles.includes(opt.value);
 						const disabled = !checked && selectedStyles.length >= 3;
 						return (
@@ -343,21 +305,21 @@ export function RegistrationForm() {
 
 			<div className="space-y-2">
 				<label className="text-sm font-medium" htmlFor="learning_goals">
-					学习目标{" "}
-					<span className="text-muted-foreground font-normal">（选填）</span>
+					{t("learningGoals")}{" "}
+					<span className="text-muted-foreground font-normal">{t("learningGoalsHint")}</span>
 				</label>
 				<textarea
 					id="learning_goals"
 					rows={4}
 					className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[100px] w-full rounded-md border px-3 py-2 text-sm shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-					placeholder="例如：希望三个月内建立稳定的日内复盘习惯……"
+					placeholder={t("learningGoalsPlaceholder")}
 					{...register("learning_goals")}
 				/>
 			</div>
 
 			<fieldset className="space-y-3">
 				<legend className="text-sm font-medium">
-					是否愿意被推荐相关课程 / 活动 <span className="text-destructive">*</span>
+					{t("recommendLegend")} <span className="text-destructive">*</span>
 				</legend>
 				<div className="flex flex-col gap-2">
 					{recommendValues.map((v) => (
@@ -371,7 +333,7 @@ export function RegistrationForm() {
 								className="text-primary"
 								{...register("willing_to_recommend")}
 							/>
-							{recommendLabels[v]}
+							{tRec(v)}
 						</label>
 					))}
 				</div>
@@ -388,13 +350,11 @@ export function RegistrationForm() {
 				</p>
 			)}
 			{submitOk && (
-				<p className="text-sm text-emerald-600 dark:text-emerald-400">
-					提交成功，感谢报名！
-				</p>
+				<p className="text-sm text-emerald-600 dark:text-emerald-400">{t("success")}</p>
 			)}
 
 			<Button type="submit" disabled={isSubmitting} className="w-full md:w-auto">
-				{isSubmitting ? "提交中…" : "提交报名"}
+				{isSubmitting ? t("submitting") : t("submit")}
 			</Button>
 		</form>
 	);
