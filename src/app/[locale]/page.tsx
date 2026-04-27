@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 import { LazyWhenVisible } from "@/components/LazyWhenVisible";
-import { RecruitingStickyNote } from "@/components/home/RecruitingStickyNote";
+import { UpcomingCourseTeaser } from "@/components/home/UpcomingCourseTeaser";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -94,7 +94,7 @@ export default function Home() {
 				</motion.div>
 
 				<div className="flex w-full justify-center">
-					<RecruitingStickyNote />
+					<UpcomingCourseTeaser />
 				</div>
 
 				<motion.div

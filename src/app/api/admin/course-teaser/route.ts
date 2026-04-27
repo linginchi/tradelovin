@@ -5,18 +5,10 @@ import { requireSuperAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const putSchema = z.object({
-	title: z.string().min(1),
-	description: z.string().optional().nullable(),
-	start_date: z
-		.string()
-		.regex(/^\d{4}-\d{2}-\d{2}$/)
-		.optional()
-		.nullable(),
-	enrollment_url: z.string().min(1).default("/register"),
+	content: z.string().min(1),
 	is_active: z.boolean().default(true),
 });
 
-/** 超级管理员：读取当前编辑用的一条记录（按 updated_at 最新） */
 export async function GET() {
 	const gated = await requireSuperAdminSession();
 	if (gated instanceof NextResponse) return gated;
@@ -27,8 +19,8 @@ export async function GET() {
 	}
 
 	const { data, error } = await supabase
-		.from("recruiting_info")
-		.select("id, course_id, title, description, start_date, enrollment_url, is_active, updated_at")
+		.from("course_teaser")
+		.select("id, content, is_active, updated_at")
 		.order("updated_at", { ascending: false })
 		.limit(1)
 		.maybeSingle();
@@ -37,7 +29,7 @@ export async function GET() {
 		return NextResponse.json({ error: error.message }, { status: 500 });
 	}
 
-	return NextResponse.json({ recruiting: data ?? null });
+	return NextResponse.json({ teaser: data ?? null });
 }
 
 export async function PUT(req: Request) {
@@ -63,34 +55,39 @@ export async function PUT(req: Request) {
 
 	const now = new Date().toISOString();
 	const payload = {
-		title: parsed.data.title,
-		description: parsed.data.description ?? null,
-		start_date: parsed.data.start_date ?? null,
-		enrollment_url: parsed.data.enrollment_url,
+		content: parsed.data.content.trim(),
 		is_active: parsed.data.is_active,
 		updated_at: now,
 	};
 
-	const { data: existing } = await supabase.from("recruiting_info").select("id").limit(1).maybeSingle();
+	const { data: existing } = await supabase
+		.from("course_teaser")
+		.select("id")
+		.limit(1)
+		.maybeSingle();
 
 	if (existing?.id) {
 		const { data, error } = await supabase
-			.from("recruiting_info")
+			.from("course_teaser")
 			.update(payload)
 			.eq("id", existing.id)
-			.select()
+			.select("id, content, is_active, updated_at")
 			.single();
 
 		if (error) {
 			return NextResponse.json({ error: error.message }, { status: 500 });
 		}
-		return NextResponse.json({ recruiting: data });
+		return NextResponse.json({ teaser: data });
 	}
 
-	const { data, error } = await supabase.from("recruiting_info").insert(payload).select().single();
+	const { data, error } = await supabase
+		.from("course_teaser")
+		.insert(payload)
+		.select("id, content, is_active, updated_at")
+		.single();
 
 	if (error) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
 	}
-	return NextResponse.json({ recruiting: data });
+	return NextResponse.json({ teaser: data });
 }

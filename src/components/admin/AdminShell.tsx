@@ -12,7 +12,7 @@ import {
 	Mail,
 	Menu,
 	Shield,
-	StickyNote,
+	Sparkles,
 	UserCircle,
 	Users,
 } from "lucide-react";
@@ -47,9 +47,9 @@ export function AdminShell({ role, email, children }: Props) {
 
 	if (role === "super_admin") {
 		items.push({
-			href: `${ADMIN_BASE_PATH}/recruiting`,
-			label: t("navRecruiting"),
-			icon: StickyNote,
+			href: `${ADMIN_BASE_PATH}/course-teaser`,
+			label: t("navCourseTeaser"),
+			icon: Sparkles,
 		});
 	}
 
