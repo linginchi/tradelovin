@@ -5,8 +5,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-
 type Props = {
 	params: Promise<{ locale: string }>;
 };
@@ -27,10 +25,6 @@ export default async function AboutPage({ params }: Props) {
 				aria-hidden
 			>
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-15%,oklch(0.55_0.18_195/0.35),transparent)]" />
-			</div>
-
-			<div className="absolute right-4 top-4 z-20 md:right-8 md:top-6">
-				<LanguageSwitcher />
 			</div>
 
 			<div className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-6 py-10 md:py-16">

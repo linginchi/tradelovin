@@ -1,7 +1,6 @@
 import { ArrowLeft, Calendar, Clock, Link2, MapPin, User } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import type { EnrolledCourse } from "@/lib/course-schedule";
@@ -39,10 +38,6 @@ export default async function MyCoursesPage({ params }: Props) {
 				aria-hidden
 			>
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_65%_45%_at_50%_0%,oklch(0.52_0.16_200/0.28),transparent)]" />
-			</div>
-
-			<div className="absolute right-4 top-4 z-20 md:right-8 md:top-6">
-				<LanguageSwitcher />
 			</div>
 
 			<div className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-6 py-10 md:py-16">

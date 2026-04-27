@@ -3,7 +3,6 @@
 import { useTranslations } from "next-intl";
 import { Info, Medal, UserRound } from "lucide-react";
 
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Link, usePathname } from "@/i18n/navigation";
 
 const ADMIN_PREFIX = "/cjkzt";
@@ -36,9 +35,6 @@ export default function MobileBottomNav() {
 			aria-label={t("mainLabel")}
 		>
 			<div className="mx-auto flex max-w-lg flex-col gap-1 px-2 pt-2 lg:max-w-none">
-				<div className="flex justify-center lg:justify-end">
-					<LanguageSwitcher variant="compact" />
-				</div>
 				<ul className="flex items-stretch justify-around gap-1 py-1 lg:gap-2 lg:py-1">
 					{items.map(({ href, label, icon: Icon }) => {
 						const active = pathname === href || pathname.startsWith(`${href}/`);

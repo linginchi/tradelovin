@@ -1,7 +1,6 @@
 import { ArrowLeft, Building2, GraduationCap } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -73,10 +72,6 @@ export default async function MyProfilePage({ params }: Props) {
 				aria-hidden
 			>
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_40%_at_20%_10%,oklch(0.5_0.16_260/0.28),transparent)]" />
-			</div>
-
-			<div className="absolute right-4 top-4 z-20 md:right-8 md:top-6">
-				<LanguageSwitcher />
 			</div>
 
 			<div className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-6 py-10 md:py-16">

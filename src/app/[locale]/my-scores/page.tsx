@@ -1,7 +1,6 @@
 import { ArrowLeft } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import MyScoresTabsClient from "@/components/scores/MyScoresTabsClient";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -31,10 +30,6 @@ export default async function MyScoresPage({ params }: Props) {
 				aria-hidden
 			>
 				<div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_50%_at_80%_0%,oklch(0.55_0.18_195/0.3),transparent)]" />
-			</div>
-
-			<div className="absolute right-4 top-4 z-20 md:right-8 md:top-6">
-				<LanguageSwitcher />
 			</div>
 
 			<div className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-6 py-10 md:py-16">
