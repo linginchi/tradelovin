@@ -28,17 +28,13 @@
 		"subtitle": "Nothing can stop your drive to become a great trader",
 		"ctaTrading": "Open learning terminal",
 		"ctaRegister": "Register now",
-		"promoKicker": "Highlights",
-		"promoTitle": "Curriculum & mentors",
-		"promoSubtitle": "Glassmorphism cards with hover motion; tabs on small screens, side‑by‑side on desktop.",
-		"promoTablist": "Promo tabs",
+		"promoKicker": "Core highlights",
+		"promoTitle": "Direct job referrals from mentors after graduation",
+		"promoSubtitle": "Mentors, curriculum, and assessment standards are closely aligned with the hiring needs of proprietary trading firms and asset management institutions. Qualified graduates receive priority referrals.",
+		"promoPartners": "Partner institutions (examples): Jianbao Asset, Six‑Second Star",
 		"honorTitle": "Alumni spotlight",
 		"honorSubtitle": "Sample outcomes and roles (demo content)",
 		"honorInitial": "T",
-		"courseCardTitle": "Programs",
-		"courseCardSubtitle": "Core tracks",
-		"mentorCardTitle": "Mentors",
-		"mentorCardSubtitle": "Practice‑first coaching",
 		"highlights": [
 			{
 				"title": "Structured curriculum",
@@ -54,47 +50,6 @@
 				"title": "Instant feedback",
 				"desc": "Every action gets a clear score and guidance—know your strengths and what to train next.",
 				"tag": "Measurable"
-			}
-		],
-		"promoTabs": [
-			{ "id": "courses", "label": "Curriculum" },
-			{ "id": "mentors", "label": "Mentors" }
-		],
-		"courseTracks": [
-			{
-				"title": "Foundations",
-				"desc": "Terminology, charts, rhythm, and risk boundaries—build a repeatable daily workflow."
-			},
-			{
-				"title": "Live drills",
-				"desc": "Scenarios plus simulation—train sizing, execution, and review loops together."
-			},
-			{
-				"title": "Masterclass",
-				"desc": "Advanced playbooks and live‑market thinking for consistency and capital management."
-			}
-		],
-		"mentors": [
-			{
-				"name": "Lin Ce",
-				"role": "Head of curriculum · Intraday structure",
-				"bio": "10+ years in derivatives and intraday—turns market structure into leveled, trainable drills.",
-				"skills": ["Key levels", "Volatility rhythm", "Review methods"],
-				"initials": "LC"
-			},
-			{
-				"name": "Zhou Yan",
-				"role": "Risk advisor · Sizing & execution",
-				"bio": "Focus on psychology and discipline—helping rules become muscle memory.",
-				"skills": ["Position sizing", "Execution discipline", "Drawdown control"],
-				"initials": "ZY"
-			},
-			{
-				"name": "Shen Lan",
-				"role": "Drill coach · Scenarios",
-				"bio": "Designs high‑intensity simulations so mistakes happen in class—not in real accounts.",
-				"skills": ["Simulations", "Pressure scenarios", "Feedback loops"],
-				"initials": "SL"
 			}
 		],
 		"honorGraduates": [

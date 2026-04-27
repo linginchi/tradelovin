@@ -29,16 +29,12 @@
 		"ctaTrading": "进入教学交易系统",
 		"ctaRegister": "立即报名",
 		"promoKicker": "核心亮点",
-		"promoTitle": "课程体系与导师团队",
-		"promoSubtitle": "深色毛玻璃卡片，悬浮动效；小屏可用 Tab 切换，大屏并排展示。",
-		"promoTablist": "宣传区切换",
+		"promoTitle": "毕业后导师直接推荐求职",
+		"promoSubtitle": "导师、课程和考核标准均紧密结合自营交易机构和资管机构的招聘需求，合格者优先推荐。",
+		"promoPartners": "合作机构示例：剑豹资产、六秒星",
 		"honorTitle": "毕业豹仔荣誉榜",
 		"honorSubtitle": "毕业学员的优秀出路与岗位（示例展示）",
 		"honorInitial": "豹",
-		"courseCardTitle": "课程介绍",
-		"courseCardSubtitle": "核心课程体系",
-		"mentorCardTitle": "导师介绍",
-		"mentorCardSubtitle": "实战派带教",
 		"highlights": [
 			{
 				"title": "结构化课程",
@@ -54,47 +50,6 @@
 				"title": "即时反馈",
 				"desc": "每一次操作都有清晰评分与提示，知道自己强在哪、下一步该练什么。",
 				"tag": "可量化"
-			}
-		],
-		"promoTabs": [
-			{ "id": "courses", "label": "课程体系" },
-			{ "id": "mentors", "label": "导师团队" }
-		],
-		"courseTracks": [
-			{
-				"title": "基础入门",
-				"desc": "术语、图表、节奏与风险边界，建立可重复的交易日流程。"
-			},
-			{
-				"title": "实战进阶",
-				"desc": "情境任务与模拟盘联动，训练执行、仓位与复盘闭环。"
-			},
-			{
-				"title": "大师班",
-				"desc": "高阶策略拆解与实盘思维陪练，面向稳定盈利与资金管理。"
-			}
-		],
-		"mentors": [
-			{
-				"name": "林策",
-				"role": "首席教研 · 日内结构",
-				"bio": "十年+衍生品与日内经验，擅长把行情结构讲成可练的「关卡」。",
-				"skills": ["关键位", "波动节奏", "复盘方法"],
-				"initials": "林"
-			},
-			{
-				"name": "周砚",
-				"role": "风控顾问 · 仓位与执行",
-				"bio": "专注交易心理与执行纪律，帮学员把规则固化成肌肉记忆。",
-				"skills": ["仓位管理", "执行纪律", "回撤控制"],
-				"initials": "周"
-			},
-			{
-				"name": "沈澜",
-				"role": "实战导师 · 情境演练",
-				"bio": "设计高强度模拟任务，让错误发生在课堂里而不是真实账户。",
-				"skills": ["模拟演练", "情境压力", "反馈闭环"],
-				"initials": "沈"
 			}
 		],
 		"honorGraduates": [

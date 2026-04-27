@@ -29,16 +29,12 @@
 		"ctaTrading": "進入教學交易系統",
 		"ctaRegister": "立即報名",
 		"promoKicker": "核心亮點",
-		"promoTitle": "課程體系與導師團隊",
-		"promoSubtitle": "深色毛玻璃卡片，懸浮動效；小屏可用 Tab 切換，大屏並排展示。",
-		"promoTablist": "宣傳區切換",
+		"promoTitle": "畢業後導師直接推薦求職",
+		"promoSubtitle": "導師、課程和考核標準均緊密結合自營交易機構和資管機構的招聘需求，合格者優先推薦。",
+		"promoPartners": "合作機構示例：劍豹資產、六秒星",
 		"honorTitle": "畢業豹仔榮譽榜",
 		"honorSubtitle": "畢業學員的優秀出路與崗位（示例展示）",
 		"honorInitial": "豹",
-		"courseCardTitle": "課程介紹",
-		"courseCardSubtitle": "核心課程體系",
-		"mentorCardTitle": "導師介紹",
-		"mentorCardSubtitle": "實戰派帶教",
 		"highlights": [
 			{
 				"title": "結構化課程",
@@ -54,65 +50,6 @@
 				"title": "即時反饋",
 				"desc": "每一次操作都有清晰評分與提示，知道自己強在哪、下一步該練什麼。",
 				"tag": "可量化"
-			}
-		],
-		"promoTabs": [
-			{
-				"id": "courses",
-				"label": "課程體系"
-			},
-			{
-				"id": "mentors",
-				"label": "導師團隊"
-			}
-		],
-		"courseTracks": [
-			{
-				"title": "基礎入門",
-				"desc": "術語、圖表、節奏與風險邊界，建立可重複的交易日流程。"
-			},
-			{
-				"title": "實戰進階",
-				"desc": "情境任務與模擬盤聯動，訓練執行、倉位與覆盤閉環。"
-			},
-			{
-				"title": "大師班",
-				"desc": "高階策略拆解與實盤思維陪練，面向穩定盈利與資金管理。"
-			}
-		],
-		"mentors": [
-			{
-				"name": "林策",
-				"role": "首席教研 · 日內結構",
-				"bio": "十年+衍生品與日內經驗，擅長把行情結構講成可練的「關卡」。",
-				"skills": [
-					"關鍵位",
-					"波動節奏",
-					"覆盤方法"
-				],
-				"initials": "林"
-			},
-			{
-				"name": "周硯",
-				"role": "風控顧問 · 倉位與執行",
-				"bio": "專注交易心理與執行紀律，幫學員把規則固化成肌肉記憶。",
-				"skills": [
-					"倉位管理",
-					"執行紀律",
-					"回撤控制"
-				],
-				"initials": "周"
-			},
-			{
-				"name": "沈瀾",
-				"role": "實戰導師 · 情境演練",
-				"bio": "設計高強度模擬任務，讓錯誤發生在課堂裡而不是真實賬戶。",
-				"skills": [
-					"模擬演練",
-					"情境壓力",
-					"反饋閉環"
-				],
-				"initials": "沈"
 			}
 		],
 		"honorGraduates": [
