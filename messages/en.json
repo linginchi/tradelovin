@@ -83,7 +83,9 @@
 				"role": "Market making & arb assistant",
 				"achievement": "Completed live rotation and internal risk certification"
 			}
-		]
+		],
+		"complianceTitle": "Compliance notice",
+		"complianceDisclaimer": "This course is developed based on the copyrighted technology of \"Coach Xiao Q Simulation Trading System\". It aims to uncover users' trading talents through gamification, improving trading cognition and practical skills. This platform does NOT involve any real securities trading, provide investment advice, recommend stocks, or manage assets on behalf of clients. All simulated data and teaching cases are for learning and training purposes only. Users bear their own decision-making risks. This platform is not a regulated financial institution and does not engage in any business regulated by securities laws."
 	},
 	"RegisterPage": {
 		"back": "← Back to home"
@@ -186,7 +188,29 @@
 		"teamBody": "Our core team blends traders, educators, and product builders—continuously iterating on content and drill tools. We value review culture, risk boundaries, and execution—we don’t promise get‑rich shortcuts; we teach repeatable training methods.",
 		"contactTitle": "Contact",
 		"contactPrefix": "Business & partnerships:",
-		"contactNote": "(placeholder email—replace later)"
+		"contactNote": "(placeholder email—replace later)",
+		"copyrightTitle": "Software copyright (summary)",
+		"copyrightHint": "Text summary of the registered work for context only—not a substitute for the official certificate.",
+		"copyrightRows": [
+			{
+				"label": "Software name",
+				"value": "Coach Xiao Q Simulation Trading System (abbrev.: Coach Xiao Q)"
+			},
+			{
+				"label": "Copyright owner",
+				"value": "Shenzhen Greater Bay Area Zhihui Technology Co., Ltd."
+			},
+			{
+				"label": "Certificate No.",
+				"value": "软著登字第4361890号 (Software copyright registration)"
+			},
+			{ "label": "Registration No.", "value": "2019SR0941133" },
+			{
+				"label": "Issuing authority",
+				"value": "National Copyright Administration of the People’s Republic of China"
+			},
+			{ "label": "Development completed", "value": "July 10, 2019" }
+		]
 	},
 	"MyProfile": {
 		"title": "Profile",

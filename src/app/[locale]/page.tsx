@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
-import { Sparkles } from "lucide-react";
+import { ShieldAlert, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
@@ -172,6 +172,17 @@ export default function Home() {
 						<HonorGraduatesGrid honorGraduates={honorGraduates} />
 					</LazyWhenVisible>
 				</motion.section>
+
+				<div
+					className="border-border/50 bg-card/15 text-muted-foreground w-full max-w-5xl rounded-xl border px-4 py-5 shadow-sm backdrop-blur-sm md:px-6 md:py-6"
+					role="note"
+				>
+					<p className="text-primary/90 mb-2 flex items-center gap-2 text-[10px] font-semibold tracking-wide uppercase">
+						<ShieldAlert className="size-3.5 shrink-0" aria-hidden />
+						{t("complianceTitle")}
+					</p>
+					<p className="text-[11px] leading-relaxed md:text-xs">{t("complianceDisclaimer")}</p>
+				</div>
 			</section>
 		</main>
 	);

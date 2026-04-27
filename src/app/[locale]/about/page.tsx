@@ -1,4 +1,4 @@
-import { ArrowLeft, Mail, Sparkles } from "lucide-react";
+import { ArrowLeft, Mail, Scale, Sparkles } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -18,6 +18,7 @@ export default async function AboutPage({ params }: Props) {
 	const t = await getTranslations("About");
 	const tCommon = await getTranslations("Common");
 	const tHome = await getTranslations("Home");
+	const copyrightRows = t.raw("copyrightRows") as Array<{ label: string; value: string }>;
 
 	return (
 		<main className="relative flex min-h-full flex-1 flex-col">
@@ -69,6 +70,29 @@ export default async function AboutPage({ params }: Props) {
 				<section className="border-border/80 bg-card/25 mb-6 rounded-2xl border p-6 backdrop-blur-md">
 					<h2 className="text-base font-semibold tracking-tight">{t("teamTitle")}</h2>
 					<p className="text-muted-foreground mt-3 text-sm leading-relaxed">{t("teamBody")}</p>
+				</section>
+
+				<section className="border-border/80 bg-card/25 from-primary/5 mb-6 rounded-2xl border bg-linear-to-br to-transparent p-6 backdrop-blur-md md:p-8">
+					<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">
+						<Scale className="text-primary size-5 shrink-0" aria-hidden />
+						{t("copyrightTitle")}
+					</h2>
+					<p className="text-muted-foreground mt-2 text-xs leading-relaxed md:text-sm">
+						{t("copyrightHint")}
+					</p>
+					<dl className="mt-5 grid gap-3 text-sm sm:gap-4">
+						{copyrightRows.map((row) => (
+							<div
+								key={row.label}
+								className="border-border/50 flex flex-col gap-0.5 rounded-lg border bg-black/15 px-3 py-2.5 sm:flex-row sm:items-baseline sm:gap-4"
+							>
+								<dt className="text-muted-foreground shrink-0 text-xs font-medium tracking-wide uppercase sm:w-36 sm:normal-case">
+									{row.label}
+								</dt>
+								<dd className="text-foreground text-sm leading-relaxed">{row.value}</dd>
+							</div>
+						))}
+					</dl>
 				</section>
 
 				<section className="border-border/80 bg-card/25 rounded-2xl border p-6 backdrop-blur-md">
