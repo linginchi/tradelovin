@@ -67,9 +67,6 @@ export default function Home() {
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
 				>
-					<p className="text-primary border-primary/25 bg-primary/10 inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium tracking-wide uppercase">
-						{t("badge")}
-					</p>
 					<h1 className="max-w-3xl text-balance text-3xl font-semibold tracking-tight md:text-5xl md:leading-[1.1]">
 						{t("title")}
 					</h1>

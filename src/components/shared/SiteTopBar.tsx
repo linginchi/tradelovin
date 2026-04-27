@@ -10,7 +10,7 @@ type Props = {
 	className?: string;
 };
 
-/** 全站顶栏：品牌标题（与首页 badge 一致）+ 右上角语言切换 */
+/** 全站顶栏：品牌标题（Home.badge，随语言切换）+ 右上角语言切换 */
 export function SiteTopBar({ className }: Props) {
 	const tHome = useTranslations("Home");
 

@@ -15,7 +15,6 @@ type Row = {
 	start_date: string;
 	enrollment_url: string;
 	is_active: boolean;
-	course_id: string;
 };
 
 const empty: Row = {
@@ -24,7 +23,6 @@ const empty: Row = {
 	start_date: "",
 	enrollment_url: "/register",
 	is_active: true,
-	course_id: "",
 };
 
 export function AdminRecruitingPanel() {
@@ -47,7 +45,6 @@ export function AdminRecruitingPanel() {
 					start_date: string | null;
 					enrollment_url: string;
 					is_active: boolean;
-					course_id: string | null;
 				} | null;
 				error?: string;
 			};
@@ -63,7 +60,6 @@ export function AdminRecruitingPanel() {
 					start_date: r.start_date ?? "",
 					enrollment_url: r.enrollment_url,
 					is_active: r.is_active,
-					course_id: r.course_id ?? "",
 				});
 			} else {
 				setRow({ ...empty });
@@ -83,7 +79,6 @@ export function AdminRecruitingPanel() {
 		setSaving(true);
 		setMessage(null);
 		setError(null);
-		const courseId = row.course_id.trim();
 		try {
 			const res = await fetch("/api/admin/recruiting", {
 				method: "PUT",
@@ -95,7 +90,6 @@ export function AdminRecruitingPanel() {
 					start_date: row.start_date.trim() || null,
 					enrollment_url: row.enrollment_url.trim() || "/register",
 					is_active: row.is_active,
-					course_id: courseId ? courseId : null,
 				}),
 			});
 			const data = (await res.json()) as {
@@ -105,7 +99,6 @@ export function AdminRecruitingPanel() {
 					start_date: string | null;
 					enrollment_url: string;
 					is_active: boolean;
-					course_id: string | null;
 				};
 				error?: string;
 			};
@@ -122,7 +115,6 @@ export function AdminRecruitingPanel() {
 					start_date: r.start_date ?? "",
 					enrollment_url: r.enrollment_url,
 					is_active: r.is_active,
-					course_id: r.course_id ?? "",
 				});
 			}
 		} catch {
@@ -170,14 +162,6 @@ export function AdminRecruitingPanel() {
 					id="rec-url"
 					value={row.enrollment_url}
 					onChange={(e) => setRow({ ...row, enrollment_url: e.target.value })}
-				/>
-			</div>
-			<div className="space-y-2">
-				<Label htmlFor="rec-cid">{t("recruitingLabelCourseId")}</Label>
-				<Input
-					id="rec-cid"
-					value={row.course_id}
-					onChange={(e) => setRow({ ...row, course_id: e.target.value })}
 				/>
 			</div>
 			<div className="flex items-center gap-2">

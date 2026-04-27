@@ -23,7 +23,7 @@
 		"comingSoon": "Coming soon"
 	},
 	"Home": {
-		"badge": "Tradelovin · Gamified trading learning",
+		"badge": "Baozi Paradise · Gamified Trading",
 		"title": "Tradelovin — Unlock your trading talent",
 		"subtitle": "Nothing can stop your drive to become a great trader",
 		"ctaTrading": "Open learning terminal",
@@ -415,7 +415,6 @@
 		"recruitingLabelStart": "Start date (YYYY-MM-DD)",
 		"recruitingLabelUrl": "Enrollment URL",
 		"recruitingLabelActive": "Visible on homepage",
-		"recruitingLabelCourseId": "Linked course ID (optional)",
 		"recruitingSave": "Save",
 		"recruitingSaved": "Saved",
 		"recruitingLoadError": "Could not load",

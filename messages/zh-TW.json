@@ -446,7 +446,6 @@
 		"recruitingLabelStart": "開課日期（YYYY-MM-DD）",
 		"recruitingLabelUrl": "報名鏈接",
 		"recruitingLabelActive": "在首頁顯示",
-		"recruitingLabelCourseId": "關聯課程 ID（可選）",
 		"recruitingSave": "保存",
 		"recruitingSaved": "已保存",
 		"recruitingLoadError": "加載失敗",

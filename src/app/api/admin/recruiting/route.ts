@@ -14,7 +14,6 @@ const putSchema = z.object({
 		.nullable(),
 	enrollment_url: z.string().min(1).default("/register"),
 	is_active: z.boolean().default(true),
-	course_id: z.string().uuid().optional().nullable(),
 });
 
 /** 超级管理员：读取当前编辑用的一条记录（按 updated_at 最新） */
@@ -69,7 +68,6 @@ export async function PUT(req: Request) {
 		start_date: parsed.data.start_date ?? null,
 		enrollment_url: parsed.data.enrollment_url,
 		is_active: parsed.data.is_active,
-		course_id: parsed.data.course_id ?? null,
 		updated_at: now,
 	};
 

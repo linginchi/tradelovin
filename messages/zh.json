@@ -403,7 +403,6 @@
 		"recruitingLabelStart": "开课日期（YYYY-MM-DD）",
 		"recruitingLabelUrl": "报名链接",
 		"recruitingLabelActive": "在首页显示",
-		"recruitingLabelCourseId": "关联课程 ID（可选）",
 		"recruitingSave": "保存",
 		"recruitingSaved": "已保存",
 		"recruitingLoadError": "加载失败",
