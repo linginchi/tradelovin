@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -190,10 +191,13 @@ export function AdminStudentsPanel() {
 			header: t("colAvatar"),
 			cell: ({ row }) =>
 				row.original.avatar_url ? (
-					<img
+					<Image
 						src={row.original.avatar_url}
 						alt=""
+						width={32}
+						height={32}
 						className="size-8 rounded-full object-cover ring-1 ring-border"
+						sizes="32px"
 					/>
 				) : (
 					<span className="text-muted-foreground text-xs">—</span>
