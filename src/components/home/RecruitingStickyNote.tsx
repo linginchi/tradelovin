@@ -24,15 +24,28 @@ export function RecruitingStickyNote() {
 		let alive = true;
 		(async () => {
 			try {
-				const res = await fetch("/api/recruiting");
-				const data = (await res.json()) as { recruiting: RecruitingRow | null };
+				const res = await fetch("/api/recruiting", { credentials: "same-origin" });
+				const raw = (await res.json()) as {
+					recruiting: RecruitingRow | null;
+					error?: string;
+				};
 				if (!alive) return;
 				if (!res.ok) {
 					setFailed(true);
 					setRow(null);
 					return;
 				}
-				setRow(data.recruiting ?? null);
+				const rec = raw.recruiting;
+				if (rec && typeof rec.title === "string") {
+					setRow({
+						title: rec.title,
+						description: rec.description ?? null,
+						start_date: rec.start_date ?? null,
+						enrollment_url: typeof rec.enrollment_url === "string" ? rec.enrollment_url : "/register",
+					});
+				} else {
+					setRow(null);
+				}
 			} catch {
 				if (alive) {
 					setFailed(true);
@@ -69,7 +82,8 @@ export function RecruitingStickyNote() {
 		);
 	}
 
-	const isAbsolute = /^https?:\/\//i.test(row.enrollment_url.trim());
+	const enrollUrl = (row.enrollment_url ?? "/register").trim() || "/register";
+	const isAbsolute = /^https?:\/\//i.test(enrollUrl);
 
 	return (
 		<div
@@ -98,7 +112,7 @@ export function RecruitingStickyNote() {
 			<div className="mt-4">
 				{isAbsolute ? (
 					<a
-						href={row.enrollment_url}
+						href={enrollUrl}
 						rel="noopener noreferrer"
 						className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
 					>
@@ -106,7 +120,7 @@ export function RecruitingStickyNote() {
 					</a>
 				) : (
 					<Link
-						href={row.enrollment_url.startsWith("/") ? row.enrollment_url : `/${row.enrollment_url}`}
+						href={enrollUrl.startsWith("/") ? enrollUrl : `/${enrollUrl}`}
 						className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
 					>
 						{t("recruitingCta")}

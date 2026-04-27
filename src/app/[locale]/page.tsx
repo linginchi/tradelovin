@@ -52,7 +52,7 @@ export default function Home() {
 		[t],
 	);
 	return (
-		<main className="relative flex min-h-full flex-1 flex-col overflow-hidden">
+		<main className="relative flex min-h-full flex-1 flex-col overflow-x-hidden">
 			<div className="pointer-events-none absolute inset-0 right-4 top-4 z-20 flex justify-end md:right-8 md:top-6">
 				<LanguageSwitcher />
 			</div>
