@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 
 import { LazyWhenVisible } from "@/components/LazyWhenVisible";
+import { RecruitingStickyNote } from "@/components/home/RecruitingStickyNote";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -98,6 +99,10 @@ export default function Home() {
 						</Link>
 					</div>
 				</motion.div>
+
+				<div className="flex w-full justify-center">
+					<RecruitingStickyNote />
+				</div>
 
 				<motion.div
 					className="grid w-full gap-4 md:grid-cols-3"

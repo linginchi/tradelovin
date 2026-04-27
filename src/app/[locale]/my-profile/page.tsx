@@ -101,15 +101,6 @@ export default async function MyProfilePage({ params }: Props) {
 						>
 							{t("myCoursesLink")}
 						</Link>
-						<Link
-							href="/admin"
-							className={cn(
-								buttonVariants({ variant: "ghost", size: "sm" }),
-								"text-muted-foreground",
-							)}
-						>
-							{t("adminLink")}
-						</Link>
 					</div>
 				</header>
 

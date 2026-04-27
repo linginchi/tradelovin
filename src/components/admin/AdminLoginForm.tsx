@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 
-import { useRouter } from "@/i18n/navigation";
-
+import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 export function AdminLoginForm() {
@@ -26,8 +25,8 @@ export function AdminLoginForm() {
 
 	function safeNext(): string {
 		const raw = searchParams.get("next");
-		if (raw && raw.startsWith("/admin")) return raw;
-		return "/admin";
+		if (raw && raw.startsWith(ADMIN_BASE_PATH)) return raw;
+		return ADMIN_BASE_PATH;
 	}
 
 	async function sendCode() {

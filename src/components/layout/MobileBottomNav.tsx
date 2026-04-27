@@ -6,7 +6,7 @@ import { Info, Medal, UserRound } from "lucide-react";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { Link, usePathname } from "@/i18n/navigation";
 
-const ADMIN_PREFIX = "/admin";
+const ADMIN_PREFIX = "/cjkzt";
 import { cn } from "@/lib/utils";
 
 const NAV_HREFS = ["/about", "/my-scores", "/my-profile"] as const;

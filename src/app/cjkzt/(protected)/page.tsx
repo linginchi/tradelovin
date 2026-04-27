@@ -1,17 +1,17 @@
 import { LayoutDashboard } from "lucide-react";
+import Link from "next/link";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { Link } from "@/i18n/navigation";
+import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { routing } from "@/i18n/routing";
 
-type Props = { params: Promise<{ locale: string }> };
+const locale = routing.defaultLocale;
 
-export default async function AdminDashboardPage({ params }: Props) {
-	const { locale } = await params;
+export default async function CjkztDashboardPage() {
 	setRequestLocale(locale);
-
 	const t = await getTranslations("Admin");
 
 	return (
@@ -42,7 +42,10 @@ export default async function AdminDashboardPage({ params }: Props) {
 						<CardDescription>{t("registrationsHint")}</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<Link href="/admin/students" className={cn(buttonVariants({ size: "sm" }))}>
+						<Link
+							href={`${ADMIN_BASE_PATH}/students`}
+							className={cn(buttonVariants({ size: "sm" }))}
+						>
 							{t("navStudents")}
 						</Link>
 					</CardContent>

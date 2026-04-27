@@ -9,10 +9,10 @@ type Props = {
 	children: React.ReactNode;
 };
 
-/** 前台保留底部导航与安全区留白；管理后台 `/admin` 去掉，避免与后台顶栏叠层 */
+/** 前台保留底部导航与安全区留白；管理后台 `/cjkzt` 去掉，避免与后台顶栏叠层 */
 export function LocaleMainShell({ children }: Props) {
 	const pathname = usePathname();
-	const isAdmin = pathname.includes("/admin");
+	const isAdmin = pathname.includes("/cjkzt");
 
 	return (
 		<>

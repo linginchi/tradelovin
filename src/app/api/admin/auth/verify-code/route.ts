@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
 import { promoteBootstrapSuperAdmin } from "@/lib/auth/bootstrap-super-admin";
 import { signAdminToken } from "@/lib/auth/admin-jwt";
 import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
@@ -32,6 +33,10 @@ export async function POST(req: Request) {
 
 	const email = parsed.data.email.trim().toLowerCase();
 	const code = parsed.data.code;
+
+	if (!isAdminPortalEmail(email)) {
+		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+	}
 
 	const { data: admin, error: adminErr } = await supabase
 		.from("admins")
@@ -74,6 +79,10 @@ export async function POST(req: Request) {
 		.maybeSingle();
 
 	if (refreshErr || !adminFresh) {
+		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+	}
+
+	if (adminFresh.role !== "super_admin") {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 

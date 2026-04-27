@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { z } from "zod";
 
+import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -14,6 +15,8 @@ export async function POST(req: Request) {
 	if (!supabase) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
+
+	const neutralMessage = { ok: true as const, message: "If this email is authorized, a code was sent." };
 
 	let json: unknown;
 	try {
@@ -28,14 +31,16 @@ export async function POST(req: Request) {
 	}
 
 	const email = parsed.data.email.trim().toLowerCase();
+
+	if (!isAdminPortalEmail(email)) {
+		return NextResponse.json(neutralMessage);
+	}
+
 	const { data: admin } = await supabase
 		.from("admins")
 		.select("email")
 		.eq("email", email)
 		.maybeSingle();
-
-	// 统一响应，避免枚举哪些邮箱是管理员
-	const neutralMessage = { ok: true as const, message: "If this email is authorized, a code was sent." };
 
 	if (!admin) {
 		return NextResponse.json(neutralMessage);

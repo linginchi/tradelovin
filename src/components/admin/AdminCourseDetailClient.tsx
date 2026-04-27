@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 type SessionRow = {
 	id: string;
@@ -226,7 +226,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	return (
 		<div className="space-y-8">
 			<p className="text-sm">
-				<Link href="/admin/courses" className="text-cyan-300 underline-offset-4 hover:underline">
+				<Link href="/cjkzt/courses" className="text-cyan-300 underline-offset-4 hover:underline">
 					← {t("coursesTitle")}
 				</Link>
 			</p>

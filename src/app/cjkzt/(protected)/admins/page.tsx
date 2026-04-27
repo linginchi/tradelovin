@@ -1,23 +1,22 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { redirect } from "next/navigation";
 
 import { AdminAdminsPanel } from "@/components/admin/AdminAdminsPanel";
 import { getAdminSession } from "@/lib/auth/admin-session";
-import { redirect } from "@/i18n/navigation";
+import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
+import { routing } from "@/i18n/routing";
 
-type Props = { params: Promise<{ locale: string }> };
+const locale = routing.defaultLocale;
 
-export default async function AdminAdminsPage({ params }: Props) {
-	const { locale } = await params;
+export default async function CjkztAdminsPage() {
 	setRequestLocale(locale);
 
 	const session = await getAdminSession();
 	if (!session) {
-		redirect({ href: "/admin/login", locale });
-		return null;
+		redirect(`${ADMIN_BASE_PATH}/login`);
 	}
 	if (session.role !== "super_admin") {
-		redirect({ href: "/admin", locale });
-		return null;
+		redirect(ADMIN_BASE_PATH);
 	}
 
 	const t = await getTranslations("Admin");

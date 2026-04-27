@@ -1,22 +1,18 @@
 import { setRequestLocale } from "next-intl/server";
+import { redirect } from "next/navigation";
 
 import { AdminShell } from "@/components/admin/AdminShell";
 import { getAdminSession } from "@/lib/auth/admin-session";
-import { redirect } from "@/i18n/navigation";
+import { routing } from "@/i18n/routing";
 
-type Props = {
-	children: React.ReactNode;
-	params: Promise<{ locale: string }>;
-};
+const locale = routing.defaultLocale;
 
-export default async function ProtectedAdminLayout({ children, params }: Props) {
-	const { locale } = await params;
+export default async function CjkztProtectedLayout({ children }: { children: React.ReactNode }) {
 	setRequestLocale(locale);
 
 	const session = await getAdminSession();
 	if (!session || (session.role !== "admin" && session.role !== "super_admin")) {
-		redirect({ href: "/admin/login", locale });
-		return null;
+		redirect("/cjkzt/login");
 	}
 
 	return (

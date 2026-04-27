@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
@@ -10,11 +12,12 @@ import {
 	Mail,
 	Menu,
 	Shield,
+	StickyNote,
 	UserCircle,
 	Users,
 } from "lucide-react";
 
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
 import { Button } from "@/components/ui/button";
 import {
 	Sheet,
@@ -23,7 +26,6 @@ import {
 	SheetTitle,
 	SheetTrigger,
 } from "@/components/ui/sheet";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import type { AdminRole } from "@/lib/auth/admin-jwt";
 import { cn } from "@/lib/utils";
 
@@ -40,21 +42,32 @@ export function AdminShell({ role, email, children }: Props) {
 	const [mobileOpen, setMobileOpen] = useState(false);
 
 	const items: { href: string; label: string; icon: typeof LayoutDashboard }[] = [
-		{ href: "/admin", label: t("navDashboard"), icon: LayoutDashboard },
-		{ href: "/admin/reviews", label: t("navReviews"), icon: ClipboardList },
-		{ href: "/admin/students", label: t("navStudents"), icon: Users },
-		{ href: "/admin/courses", label: t("navCourses"), icon: BookOpen },
-		{ href: "/admin/instructors", label: t("navInstructors"), icon: UserCircle },
-		{ href: "/admin/fees", label: t("navFees"), icon: Mail },
+		{ href: ADMIN_BASE_PATH, label: t("navDashboard"), icon: LayoutDashboard },
 	];
 
 	if (role === "super_admin") {
-		items.push({ href: "/admin/admins", label: t("navAdmins"), icon: Shield });
+		items.push({
+			href: `${ADMIN_BASE_PATH}/recruiting`,
+			label: t("navRecruiting"),
+			icon: StickyNote,
+		});
+	}
+
+	items.push(
+		{ href: `${ADMIN_BASE_PATH}/reviews`, label: t("navReviews"), icon: ClipboardList },
+		{ href: `${ADMIN_BASE_PATH}/students`, label: t("navStudents"), icon: Users },
+		{ href: `${ADMIN_BASE_PATH}/courses`, label: t("navCourses"), icon: BookOpen },
+		{ href: `${ADMIN_BASE_PATH}/instructors`, label: t("navInstructors"), icon: UserCircle },
+		{ href: `${ADMIN_BASE_PATH}/fees`, label: t("navFees"), icon: Mail },
+	);
+
+	if (role === "super_admin") {
+		items.push({ href: `${ADMIN_BASE_PATH}/admins`, label: t("navAdmins"), icon: Shield });
 	}
 
 	async function logout() {
 		await fetch("/api/admin/auth/logout", { method: "POST" });
-		router.replace("/admin/login");
+		router.replace(`${ADMIN_BASE_PATH}/login`);
 	}
 
 	function NavLink({
@@ -70,7 +83,10 @@ export function AdminShell({ role, email, children }: Props) {
 		onNavigate?: () => void;
 		mobile?: boolean;
 	}) {
-		const active = pathname === href || pathname.startsWith(`${href}/`);
+		const active =
+			href === ADMIN_BASE_PATH
+				? pathname === href
+				: pathname === href || pathname.startsWith(`${href}/`);
 		return (
 			<Link
 				href={href}
@@ -105,8 +121,7 @@ export function AdminShell({ role, email, children }: Props) {
 						<NavLink key={item.href} {...item} />
 					))}
 				</nav>
-				<div className="border-border/60 mt-auto space-y-3 border-t p-3">
-					<LanguageSwitcher variant="compact" className="justify-center" />
+				<div className="border-border/60 mt-auto border-t p-3">
 					<Button type="button" variant="outline" size="sm" className="w-full" onClick={() => void logout()}>
 						<LogOut className="mr-2 size-4" aria-hidden />
 						{t("logout")}
@@ -139,8 +154,7 @@ export function AdminShell({ role, email, children }: Props) {
 									/>
 								))}
 							</nav>
-							<div className="border-border/60 mt-auto space-y-2 border-t p-3">
-								<LanguageSwitcher variant="compact" />
+							<div className="border-border/60 mt-auto border-t p-3">
 								<Button type="button" variant="outline" size="sm" className="w-full" onClick={() => void logout()}>
 									<LogOut className="mr-2 size-4" aria-hidden />
 									{t("logout")}
@@ -149,7 +163,7 @@ export function AdminShell({ role, email, children }: Props) {
 						</SheetContent>
 					</Sheet>
 					<span className="text-muted-foreground truncate text-xs">{t("title")}</span>
-					<LanguageSwitcher variant="compact" />
+					<span className="w-10" aria-hidden />
 				</header>
 
 				<div className="relative flex-1">{children}</div>

@@ -16,7 +16,7 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 export type CourseListRow = {
 	id: string;
@@ -189,7 +189,7 @@ export function AdminCoursesPanel() {
 									</TableCell>
 									<TableCell className="text-right">
 										<Link
-											href={`/admin/courses/${c.id}`}
+											href={`/cjkzt/courses/${c.id}`}
 											className="text-cyan-300 text-xs font-medium underline-offset-4 hover:underline"
 										>
 											{t("goDetail")}
