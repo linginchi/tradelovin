@@ -1,5 +1,6 @@
 -- 管理后台：管理员表、邮箱 OTP 表、学员（registrations）扩展字段
 -- 在 Supabase SQL Editor 中执行（需已有 public.registrations）
+-- 若使用 CLI：同等逻辑已纳入 migrations/20260430127000_admins_bootstrap_mark.sql（admins 表 + mark@hkfac.com 行）；本文件仍含 admin_otp_challenges 与 registrations 扩展，请按需执行。
 
 -- 管理员角色
 do $$ begin

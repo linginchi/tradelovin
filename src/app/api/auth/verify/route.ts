@@ -9,10 +9,6 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
-/** 测试用：无邮件服务时超级管理员邮箱固定验证码。上架前必须移除。 */
-const FIXED_OTP_ADMIN_EMAIL = "mark@hkfac.com";
-const FIXED_OTP_CODE = "123456";
-
 const baseSchema = z.object({
 	email: z.string().email(),
 	code: z.string().trim().min(6).max(6),
@@ -68,38 +64,31 @@ export async function POST(request: NextRequest) {
 		registerPayload = normalized.payload;
 	}
 
-	const useFixedAdminOtp = email === FIXED_OTP_ADMIN_EMAIL && code === FIXED_OTP_CODE;
+	const { data: row, error: selErr } = await srv
+		.from("email_verification_codes")
+		.select("id, code_hash, expires_at")
+		.eq("email", email)
+		.eq("intent", intent)
+		.order("created_at", { ascending: false })
+		.limit(1)
+		.maybeSingle();
 
-	if (useFixedAdminOtp) {
-		console.warn(`[FIXED OTP] Trade auth bypass for ${email} intent=${intent} — remove before production`);
-		await srv.from("email_verification_codes").delete().eq("email", email).eq("intent", intent);
-	} else {
-		const { data: row, error: selErr } = await srv
-			.from("email_verification_codes")
-			.select("id, code_hash, expires_at")
-			.eq("email", email)
-			.eq("intent", intent)
-			.order("created_at", { ascending: false })
-			.limit(1)
-			.maybeSingle();
-
-		if (selErr || !row) {
-			return NextResponse.json({ success: false, error: "验证码无效或已过期，请重新获取" }, { status: 400 });
-		}
-
-		const expiresAt = new Date(row.expires_at as string).getTime();
-		if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
-			await srv.from("email_verification_codes").delete().eq("id", row.id as string);
-			return NextResponse.json({ success: false, error: "验证码已过期，请重新获取" }, { status: 400 });
-		}
-
-		const hash = row.code_hash as string;
-		if (!(await verifyOtp(email, code, hash))) {
-			return NextResponse.json({ success: false, error: "验证码错误" }, { status: 400 });
-		}
-
-		await srv.from("email_verification_codes").delete().eq("id", row.id as string);
+	if (selErr || !row) {
+		return NextResponse.json({ success: false, error: "验证码无效或已过期，请重新获取" }, { status: 400 });
 	}
+
+	const expiresAt = new Date(row.expires_at as string).getTime();
+	if (Number.isFinite(expiresAt) && expiresAt < Date.now()) {
+		await srv.from("email_verification_codes").delete().eq("id", row.id as string);
+		return NextResponse.json({ success: false, error: "验证码已过期，请重新获取" }, { status: 400 });
+	}
+
+	const hash = row.code_hash as string;
+	if (!(await verifyOtp(email, code, hash))) {
+		return NextResponse.json({ success: false, error: "验证码错误" }, { status: 400 });
+	}
+
+	await srv.from("email_verification_codes").delete().eq("id", row.id as string);
 
 	if (intent === "register") {
 		const exists = await tradeUserExistsForEmail(srv, email);

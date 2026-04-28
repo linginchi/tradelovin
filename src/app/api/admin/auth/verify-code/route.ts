@@ -13,10 +13,6 @@ const bodySchema = z.object({
 	code: z.string().regex(/^\d{6}$/),
 });
 
-/** 测试用：无邮件服务时该邮箱固定验证码登录 /cjkzt。上架前必须移除。 */
-const FIXED_OTP_ADMIN_EMAIL = "mark@hkfac.com";
-const FIXED_OTP_CODE = "123456";
-
 export async function POST(req: Request) {
 	const supabase = getServiceSupabase();
 	if (!supabase) {
@@ -52,34 +48,27 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 
-	const useFixedOtp = email === FIXED_OTP_ADMIN_EMAIL && code === FIXED_OTP_CODE;
+	const { data: row } = await supabase
+		.from("admin_otp_challenges")
+		.select("id, code_hash, expires_at")
+		.eq("email", email)
+		.order("created_at", { ascending: false })
+		.limit(1)
+		.maybeSingle();
 
-	if (useFixedOtp) {
-		console.warn(`[FIXED OTP] Admin portal bypass for ${email} — remove before production`);
-		await supabase.from("admin_otp_challenges").delete().eq("email", email);
-	} else {
-		const { data: row } = await supabase
-			.from("admin_otp_challenges")
-			.select("id, code_hash, expires_at")
-			.eq("email", email)
-			.order("created_at", { ascending: false })
-			.limit(1)
-			.maybeSingle();
-
-		if (!row) {
-			return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
-		}
-
-		if (new Date(row.expires_at) < new Date()) {
-			return NextResponse.json({ error: "Code expired" }, { status: 401 });
-		}
-
-		if (!(await verifyOtp(email, code, row.code_hash))) {
-			return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
-		}
-
-		await supabase.from("admin_otp_challenges").delete().eq("email", email);
+	if (!row) {
+		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
+
+	if (new Date(row.expires_at) < new Date()) {
+		return NextResponse.json({ error: "Code expired" }, { status: 401 });
+	}
+
+	if (!(await verifyOtp(email, code, row.code_hash))) {
+		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+	}
+
+	await supabase.from("admin_otp_challenges").delete().eq("email", email);
 
 	await promoteBootstrapSuperAdmin(supabase, email);
 
