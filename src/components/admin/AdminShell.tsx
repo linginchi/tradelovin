@@ -16,6 +16,7 @@ import {
 	Sparkles,
 	UserCircle,
 	UserPlus,
+	UserRoundPlus,
 	Users,
 } from "lucide-react";
 
@@ -66,6 +67,7 @@ export function AdminShell({ role, email, children }: Props) {
 	);
 
 	if (role === "super_admin") {
+		items.push({ href: `${ADMIN_BASE_PATH}/add-user`, label: t("navAddUser"), icon: UserRoundPlus });
 		items.push({ href: `${ADMIN_BASE_PATH}/admins`, label: t("navAdmins"), icon: Shield });
 	}
 
