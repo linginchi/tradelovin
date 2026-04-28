@@ -59,8 +59,6 @@ export async function POST(request: Request) {
 			real_name: realName || null,
 			phone: phone || null,
 			role: "user",
-			specialties: [],
-			is_instructor: false,
 		},
 		{ onConflict: "id" },
 	);

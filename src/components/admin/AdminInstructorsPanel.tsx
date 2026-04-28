@@ -32,7 +32,6 @@ type InstructorRow = {
 	email: string | null;
 	avatar_url: string | null;
 	bio: string | null;
-	specialties: string[];
 };
 
 type CourseRow = {
@@ -51,11 +50,9 @@ export function AdminInstructorsPanel() {
 	const [name, setName] = useState("");
 	const [email, setEmail] = useState("");
 	const [bio, setBio] = useState("");
-	const [specialties, setSpecialties] = useState("");
 	const [editName, setEditName] = useState("");
 	const [editEmail, setEditEmail] = useState("");
 	const [editBio, setEditBio] = useState("");
-	const [editSpec, setEditSpec] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [assignFor, setAssignFor] = useState<InstructorRow | null>(null);
 	const [courses, setCourses] = useState<CourseRow[]>([]);
@@ -87,7 +84,6 @@ export function AdminInstructorsPanel() {
 		setName("");
 		setEmail("");
 		setBio("");
-		setSpecialties("");
 		setAddOpen(true);
 	}
 
@@ -96,7 +92,6 @@ export function AdminInstructorsPanel() {
 		setEditName(r.name);
 		setEditEmail(r.email ?? "");
 		setEditBio(r.bio ?? "");
-		setEditSpec(r.specialties?.join(", ") ?? "");
 	}
 
 	async function openAssign(r: InstructorRow) {
@@ -164,10 +159,6 @@ export function AdminInstructorsPanel() {
 		if (!name.trim()) return;
 		setSaving(true);
 		setError(null);
-		const spec = specialties
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean);
 		try {
 			const res = await fetch("/api/admin/instructors", {
 				method: "POST",
@@ -177,7 +168,6 @@ export function AdminInstructorsPanel() {
 					name: name.trim(),
 					email: email.trim() ? email.trim().toLowerCase() : null,
 					bio: bio.trim() || null,
-					specialties: spec,
 				}),
 			});
 			const j = (await res.json()) as { error?: string };
@@ -198,10 +188,6 @@ export function AdminInstructorsPanel() {
 		if (!editRow) return;
 		setSaving(true);
 		setError(null);
-		const spec = editSpec
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean);
 		try {
 			const res = await fetch(`/api/admin/instructors/${editRow.id}`, {
 				method: "PATCH",
@@ -211,7 +197,6 @@ export function AdminInstructorsPanel() {
 					name: editName.trim(),
 					email: editEmail.trim() ? editEmail.trim().toLowerCase() : null,
 					bio: editBio.trim() || null,
-					specialties: spec,
 				}),
 			});
 			const j = (await res.json()) as { error?: string };
@@ -258,20 +243,19 @@ export function AdminInstructorsPanel() {
 							<TableHead>{t("instructorName")}</TableHead>
 							<TableHead className="hidden md:table-cell">{t("instructorEmail")}</TableHead>
 							<TableHead className="hidden md:table-cell">{t("instructorBio")}</TableHead>
-							<TableHead className="hidden sm:table-cell">{t("specialties")}</TableHead>
 							<TableHead className="text-right">{t("actions")}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{loading ? (
 							<TableRow>
-								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
 									…
 								</TableCell>
 							</TableRow>
 						) : rows.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
 									{t("empty")}
 								</TableCell>
 							</TableRow>
@@ -296,9 +280,6 @@ export function AdminInstructorsPanel() {
 									<TableCell className="hidden font-mono text-xs md:table-cell">{r.email ?? "—"}</TableCell>
 									<TableCell className="text-muted-foreground hidden max-w-xs truncate md:table-cell">
 										{r.bio ?? "—"}
-									</TableCell>
-									<TableCell className="text-muted-foreground hidden text-xs sm:table-cell">
-										{r.specialties?.length ? r.specialties.join(" · ") : "—"}
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex flex-wrap justify-end gap-1">
@@ -349,16 +330,6 @@ export function AdminInstructorsPanel() {
 							<Label htmlFor="ins-bio">{t("instructorBio")}</Label>
 							<Textarea id="ins-bio" value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-[72px]" />
 						</div>
-						<div className="space-y-2">
-							<Label htmlFor="ins-spec">{t("specialties")}</Label>
-							<Input
-								id="ins-spec"
-								value={specialties}
-								onChange={(e) => setSpecialties(e.target.value)}
-								placeholder="A, B, C"
-								className="h-10"
-							/>
-						</div>
 					</div>
 					<DialogFooter className="border-t-0 bg-transparent p-0 sm:justify-end">
 						<Button type="button" variant="outline" disabled={saving} onClick={() => setAddOpen(false)}>
@@ -403,15 +374,6 @@ export function AdminInstructorsPanel() {
 								value={editBio}
 								onChange={(e) => setEditBio(e.target.value)}
 								className="min-h-[72px]"
-							/>
-						</div>
-						<div className="space-y-2">
-							<Label htmlFor="ins-edit-spec">{t("specialties")}</Label>
-							<Input
-								id="ins-edit-spec"
-								value={editSpec}
-								onChange={(e) => setEditSpec(e.target.value)}
-								className="h-10"
 							/>
 						</div>
 					</div>

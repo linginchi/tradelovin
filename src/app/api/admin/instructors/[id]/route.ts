@@ -10,7 +10,6 @@ const patchSchema = z
 		name: z.string().min(1).optional(),
 		email: z.string().email().nullable().optional(),
 		bio: z.string().nullable().optional(),
-		specialties: z.array(z.string()).optional(),
 	})
 	.strict();
 
@@ -45,7 +44,6 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 	const updates: Record<string, unknown> = {};
 	if (parsed.data.name !== undefined) updates.real_name = parsed.data.name.trim();
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio === "" ? null : parsed.data.bio;
-	if (parsed.data.specialties !== undefined) updates.specialties = parsed.data.specialties;
 
 	Object.keys(updates).forEach((k) => {
 		if (updates[k] === undefined) delete updates[k];
@@ -78,7 +76,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 			.from("profiles")
 			.update(updates)
 			.eq("id", id)
-			.eq("is_instructor", true)
+			.eq("role", "instructor")
 			.select()
 			.maybeSingle();
 		data = res.data as Record<string, unknown> | null;
@@ -88,7 +86,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 			.from("profiles")
 			.select()
 			.eq("id", id)
-			.eq("is_instructor", true)
+			.eq("role", "instructor")
 			.maybeSingle();
 		data = res.data as Record<string, unknown> | null;
 		error = res.error;
@@ -107,7 +105,6 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		nickname: string | null;
 		avatar_url: string | null;
 		bio: string | null;
-		specialties: string[];
 	};
 
 	const contactEmail = await getAuthEmailByUserId(supabase, row.id);
@@ -119,7 +116,6 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 			email: contactEmail,
 			avatar_url: row.avatar_url,
 			bio: row.bio,
-			specialties: row.specialties ?? [],
 		},
 	});
 }
@@ -142,7 +138,7 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
 		.from("profiles")
 		.select("student_id")
 		.eq("id", id)
-		.eq("is_instructor", true)
+		.eq("role", "instructor")
 		.maybeSingle();
 
 	if (selErr) {
@@ -153,7 +149,7 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
 	}
 
 	if (row.student_id) {
-		const { error } = await supabase.from("profiles").update({ is_instructor: false }).eq("id", id);
+		const { error } = await supabase.from("profiles").update({ role: "user" }).eq("id", id);
 		if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 	} else {
 		const { error } = await supabase.from("profiles").delete().eq("id", id);

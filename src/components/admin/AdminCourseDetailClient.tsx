@@ -19,7 +19,7 @@ type SessionRow = {
 	location: string | null;
 };
 
-type InstructorRow = { id: string; name: string; bio: string | null; specialties: string[] };
+type InstructorRow = { id: string; name: string; bio: string | null };
 
 type RosterRow = {
 	id: string;

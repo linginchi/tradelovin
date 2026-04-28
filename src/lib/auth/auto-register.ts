@@ -83,8 +83,6 @@ export async function registerUserAndSession(
 		learning_goals: payload.learningGoals ?? null,
 		willing_to_recommend: payload.willingToRecommend,
 		role: "user" as const,
-		specialties: [] as string[],
-		is_instructor: false,
 	};
 
 	const { error: insertErr } = await srv.from("profiles").insert(profileRow);

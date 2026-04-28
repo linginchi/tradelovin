@@ -9,7 +9,6 @@ const postSchema = z.object({
 	name: z.string().min(1),
 	email: z.string().email().nullable().optional(),
 	bio: z.string().nullable().optional(),
-	specialties: z.array(z.string()).optional(),
 });
 
 export async function GET() {
@@ -23,8 +22,8 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from("profiles")
-		.select("id, real_name, nickname, avatar_url, bio, specialties")
-		.eq("is_instructor", true)
+		.select("id, real_name, nickname, avatar_url, bio")
+		.eq("role", "instructor")
 		.order("created_at", { ascending: true });
 
 	if (error) {
@@ -40,7 +39,6 @@ export async function GET() {
 		email: emailMap.get(row.id as string) ?? null,
 		avatar_url: (row.avatar_url as string | null) ?? null,
 		bio: row.bio as string | null,
-		specialties: (row.specialties as string[]) ?? [],
 	}));
 
 	return NextResponse.json({ instructors });
@@ -70,9 +68,7 @@ export async function POST(req: Request) {
 	const insert: Record<string, unknown> = {
 		real_name: parsed.data.name.trim(),
 		bio: parsed.data.bio?.trim() || null,
-		specialties: parsed.data.specialties ?? [],
-		is_instructor: true,
-		role: "user",
+		role: "instructor",
 	};
 	const { data, error } = await supabase.from("profiles").insert(insert)
 		.select()
@@ -88,7 +84,6 @@ export async function POST(req: Request) {
 		nickname: string | null;
 		avatar_url: string | null;
 		bio: string | null;
-		specialties: string[];
 	};
 
 	const contactEmail = await getAuthEmailByUserId(supabase, row.id);
@@ -100,7 +95,6 @@ export async function POST(req: Request) {
 			email: contactEmail,
 			avatar_url: row.avatar_url,
 			bio: row.bio,
-			specialties: row.specialties ?? [],
 		},
 	});
 }

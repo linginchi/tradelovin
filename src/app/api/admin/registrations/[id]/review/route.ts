@@ -148,8 +148,6 @@ export async function POST(req: Request, ctx: RouteContext) {
 				address: reg.address as string | null,
 				student_id: code,
 				role: "user",
-				specialties: [],
-				is_instructor: false,
 			},
 			{ onConflict: "id" },
 		)
