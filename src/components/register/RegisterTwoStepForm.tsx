@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, type UseFormRegister } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
 import { toast, Toaster } from "sonner";
 import { z } from "zod";
@@ -13,7 +13,7 @@ import type { RegistrationFormValues } from "@/components/registration-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { normalizeRegisterBody } from "@/lib/auth/register-payload";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,8 @@ const tradingStyleValueEnum = z.enum([
 
 const experienceValues = ["none", "lt_1y", "y1_3", "gt_3", "professional"] as const;
 const recommendValues = ["yes", "no"] as const;
+
+type FormValues = RegistrationFormValues & { otp: string };
 
 export function RegisterTwoStepForm() {
 	const router = useRouter();
@@ -58,7 +60,7 @@ export function RegisterTwoStepForm() {
 		[t],
 	);
 
-	const defaultValues = useMemo<RegistrationFormValues>(
+	const defaultValues = useMemo<FormValues>(
 		() => ({
 			real_name: "",
 			nickname: "",
@@ -68,6 +70,7 @@ export function RegisterTwoStepForm() {
 			trading_style_preferences: [],
 			learning_goals: "",
 			willing_to_recommend: "no",
+			otp: "",
 		}),
 		[],
 	);
@@ -79,7 +82,7 @@ export function RegisterTwoStepForm() {
 		setValue,
 		trigger,
 		formState: { errors },
-	} = useForm<RegistrationFormValues>({
+	} = useForm<FormValues>({
 		defaultValues,
 		mode: "onBlur",
 	});
@@ -97,8 +100,48 @@ export function RegisterTwoStepForm() {
 		});
 	};
 
-	const submitRegister = async (raw: RegistrationFormValues) => {
+	const sendCode = async () => {
+		const ok = await trigger(["email"]);
+		if (!ok) return;
+		const email = watch("email").trim();
+		if (!email) {
+			toast.error(tWizard("errEmail"));
+			return;
+		}
+		setBusy(true);
+		const res = await fetch("/api/auth/send-code", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email, intent: "register" }),
+		});
+		const js = (await res.json()) as {
+			success?: boolean;
+			error?: string;
+			errorEn?: string;
+			code?: string;
+		};
+		setBusy(false);
+		if (res.status === 409) {
+			const msg =
+				locale === "en" ? (js.errorEn ?? js.error ?? tWizard("dupEmail")) : (js.error ?? tWizard("dupEmail"));
+			toast.error(msg);
+			return;
+		}
+		if (!res.ok || !js.success) {
+			toast.error(typeof js.error === "string" ? js.error : tWizard("sendCodeFailed"));
+			return;
+		}
+		toast.success(tWizard("codeSent"));
+		setStep(2);
+	};
+
+	const submitRegister = async (raw: FormValues) => {
 		if (finished) return;
+		const otp = raw.otp.trim();
+		if (otp.length !== 6) {
+			toast.error(tWizard("errOtp"));
+			return;
+		}
 		const normalized = normalizeRegisterBody({
 			email: raw.email.trim(),
 			nickname: raw.nickname.trim(),
@@ -115,11 +158,15 @@ export function RegisterTwoStepForm() {
 		}
 
 		setBusy(true);
-		const res = await fetch("/api/auth/register", {
+		const res = await fetch("/api/auth/verify", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",
-			body: JSON.stringify(normalized.payload),
+			body: JSON.stringify({
+				...normalized.payload,
+				code: otp,
+				intent: "register",
+			}),
 		});
 		const js = (await res.json()) as {
 			success?: boolean;
@@ -143,11 +190,6 @@ export function RegisterTwoStepForm() {
 		router.replace("/trade");
 	};
 
-	const goStep2 = async () => {
-		const ok = await trigger(["nickname", "email"]);
-		if (ok) setStep(2);
-	};
-
 	return (
 		<>
 			<form
@@ -155,7 +197,7 @@ export function RegisterTwoStepForm() {
 					step === 1
 						? (e) => {
 								e.preventDefault();
-								void goStep2();
+								void sendCode();
 							}
 						: handleSubmit(submitRegister)
 				}
@@ -167,23 +209,16 @@ export function RegisterTwoStepForm() {
 					<p className="text-muted-foreground text-sm">{tWizard("intro")}</p>
 				</div>
 
+				<p className="text-muted-foreground text-sm">
+					{tWizard("hasAccount")}{" "}
+					<Link href="/login" className="text-cyan-400 underline-offset-4 hover:underline">
+						{tWizard("goLogin")}
+					</Link>
+				</p>
+
 				{step === 1 && (
 					<div className="space-y-4">
 						<p className="text-muted-foreground text-xs font-medium">{tWizard("step1Badge")}</p>
-						<div className="space-y-2">
-							<Label htmlFor="nickname">
-								{t("nickname")} <span className="text-destructive">*</span>
-							</Label>
-							<Input
-								id="nickname"
-								autoComplete="nickname"
-								{...register("nickname", { required: true })}
-								disabled={finished}
-							/>
-							{errors.nickname && (
-								<p className="text-destructive text-xs">{tWizard("errNickname")}</p>
-							)}
-						</div>
 						<div className="space-y-2">
 							<Label htmlFor="email">
 								{t("email")} <span className="text-destructive">*</span>
@@ -197,8 +232,14 @@ export function RegisterTwoStepForm() {
 							/>
 							{errors.email && <p className="text-destructive text-xs">{tWizard("errEmail")}</p>}
 						</div>
-						<Button type="submit" disabled={finished} className="w-full sm:w-auto">
-							{tWizard("nextStep")}
+						<Button type="submit" disabled={finished || busy} className={cn(busy && "gap-2", "w-full sm:w-auto")}>
+							{busy ? (
+								<>
+									<Loader2 className="size-4 animate-spin" aria-hidden /> {tWizard("registering")}
+								</>
+							) : (
+								tWizard("nextStep")
+							)}
 						</Button>
 					</div>
 				)}
@@ -216,6 +257,34 @@ export function RegisterTwoStepForm() {
 						>
 							{tWizard("backToStep1")}
 						</Button>
+
+						<div className="space-y-2">
+							<Label htmlFor="otp">{tWizard("otpLabel")}</Label>
+							<Input
+								id="otp"
+								inputMode="numeric"
+								autoComplete="one-time-code"
+								maxLength={6}
+								{...register("otp", { required: true, minLength: 6, maxLength: 6 })}
+								disabled={finished}
+							/>
+							{errors.otp && <p className="text-destructive text-xs">{tWizard("errOtp")}</p>}
+						</div>
+
+						<div className="space-y-2">
+							<Label htmlFor="nickname">
+								{t("nickname")} <span className="text-destructive">*</span>
+							</Label>
+							<Input
+								id="nickname"
+								autoComplete="nickname"
+								{...register("nickname", { required: true })}
+								disabled={finished}
+							/>
+							{errors.nickname && (
+								<p className="text-destructive text-xs">{tWizard("errNickname")}</p>
+							)}
+						</div>
 
 						<div className="space-y-2">
 							<Label htmlFor="real_name">
@@ -294,7 +363,9 @@ export function RegisterTwoStepForm() {
 						</fieldset>
 
 						<LazyWhenVisible minHeight={100} rootMargin="80px">
-							<RegistrationFormOptionalFields register={register} />
+							<RegistrationFormOptionalFields
+								register={register as unknown as UseFormRegister<RegistrationFormValues>}
+							/>
 						</LazyWhenVisible>
 
 						<fieldset className="space-y-3" disabled={finished}>

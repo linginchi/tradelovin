@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
 	BookOpen,
+	Briefcase,
 	ClipboardList,
 	LayoutDashboard,
 	LogOut,
@@ -14,6 +15,7 @@ import {
 	Shield,
 	Sparkles,
 	UserCircle,
+	UserPlus,
 	Users,
 } from "lucide-react";
 
@@ -57,6 +59,8 @@ export function AdminShell({ role, email, children }: Props) {
 		{ href: `${ADMIN_BASE_PATH}/reviews`, label: t("navReviews"), icon: ClipboardList },
 		{ href: `${ADMIN_BASE_PATH}/students`, label: t("navStudents"), icon: Users },
 		{ href: `${ADMIN_BASE_PATH}/courses`, label: t("navCourses"), icon: BookOpen },
+		{ href: `${ADMIN_BASE_PATH}/course-registrations`, label: t("navCourseRegs"), icon: UserPlus },
+		{ href: `${ADMIN_BASE_PATH}/job-applications`, label: t("navJobApps"), icon: Briefcase },
 		{ href: `${ADMIN_BASE_PATH}/instructors`, label: t("navInstructors"), icon: UserCircle },
 		{ href: `${ADMIN_BASE_PATH}/fees`, label: t("navFees"), icon: Mail },
 	);

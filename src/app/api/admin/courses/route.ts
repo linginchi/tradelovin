@@ -10,6 +10,13 @@ const postSchema = z.object({
 	mode: z.enum(["online", "offline"]),
 	capacity: z.number().int().positive().max(10000),
 	instructor_id: z.string().uuid().nullable().optional(),
+	cover_image: z.string().max(2048).nullable().optional(),
+	instructor_label: z.string().max(200).nullable().optional(),
+	start_date: z.string().max(32).nullable().optional(),
+	end_date: z.string().max(32).nullable().optional(),
+	location: z.string().max(500).nullable().optional(),
+	price: z.number().nonnegative().nullable().optional(),
+	is_active: z.boolean().optional(),
 });
 
 export async function GET() {
@@ -90,6 +97,15 @@ export async function POST(req: Request) {
 		capacity: parsed.data.capacity,
 	};
 	if (parsed.data.instructor_id) insert.instructor_id = parsed.data.instructor_id;
+	if (parsed.data.cover_image !== undefined) insert.cover_image = parsed.data.cover_image?.trim() || null;
+	if (parsed.data.instructor_label !== undefined) {
+		insert.instructor_label = parsed.data.instructor_label?.trim() || null;
+	}
+	if (parsed.data.start_date !== undefined) insert.start_date = parsed.data.start_date || null;
+	if (parsed.data.end_date !== undefined) insert.end_date = parsed.data.end_date || null;
+	if (parsed.data.location !== undefined) insert.location = parsed.data.location?.trim() || null;
+	if (parsed.data.price !== undefined) insert.price = parsed.data.price;
+	if (parsed.data.is_active !== undefined) insert.is_active = parsed.data.is_active;
 
 	const { data, error } = await supabase.from("courses").insert(insert).select().maybeSingle();
 
