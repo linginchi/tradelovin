@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailsByUserIds } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -28,8 +29,13 @@ export async function GET() {
 	const userIds = [...new Set((rows ?? []).map((r) => r.user_id as string))];
 	let profiles: { id: string; email: string | null; nickname: string | null }[] = [];
 	if (userIds.length > 0) {
-		const { data: p } = await srv.from("profiles").select("id,email,nickname").in("id", userIds);
-		profiles = (p ?? []) as typeof profiles;
+		const { data: p } = await srv.from("profiles").select("id,nickname").in("id", userIds);
+		const emailMap = await getAuthEmailsByUserIds(srv, userIds);
+		profiles = (p ?? []).map((row) => ({
+			id: row.id as string,
+			nickname: row.nickname as string | null,
+			email: emailMap.get(row.id as string) ?? null,
+		}));
 	}
 	const profById = new Map(profiles.map((p) => [p.id, p]));
 

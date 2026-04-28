@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { nextBdStudentId } from "@/lib/admin/student-code";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const patchSchema = z
@@ -72,11 +73,14 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		.trim()
 		.toLowerCase();
 
-	const { data: profBefore } = await supabase
-		.from("profiles")
-		.select("id, student_id")
-		.eq("email", emailBefore)
-		.maybeSingle();
+	const uidBefore =
+		(before.user_id as string | null) && String(before.user_id).length > 0
+			? (before.user_id as string)
+			: await getAuthUserIdByEmail(supabase, emailBefore);
+
+	const { data: profBefore } = uidBefore
+		? await supabase.from("profiles").select("id, student_id").eq("id", uidBefore).maybeSingle()
+		: { data: null };
 
 	if (wantAssign) {
 		const hasSid = Boolean(before.student_id) || Boolean(profBefore?.student_id);
@@ -102,9 +106,10 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
 	const nextEmail = regUpdates.email !== undefined ? String(regUpdates.email).trim().toLowerCase() : emailBefore;
 	if (regUpdates.email !== undefined && nextEmail !== emailBefore) {
-		const { data: clash } = await supabase.from("profiles").select("id").eq("email", nextEmail).maybeSingle();
-		if (clash && clash.id !== profBefore?.id) {
-			return NextResponse.json({ error: "Profile email already in use" }, { status: 409 });
+		const clashUid = await getAuthUserIdByEmail(supabase, nextEmail);
+		const selfId = (profBefore?.id as string | undefined) ?? uidBefore ?? null;
+		if (clashUid && clashUid !== selfId) {
+			return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 		}
 	}
 
@@ -131,8 +136,14 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
 	let profileId = profBefore?.id as string | undefined;
 	if (!profileId) {
-		const { data: profMatch } = await supabase.from("profiles").select("id").eq("email", emailAfter).maybeSingle();
-		profileId = profMatch?.id as string | undefined;
+		const uidAfter =
+			(after.user_id as string | null) && String(after.user_id).length > 0
+				? (after.user_id as string)
+				: await getAuthUserIdByEmail(supabase, emailAfter);
+		if (uidAfter) {
+			const { data: profMatch } = await supabase.from("profiles").select("id").eq("id", uidAfter).maybeSingle();
+			profileId = profMatch?.id as string | undefined;
+		}
 	}
 
 	if (hasEmerg && !profileId) {
@@ -145,7 +156,6 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 			nickname: after.nickname,
 			phone: after.phone,
 			address: after.address,
-			email: emailAfter,
 		};
 		if (after.student_id) {
 			profilePatch.student_id = after.student_id;

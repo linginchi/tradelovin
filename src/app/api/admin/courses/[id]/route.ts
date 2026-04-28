@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailsByUserIds } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const patchSchema = z
@@ -75,15 +76,21 @@ export async function GET(_req: Request, ctx: RouteContext) {
 		full_name: string | null;
 		email: string;
 	};
-	const { data: studRows } =
+	const { data: studRowsRaw } =
 		studIds.length > 0
 			? await supabase
 					.from("profiles")
-					.select("id, student_id, nickname, full_name, email")
+					.select("id, student_id, nickname, full_name")
 					.in("id", studIds)
-			: { data: [] as StudRow[] };
+			: { data: [] as Omit<StudRow, "email">[] };
 
-	const studMap = new Map((studRows ?? []).map((s) => [s.id, s]));
+	const studEmailMap = await getAuthEmailsByUserIds(supabase, studIds);
+	const studRows: StudRow[] = (studRowsRaw ?? []).map((s) => ({
+		...s,
+		email: studEmailMap.get(s.id as string) ?? "",
+	})) as StudRow[];
+
+	const studMap = new Map(studRows.map((s) => [s.id, s]));
 
 	const enrollmentCount = enrollments?.length ?? 0;
 

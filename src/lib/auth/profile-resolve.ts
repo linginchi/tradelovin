@@ -31,58 +31,62 @@ export async function getAuthUserIdByEmail(srv: SupabaseClient, emailLower: stri
 	return null;
 }
 
-/** 是否已有该邮箱的学员账号：profiles 或 auth.users 任一有即视为已注册。 */
+/** 是否已有该邮箱的学员账号（以 auth.users 为准；邮箱不存 profiles）。 */
 export async function tradeUserExistsForEmail(srv: SupabaseClient, emailLower: string): Promise<boolean> {
-	const { data: p } = await srv.from("profiles").select("id").eq("email", emailLower).maybeSingle();
-	if (p?.id) return true;
-	const uid = await getAuthUserIdByEmail(srv, emailLower);
-	return uid !== null;
+	return (await getAuthUserIdByEmail(srv, emailLower)) !== null;
 }
 
-/** 登录用：优先 profiles.id，无行则回退 auth 用户 id。 */
+/** 登录用：auth 用户 id（与 profiles.id 对齐）。 */
 export async function getTradeUserIdByEmail(srv: SupabaseClient, emailLower: string): Promise<string | null> {
-	const { data: p } = await srv.from("profiles").select("id").eq("email", emailLower).maybeSingle();
-	if (p?.id) return p.id as string;
 	return getAuthUserIdByEmail(srv, emailLower);
 }
 
+/** 从 auth.users 读取邮箱（profiles 不存 email）。 */
+export async function getAuthEmailByUserId(srv: SupabaseClient, userId: string): Promise<string | null> {
+	const { data, error } = await srv.auth.admin.getUserById(userId);
+	if (error || !data?.user?.email) return null;
+	const e = String(data.user.email).trim().toLowerCase();
+	return e || null;
+}
+
+/** 批量解析 userId → 邮箱（顺序请求，避免压垮 Admin API）。 */
+export async function getAuthEmailsByUserIds(
+	srv: SupabaseClient,
+	userIds: string[],
+): Promise<Map<string, string>> {
+	const out = new Map<string, string>();
+	const seen = new Set<string>();
+	for (const id of userIds) {
+		if (!id || seen.has(id)) continue;
+		seen.add(id);
+		const e = await getAuthEmailByUserId(srv, id);
+		if (e) out.set(id, e);
+	}
+	return out;
+}
+
 /**
- * 服务端读取昵称/邮箱：优先 public.profiles，缺省字段时用 auth.admin.getUserById 的 user_metadata / email。
+ * 服务端读取昵称/邮箱：profiles 仅取昵称；邮箱始终来自 auth.users（或当前会话）。
  */
 export async function getTradeNicknameAndEmail(
 	srv: SupabaseClient,
 	userId: string,
 	sessionEmail: string | undefined,
 ): Promise<{ nickname: string; email: string } | null> {
-	const { data: profile } = await srv.from("profiles").select("nickname,email").eq("id", userId).maybeSingle();
+	const { data: profile } = await srv.from("profiles").select("nickname").eq("id", userId).maybeSingle();
 
-	let meta: Record<string, unknown> | undefined;
-	let authEmail: string | undefined;
-
-	const needAuth =
-		!profile ||
-		!(profile.nickname != null && String(profile.nickname).trim()) ||
-		!(profile.email != null && String(profile.email).trim());
-
-	if (needAuth) {
-		const { data: authData, error } = await srv.auth.admin.getUserById(userId);
-		if (error) {
-			console.warn("[getUserById]", error.message);
-		}
-		meta = authData?.user?.user_metadata as Record<string, unknown> | undefined;
-		authEmail = authData?.user?.email ?? undefined;
+	const { data: authData, error } = await srv.auth.admin.getUserById(userId);
+	if (error) {
+		console.warn("[getUserById]", error.message);
 	}
+	const meta = authData?.user?.user_metadata as Record<string, unknown> | undefined;
+	const authEmail = authData?.user?.email ?? undefined;
 
 	const nickname =
 		(profile?.nickname != null && String(profile.nickname).trim()) ||
 		resolveNicknameFromMetadata(meta, "学员");
 
-	const email = (
-		(profile?.email != null && String(profile.email).trim()) ||
-		authEmail ||
-		sessionEmail ||
-		""
-	).toLowerCase();
+	const email = (authEmail || sessionEmail || "").trim().toLowerCase();
 
 	if (!email) return null;
 	return { nickname, email };

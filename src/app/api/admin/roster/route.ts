@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailsByUserIds } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 function aggregatePayment(rows: { payment_status: string }[]): "paid" | "unpaid" | "refunded" {
@@ -72,21 +73,23 @@ export async function GET(req: Request) {
 		if (studIds.length > 0) {
 			const { data: profs } = await supabase
 				.from("profiles")
-				.select("id, student_id, nickname, full_name, email")
+				.select("id, student_id, nickname, full_name")
 				.in("id", studIds);
 			for (const p of profs ?? []) {
 				profById.set(p.id as string, p as Record<string, unknown>);
 			}
 		}
+		const studEmailMap = await getAuthEmailsByUserIds(supabase, studIds);
 
 		const enrollments = list.map((row) => {
-			const prof = profById.get(row.student_id as string);
+			const sid = row.student_id as string;
+			const prof = profById.get(sid);
 			return {
 				enrollment_id: row.id as string,
-				student_profile_id: row.student_id as string,
+				student_profile_id: sid,
 				student_code: (prof?.student_id as string) ?? "",
 				nickname: (prof?.nickname ?? prof?.full_name) as string | null,
-				email: prof?.email as string,
+				email: studEmailMap.get(sid) ?? "",
 				course_id: row.course_id as string,
 				course_title: courseTitle.get(row.course_id as string) ?? "—",
 				payment_status: row.payment_status as string,
@@ -100,7 +103,7 @@ export async function GET(req: Request) {
 
 	const { data: profiles, error } = await supabase
 		.from("profiles")
-		.select("id, student_id, nickname, full_name, email")
+		.select("id, student_id, nickname, full_name")
 		.not("student_id", "is", null)
 		.order("created_at", { ascending: false });
 
@@ -124,11 +127,14 @@ export async function GET(req: Request) {
 		}
 	}
 
+	const rosterIds = (profiles ?? []).map((p) => p.id as string);
+	const rosterEmailMap = await getAuthEmailsByUserIds(supabase, rosterIds);
+
 	const students = (profiles ?? []).map((p) => ({
 		id: p.id as string,
 		student_id: p.student_id as string,
 		nickname: (p.nickname ?? p.full_name) as string | null,
-		email: p.email as string,
+		email: rosterEmailMap.get(p.id as string) ?? "",
 		payment_status: aggregatePayment(payByStudent.get(p.id as string) ?? []),
 	}));
 

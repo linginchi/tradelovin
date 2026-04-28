@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailByUserId, getAuthEmailsByUserIds } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const postSchema = z.object({
@@ -22,7 +23,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from("profiles")
-		.select("id, full_name, nickname, email, avatar_url, bio, specialties")
+		.select("id, full_name, nickname, avatar_url, bio, specialties")
 		.eq("is_instructor", true)
 		.order("created_at", { ascending: true });
 
@@ -30,10 +31,13 @@ export async function GET() {
 		return NextResponse.json({ error: error.message }, { status: 500 });
 	}
 
+	const ids = (data ?? []).map((r) => r.id as string);
+	const emailMap = await getAuthEmailsByUserIds(supabase, ids);
+
 	const instructors = (data ?? []).map((row) => ({
 		id: row.id as string,
 		name: ((row.full_name ?? row.nickname) as string) || "—",
-		email: (row.email as string | null) ?? null,
+		email: emailMap.get(row.id as string) ?? null,
 		avatar_url: (row.avatar_url as string | null) ?? null,
 		bio: row.bio as string | null,
 		specialties: (row.specialties as string[]) ?? [],
@@ -70,10 +74,6 @@ export async function POST(req: Request) {
 		is_instructor: true,
 		role: "user",
 	};
-	if (parsed.data.email) {
-		insert.email = parsed.data.email.trim().toLowerCase();
-	}
-
 	const { data, error } = await supabase.from("profiles").insert(insert)
 		.select()
 		.maybeSingle();
@@ -86,17 +86,18 @@ export async function POST(req: Request) {
 		id: string;
 		full_name: string | null;
 		nickname: string | null;
-		email: string | null;
 		avatar_url: string | null;
 		bio: string | null;
 		specialties: string[];
 	};
 
+	const contactEmail = await getAuthEmailByUserId(supabase, row.id);
+
 	return NextResponse.json({
 		instructor: {
 			id: row.id,
 			name: row.full_name ?? row.nickname ?? "—",
-			email: row.email,
+			email: contactEmail,
 			avatar_url: row.avatar_url,
 			bio: row.bio,
 			specialties: row.specialties ?? [],

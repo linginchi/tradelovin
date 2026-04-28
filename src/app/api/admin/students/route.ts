@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailsByUserIds, getAuthUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 type RegRow = Record<string, unknown>;
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
 	if (!supabase) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
+	const db = supabase;
 
 	const { searchParams } = new URL(req.url);
 	const search = (searchParams.get("search") ?? "").trim().replace(/%/g, "").slice(0, 120);
@@ -51,7 +53,7 @@ export async function GET(req: Request) {
 	if (search) {
 		const p = `%${search}%`;
 
-		let q1 = supabase.from("registrations").select("*");
+		let q1 = db.from("registrations").select("*");
 		if (reviewScope === "reviewed") {
 			q1 = q1
 				.in("status", ["approved", "rejected"])
@@ -69,12 +71,14 @@ export async function GET(req: Request) {
 			return NextResponse.json({ error: e1.message }, { status: 500 });
 		}
 
-		const { data: sidProfs } = await supabase.from("profiles").select("email").ilike("student_id", p);
-		const extraEmails = [...new Set((sidProfs ?? []).map((r) => normEmail(r.email as string)).filter(Boolean))];
+		const { data: sidProfs } = await db.from("profiles").select("id").ilike("student_id", p);
+		const sidUids = (sidProfs ?? []).map((r) => r.id as string);
+		const sidEmailMap = await getAuthEmailsByUserIds(db, sidUids);
+		const extraEmails = [...new Set(Array.from(sidEmailMap.values()).map((e) => normEmail(e)).filter(Boolean))];
 
 		let reg2: RegRow[] = [];
 		if (extraEmails.length > 0) {
-			let q2 = supabase.from("registrations").select("*").in("email", extraEmails);
+			let q2 = db.from("registrations").select("*").in("email", extraEmails);
 			if (reviewScope === "reviewed") {
 				q2 = q2
 					.in("status", ["approved", "rejected"])
@@ -103,36 +107,48 @@ export async function GET(req: Request) {
 			return tb - ta;
 		});
 	} else {
-		const { data, error } = await baseRegistrationsQuery(supabase, status, reviewScope);
+		const { data, error } = await baseRegistrationsQuery(db, status, reviewScope);
 		if (error) {
 			return NextResponse.json({ error: error.message }, { status: 500 });
 		}
 		registrations = (data ?? []) as RegRow[];
 	}
 
-	const emails = [...new Set(registrations.map((r) => normEmail(r.email as string)).filter(Boolean))];
+	const emailToUidCache = new Map<string, string | null>();
+	async function regUserId(reg: RegRow): Promise<string | null> {
+		const raw = reg.user_id as string | null | undefined;
+		if (raw && typeof raw === "string") return raw;
+		const em = normEmail(reg.email as string);
+		if (!em) return null;
+		if (emailToUidCache.has(em)) return emailToUidCache.get(em) ?? null;
+		const uid = await getAuthUserIdByEmail(db, em);
+		emailToUidCache.set(em, uid);
+		return uid;
+	}
 
-	const profByEmail = new Map<string, RegRow>();
-	if (emails.length > 0) {
-		const { data: profs } = await supabase
+	const regUserIds = await Promise.all(registrations.map((r) => regUserId(r)));
+	const uids = [...new Set(regUserIds.filter((x): x is string => Boolean(x)))];
+
+	const profById = new Map<string, RegRow>();
+	if (uids.length > 0) {
+		const { data: profs } = await db
 			.from("profiles")
-			.select("id,email,full_name,nickname,avatar_url,student_id,emergency_phone,phone")
-			.in("email", emails);
+			.select("id,full_name,nickname,avatar_url,student_id,emergency_phone,phone")
+			.in("id", uids);
 
 		for (const p of profs ?? []) {
-			const k = normEmail(p.email as string);
-			if (k) profByEmail.set(k, p as RegRow);
+			profById.set(p.id as string, p as RegRow);
 		}
 	}
 
-	const students = registrations.map((reg) => {
-		const em = normEmail(reg.email as string);
-		const prof = em ? profByEmail.get(em) : undefined;
+	const students = registrations.map((reg, i) => {
+		const uid = regUserIds[i];
+		const prof = uid ? profById.get(uid) : undefined;
 		return {
 			...reg,
 			avatar_url: (prof?.avatar_url as string | null) ?? null,
 			emergency_phone: (prof?.emergency_phone as string | null) ?? null,
-			profile_id: (prof?.id as string | undefined) ?? null,
+			profile_id: (prof?.id as string | undefined) ?? uid ?? null,
 			student_id: (reg.student_id as string | null) ?? (prof?.student_id as string | null) ?? null,
 		};
 	});

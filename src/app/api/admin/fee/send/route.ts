@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailsByUserIds } from "@/lib/auth/profile-resolve";
 import { resolveResendEnv } from "@/lib/email/resend-config";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -67,7 +68,7 @@ export async function POST(req: Request) {
 
 	const { data: rows, error: qErr } = await supabase
 		.from("profiles")
-		.select("id, email")
+		.select("id")
 		.in("id", profileIds)
 		.not("student_id", "is", null);
 
@@ -81,13 +82,22 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "No matching students" }, { status: 400 });
 	}
 
+	const emailByProfileId = await getAuthEmailsByUserIds(
+		supabase,
+		approved.map((r) => r.id as string),
+	);
+
 	const resend = new Resend(resendCfg.apiKey);
 	const now = new Date().toISOString();
 	let sent = 0;
 	const errors: string[] = [];
 
 	for (const row of approved) {
-		const email = row.email as string;
+		const email = emailByProfileId.get(row.id as string) ?? "";
+		if (!email) {
+			errors.push(`${row.id as string}: no auth email`);
+			continue;
+		}
 		const { error: sendErr } = await resend.emails.send({
 			from: resendCfg.from,
 			to: email,

@@ -75,7 +75,6 @@ export async function registerUserAndSession(
 
 	const profileRow = {
 		id: userId,
-		email: emailLower,
 		nickname: payload.nickname,
 		full_name: realName ?? null,
 		phone: payload.phone ?? null,

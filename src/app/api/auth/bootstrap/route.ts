@@ -55,7 +55,6 @@ export async function POST(request: Request) {
 	const { error: pErr } = await srv.from("profiles").upsert(
 		{
 			id: user.id,
-			email: user.email!.toLowerCase(),
 			nickname,
 			full_name: realName || null,
 			phone: phone || null,

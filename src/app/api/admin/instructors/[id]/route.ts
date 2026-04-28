@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthEmailByUserId } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const patchSchema = z
@@ -43,9 +44,6 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
 	const updates: Record<string, unknown> = {};
 	if (parsed.data.name !== undefined) updates.full_name = parsed.data.name.trim();
-	if (parsed.data.email !== undefined) {
-		updates.email = parsed.data.email === null || parsed.data.email === "" ? null : parsed.data.email.trim().toLowerCase();
-	}
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio === "" ? null : parsed.data.bio;
 	if (parsed.data.specialties !== undefined) updates.specialties = parsed.data.specialties;
 
@@ -53,17 +51,48 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		if (updates[k] === undefined) delete updates[k];
 	});
 
-	if (Object.keys(updates).length === 0) {
+	let emailUpdated = false;
+	if (parsed.data.email !== undefined) {
+		const raw = parsed.data.email;
+		if (raw === null || raw === "") {
+			return NextResponse.json({ error: "邮箱不可清空；请在 Supabase Auth 中处理" }, { status: 400 });
+		}
+		const { error: aErr } = await supabase.auth.admin.updateUserById(id, {
+			email: raw.trim().toLowerCase(),
+		});
+		if (aErr) {
+			return NextResponse.json({ error: aErr.message }, { status: 400 });
+		}
+		emailUpdated = true;
+	}
+
+	if (Object.keys(updates).length === 0 && !emailUpdated) {
 		return NextResponse.json({ error: "No updates" }, { status: 400 });
 	}
 
-	const { data, error } = await supabase
-		.from("profiles")
-		.update(updates)
-		.eq("id", id)
-		.eq("is_instructor", true)
-		.select()
-		.maybeSingle();
+	let data: Record<string, unknown> | null = null;
+	let error: { message: string } | null = null;
+
+	if (Object.keys(updates).length > 0) {
+		const res = await supabase
+			.from("profiles")
+			.update(updates)
+			.eq("id", id)
+			.eq("is_instructor", true)
+			.select()
+			.maybeSingle();
+		data = res.data as Record<string, unknown> | null;
+		error = res.error;
+	} else {
+		const res = await supabase
+			.from("profiles")
+			.select()
+			.eq("id", id)
+			.eq("is_instructor", true)
+			.maybeSingle();
+		data = res.data as Record<string, unknown> | null;
+		error = res.error;
+	}
 
 	if (error) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
@@ -72,21 +101,22 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		return NextResponse.json({ error: "Not found" }, { status: 404 });
 	}
 
-	const row = data as {
+	const row = data as unknown as {
 		id: string;
 		full_name: string | null;
 		nickname: string | null;
-		email: string | null;
 		avatar_url: string | null;
 		bio: string | null;
 		specialties: string[];
 	};
 
+	const contactEmail = await getAuthEmailByUserId(supabase, row.id);
+
 	return NextResponse.json({
 		instructor: {
 			id: row.id,
 			name: row.full_name ?? row.nickname ?? "—",
-			email: row.email,
+			email: contactEmail,
 			avatar_url: row.avatar_url,
 			bio: row.bio,
 			specialties: row.specialties ?? [],

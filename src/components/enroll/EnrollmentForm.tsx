@@ -127,7 +127,7 @@ export function EnrollmentForm() {
 
 			const { data, error } = await sb
 				.from("profiles")
-				.select("nickname,email")
+				.select("nickname")
 				.eq("id", uid)
 				.maybeSingle();
 
@@ -136,10 +136,7 @@ export function EnrollmentForm() {
 				console.warn("[enroll profiles]", error.message);
 			}
 
-			const emailAddr =
-				(data?.email != null && String(data.email).trim()) ||
-				sess.session.user.email ||
-				"";
+			const emailAddr = (sess.session.user.email ?? "").trim();
 			if (!emailAddr) {
 				setLoading(false);
 				toast.error(tEnroll("needLogin"));

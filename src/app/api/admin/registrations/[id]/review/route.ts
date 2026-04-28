@@ -4,6 +4,7 @@ import { z } from "zod";
 import { nextBdStudentId } from "@/lib/admin/student-code";
 import { getReviewerProfileId } from "@/lib/admin/reviewer-profile";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { getAuthUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { sendAdminEmail } from "@/lib/email/admin-mail";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -97,10 +98,25 @@ export async function POST(req: Request, ctx: RouteContext) {
 		return NextResponse.json({ ok: true, registration: { id, status: "rejected" } });
 	}
 
+	const regEmail = String(reg.email ?? "")
+		.trim()
+		.toLowerCase();
+	const applicantUid =
+		(reg.user_id as string | null) && String(reg.user_id).length > 0
+			? (reg.user_id as string)
+			: await getAuthUserIdByEmail(supabase, regEmail);
+
+	if (!applicantUid) {
+		return NextResponse.json(
+			{ error: "未找到对应登录账号，无法核准（需学员已注册 auth 用户）" },
+			{ status: 400 },
+		);
+	}
+
 	const { data: existingProfile } = await supabase
 		.from("profiles")
 		.select("id, student_id")
-		.eq("email", (reg.email as string).trim().toLowerCase())
+		.eq("id", applicantUid)
 		.not("student_id", "is", null)
 		.maybeSingle();
 
@@ -121,17 +137,22 @@ export async function POST(req: Request, ctx: RouteContext) {
 		);
 	}
 
-	const { data: inserted, error: insErr } = await supabase
+	const { data: upserted, error: insErr } = await supabase
 		.from("profiles")
-		.insert({
-			email: (reg.email as string).trim().toLowerCase(),
-			full_name: reg.real_name as string | null,
-			nickname: reg.nickname as string | null,
-			phone: reg.phone as string | null,
-			address: reg.address as string | null,
-			student_id: code,
-			role: "user",
-		})
+		.upsert(
+			{
+				id: applicantUid,
+				full_name: reg.real_name as string | null,
+				nickname: reg.nickname as string | null,
+				phone: reg.phone as string | null,
+				address: reg.address as string | null,
+				student_id: code,
+				role: "user",
+				specialties: [],
+				is_instructor: false,
+			},
+			{ onConflict: "id" },
+		)
 		.select()
 		.maybeSingle();
 
@@ -151,13 +172,12 @@ export async function POST(req: Request, ctx: RouteContext) {
 		.eq("id", id);
 
 	if (updErr) {
-		await supabase.from("profiles").delete().eq("id", inserted?.id as string);
 		return NextResponse.json({ error: updErr.message }, { status: 500 });
 	}
 
 	return NextResponse.json({
 		ok: true,
 		registration: { id, status: "approved", student_id: code },
-		profile: inserted,
+		profile: upserted,
 	});
 }
