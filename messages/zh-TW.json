@@ -9,6 +9,7 @@
 		"mainLabel": "主導航",
 		"about": "關於我們",
 		"myScores": "我的成績",
+		"trade": "模擬交易",
 		"myProfile": "我的"
 	},
 	"LanguageSwitcher": {
@@ -21,6 +22,95 @@
 		"brand": "豹仔樂園",
 		"backHome": "返回首頁",
 		"comingSoon": "待連接"
+	},
+	"Trade": {
+		"title": "豹仔樂園 · 模擬交易",
+		"subtitle": "查看資產與當日委託成交，限價練習下單（撮合功能將陸續開放）。",
+		"panel": {
+			"placeOrder": "交易區",
+			"placeHint": "填入代碼與價格數量後選擇方向；當前價為占位展示。",
+			"buy": "買入",
+			"sell": "賣出",
+			"flat": "平倉"
+		},
+		"form": {
+			"symbol": "股票代碼",
+			"symbolPlaceholder": "例如 0700",
+			"lastPrice": "當前價",
+			"price": "委託價格",
+			"quantity": "委託數量",
+			"quantityPlaceholder": "100",
+			"quantityHint": "須為 100 的整數倍",
+			"availableFunds": "可用資金（元）",
+			"sellable": "可賣數量（股）"
+		},
+		"overview": {
+			"title": "資產概況",
+			"hint": "總市值與可用、凍結拆分展示；今日盈虧待接入實時統計。",
+			"total": "總資產",
+			"available": "可用資金",
+			"posMv": "持倉市值",
+			"frozen": "凍結資金",
+			"dayPnl": "今日盈虧",
+			"notImplemented": "未接入"
+		},
+		"tabs": {
+			"positions": "持倉明細",
+			"orders": "今日委託",
+			"trades": "今日成交",
+			"positionsHint": "浮動盈虧按現價與成本價估算（占位）。"
+		},
+		"table": {
+			"time": "時間",
+			"symbol": "代碼",
+			"name": "名稱",
+			"direction": "方向",
+			"price": "價格",
+			"quantity": "委託數量",
+			"qty": "持倉",
+			"filledQty": "成交數量",
+			"statusLabel": "狀態",
+			"cost": "成本價",
+			"curPrice": "現價",
+			"mv": "市值",
+			"pnl": "盈虧",
+			"fees": "費用",
+			"pnlExplain": "盈虧 = (現價 − 成本價) × 持倉數量。"
+		},
+		"direction": {
+			"buy": "買入",
+			"sell": "賣出"
+		},
+		"orderStatus": {
+			"pending": "待成交",
+			"partial": "部分成交",
+			"filled": "已全部成交",
+			"cancelled": "已撤單",
+			"rejected": "已拒絕"
+		},
+		"empty": "暫無數據",
+		"status": {
+			"syncing": "刷新行情中…"
+		},
+		"validation": {
+			"symbolRequired": "請填寫股票代碼",
+			"price": "價格須為正數",
+			"quantityInt": "數量須為正整數",
+			"quantityStep": "數量須為 100 的整數倍"
+		},
+		"toast": {
+			"supabaseMissing": "未配置交易系統",
+			"network": "網路異常，請稍後再試",
+			"networkJson": "無法解析服務端響應",
+			"loadFailed": "加載數據失敗",
+			"loadAccountFailed": "加載賬戶失敗",
+			"loadPositionsFailed": "加載持倉失敗",
+			"loadOrdersFailed": "加載委託失敗",
+			"loadTradesFailed": "加載成交失敗",
+			"orderOk": "委託已受理",
+			"orderFailed": "委託失敗",
+			"closePlaceholder": "平倉功能開發中"
+		}
 	},
 	"Home": {
 		"badge": "豹仔樂園 · 遊戲化交易學習",

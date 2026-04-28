@@ -9,6 +9,7 @@
 		"mainLabel": "主导航",
 		"about": "关于我们",
 		"myScores": "我的成绩",
+		"trade": "模拟交易",
 		"myProfile": "我的"
 	},
 	"LanguageSwitcher": {
@@ -21,6 +22,95 @@
 		"brand": "豹仔乐园",
 		"backHome": "返回首页",
 		"comingSoon": "待连接"
+	},
+	"Trade": {
+		"title": "豹仔乐园 · 模拟交易",
+		"subtitle": "查看资产与当日委托成交，限价练习下单（撮合功能陆续开放）。",
+		"panel": {
+			"placeOrder": "交易区",
+			"placeHint": "填入代码与价格数量后选择方向；当前价为占位展示。",
+			"buy": "买入",
+			"sell": "卖出",
+			"flat": "平仓"
+		},
+		"form": {
+			"symbol": "股票代码",
+			"symbolPlaceholder": "例如 0700",
+			"lastPrice": "当前价",
+			"price": "委托价格",
+			"quantity": "委托数量",
+			"quantityPlaceholder": "100",
+			"quantityHint": "须为 100 的整数倍",
+			"availableFunds": "可用资金（元）",
+			"sellable": "可卖数量（股）"
+		},
+		"overview": {
+			"title": "资产概况",
+			"hint": "总市值与可用、冻结拆分展示；今日盈亏待接入实时统计。",
+			"total": "总资产",
+			"available": "可用资金",
+			"posMv": "持仓市值",
+			"frozen": "冻结资金",
+			"dayPnl": "今日盈亏",
+			"notImplemented": "未接入"
+		},
+		"tabs": {
+			"positions": "持仓明细",
+			"orders": "今日委托",
+			"trades": "今日成交",
+			"positionsHint": "浮动盈亏按现价与成本价估算（占位）。"
+		},
+		"table": {
+			"time": "时间",
+			"symbol": "代码",
+			"name": "名称",
+			"direction": "方向",
+			"price": "价格",
+			"quantity": "委托数量",
+			"qty": "持仓",
+			"filledQty": "成交数量",
+			"statusLabel": "状态",
+			"cost": "成本价",
+			"curPrice": "现价",
+			"mv": "市值",
+			"pnl": "盈亏",
+			"fees": "费用",
+			"pnlExplain": "盈亏 = (现价 − 成本价) × 持仓数量。"
+		},
+		"direction": {
+			"buy": "买入",
+			"sell": "卖出"
+		},
+		"orderStatus": {
+			"pending": "待成交",
+			"partial": "部分成交",
+			"filled": "已全部成交",
+			"cancelled": "已撤单",
+			"rejected": "已拒绝"
+		},
+		"empty": "暂无数据",
+		"status": {
+			"syncing": "刷新行情与列表…"
+		},
+		"validation": {
+			"symbolRequired": "请填写股票代码",
+			"price": "价格须为正数",
+			"quantityInt": "数量须为正整数",
+			"quantityStep": "数量须为 100 的整数倍"
+		},
+		"toast": {
+			"supabaseMissing": "未配置交易系统",
+			"network": "网络异常，请稍后再试",
+			"networkJson": "无法解析服务端响应",
+			"loadFailed": "加载数据失败",
+			"loadAccountFailed": "加载账户失败",
+			"loadPositionsFailed": "加载持仓失败",
+			"loadOrdersFailed": "加载委托失败",
+			"loadTradesFailed": "加载成交失败",
+			"orderOk": "委托已受理",
+			"orderFailed": "委托失败",
+			"closePlaceholder": "平仓功能开发中"
+		}
 	},
 	"Home": {
 		"badge": "豹仔乐园 · 游戏化交易学习",

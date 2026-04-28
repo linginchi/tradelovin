@@ -9,6 +9,7 @@
 		"mainLabel": "Main navigation",
 		"about": "About",
 		"myScores": "My Scores",
+		"trade": "Trading",
 		"myProfile": "Profile"
 	},
 	"LanguageSwitcher": {
@@ -21,6 +22,95 @@
 		"brand": "Tradelovin",
 		"backHome": "Back to home",
 		"comingSoon": "Coming soon"
+	},
+	"Trade": {
+		"title": "Simulated Trading",
+		"subtitle": "Review balances, today's orders/fills; limit-order practice (matching engine rollout in progress).",
+		"panel": {
+			"placeOrder": "Order panel",
+			"placeHint": "Fill symbol, limit price & quantity; last price placeholder.",
+			"buy": "Buy",
+			"sell": "Sell",
+			"flat": "Close"
+		},
+		"form": {
+			"symbol": "Symbol",
+			"symbolPlaceholder": "e.g. 0700",
+			"lastPrice": "Last",
+			"price": "Price",
+			"quantity": "Quantity",
+			"quantityPlaceholder": "100",
+			"quantityHint": "Must be multiples of 100",
+			"availableFunds": "Available (CNY)",
+			"sellable": "Sellable (shares)"
+		},
+		"overview": {
+			"title": "Account snapshot",
+			"hint": "Breakdown by total, positions, freezes; today's P&L not wired yet.",
+			"total": "Total assets",
+			"available": "Cash available",
+			"posMv": "Position value",
+			"frozen": "Frozen",
+			"dayPnl": "Today's P&L",
+			"notImplemented": "N/A"
+		},
+		"tabs": {
+			"positions": "Positions",
+			"orders": "Today's orders",
+			"trades": "Today's trades",
+			"positionsHint": "Unrealised P&L is estimated vs cost (placeholder)."
+		},
+		"table": {
+			"time": "Time",
+			"symbol": "Ticker",
+			"name": "Name",
+			"direction": "Side",
+			"price": "Price",
+			"quantity": "Qty",
+			"qty": "Held",
+			"filledQty": "Filled",
+			"statusLabel": "Status",
+			"cost": "Cost",
+			"curPrice": "Last",
+			"mv": "Mkt val",
+			"pnl": "P&L",
+			"fees": "Fees",
+			"pnlExplain": "P&L ≈ (last − cost) × quantity."
+		},
+		"direction": {
+			"buy": "Buy",
+			"sell": "Sell"
+		},
+		"orderStatus": {
+			"pending": "Open",
+			"partial": "Partial",
+			"filled": "Filled",
+			"cancelled": "Cancelled",
+			"rejected": "Rejected"
+		},
+		"empty": "Nothing here yet",
+		"status": {
+			"syncing": "Refreshing…"
+		},
+		"validation": {
+			"symbolRequired": "Symbol is required",
+			"price": "Enter a positive price",
+			"quantityInt": "Whole shares only",
+			"quantityStep": "Must be multiples of 100"
+		},
+		"toast": {
+			"supabaseMissing": "Trading backend not configured",
+			"network": "Network error",
+			"networkJson": "Unexpected response",
+			"loadFailed": "Failed to load",
+			"loadAccountFailed": "Failed to load account",
+			"loadPositionsFailed": "Failed to load positions",
+			"loadOrdersFailed": "Failed to load orders",
+			"loadTradesFailed": "Failed to load trades",
+			"orderOk": "Order accepted",
+			"orderFailed": "Order failed",
+			"closePlaceholder": "Close-all is coming soon"
+		}
 	},
 	"Home": {
 		"badge": "Baozi Paradise · Gamified Trading",
