@@ -1,5 +1,7 @@
 # 手动对齐 `public.registrations`（修复一键注册 / enroll 缺列）
 
+若需 **更大范围**（profiles、registrations、sim、courses、求职等）一次性幂等对齐，见同目录 [`full_schema_sync.sql`](full_schema_sync.sql)（仍以官方 `supabase/migrations` 为准；大脚本用于救急/空库）。
+
 当错误提示包含 **`user_id`**、**`schema cache`** 时，说明生产库未应用与代码一致的迁移。
 
 ## 推荐：Supabase CLI
