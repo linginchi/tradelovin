@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { LazyWhenVisible } from "@/components/LazyWhenVisible";
 import { UpcomingCourseTeaser } from "@/components/home/UpcomingCourseTeaser";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +34,6 @@ function HonorGraduatesSkeleton() {
 
 export default function Home() {
 	const t = useTranslations("Home");
-	const tCommon = useTranslations("Common");
 
 	const highlights = useMemo(
 		() => t.raw("highlights") as Array<{ title: string; desc: string; tag: string }>,
@@ -74,13 +73,12 @@ export default function Home() {
 						{t("subtitle")}
 					</p>
 					<div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-						<Button
-							type="button"
-							size="lg"
-							onClick={() => alert(tCommon("comingSoon"))}
+						<Link
+							href="/trade"
+							className={cn(buttonVariants({ size: "lg" }))}
 						>
 							{t("ctaTrading")}
-						</Button>
+						</Link>
 						<Link
 							href="/register"
 							className={cn(
