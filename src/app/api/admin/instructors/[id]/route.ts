@@ -43,7 +43,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 	}
 
 	const updates: Record<string, unknown> = {};
-	if (parsed.data.name !== undefined) updates.full_name = parsed.data.name.trim();
+	if (parsed.data.name !== undefined) updates.real_name = parsed.data.name.trim();
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio === "" ? null : parsed.data.bio;
 	if (parsed.data.specialties !== undefined) updates.specialties = parsed.data.specialties;
 
@@ -103,7 +103,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
 	const row = data as unknown as {
 		id: string;
-		full_name: string | null;
+		real_name: string | null;
 		nickname: string | null;
 		avatar_url: string | null;
 		bio: string | null;
@@ -115,7 +115,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 	return NextResponse.json({
 		instructor: {
 			id: row.id,
-			name: row.full_name ?? row.nickname ?? "—",
+			name: row.real_name ?? row.nickname ?? "—",
 			email: contactEmail,
 			avatar_url: row.avatar_url,
 			bio: row.bio,

@@ -23,7 +23,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from("profiles")
-		.select("id, full_name, nickname, avatar_url, bio, specialties")
+		.select("id, real_name, nickname, avatar_url, bio, specialties")
 		.eq("is_instructor", true)
 		.order("created_at", { ascending: true });
 
@@ -36,7 +36,7 @@ export async function GET() {
 
 	const instructors = (data ?? []).map((row) => ({
 		id: row.id as string,
-		name: ((row.full_name ?? row.nickname) as string) || "—",
+		name: ((row.real_name ?? row.nickname) as string) || "—",
 		email: emailMap.get(row.id as string) ?? null,
 		avatar_url: (row.avatar_url as string | null) ?? null,
 		bio: row.bio as string | null,
@@ -68,7 +68,7 @@ export async function POST(req: Request) {
 	}
 
 	const insert: Record<string, unknown> = {
-		full_name: parsed.data.name.trim(),
+		real_name: parsed.data.name.trim(),
 		bio: parsed.data.bio?.trim() || null,
 		specialties: parsed.data.specialties ?? [],
 		is_instructor: true,
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
 	const row = data as {
 		id: string;
-		full_name: string | null;
+		real_name: string | null;
 		nickname: string | null;
 		avatar_url: string | null;
 		bio: string | null;
@@ -96,7 +96,7 @@ export async function POST(req: Request) {
 	return NextResponse.json({
 		instructor: {
 			id: row.id,
-			name: row.full_name ?? row.nickname ?? "—",
+			name: row.real_name ?? row.nickname ?? "—",
 			email: contactEmail,
 			avatar_url: row.avatar_url,
 			bio: row.bio,

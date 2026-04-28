@@ -152,7 +152,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 
 	if (profileId) {
 		const profilePatch: Record<string, unknown> = {
-			full_name: after.real_name,
+			real_name: after.real_name,
 			nickname: after.nickname,
 			phone: after.phone,
 			address: after.address,

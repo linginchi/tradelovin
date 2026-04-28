@@ -52,13 +52,13 @@ export async function GET(_req: Request, ctx: RouteContext) {
 	if (instructorId) {
 		const { data: ins } = await supabase
 			.from("profiles")
-			.select("id, full_name, nickname")
+			.select("id, real_name, nickname")
 			.eq("id", instructorId)
 			.maybeSingle();
 		if (ins) {
 			instructor = {
 				id: ins.id as string,
-				name: ((ins.full_name ?? ins.nickname) as string) || "—",
+				name: ((ins.real_name ?? ins.nickname) as string) || "—",
 			};
 		}
 	}
@@ -73,14 +73,14 @@ export async function GET(_req: Request, ctx: RouteContext) {
 		id: string;
 		student_id: string;
 		nickname: string | null;
-		full_name: string | null;
+		real_name: string | null;
 		email: string;
 	};
 	const { data: studRowsRaw } =
 		studIds.length > 0
 			? await supabase
 					.from("profiles")
-					.select("id, student_id, nickname, full_name")
+					.select("id, student_id, nickname, real_name")
 					.in("id", studIds)
 			: { data: [] as Omit<StudRow, "email">[] };
 
@@ -107,7 +107,7 @@ export async function GET(_req: Request, ctx: RouteContext) {
 				student: s
 					? {
 							student_id: s.student_id,
-							nickname: (s.nickname ?? s.full_name) as string | null,
+							nickname: (s.nickname ?? s.real_name) as string | null,
 							email: s.email as string,
 						}
 					: null,

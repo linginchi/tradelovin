@@ -142,7 +142,7 @@ export async function POST(req: Request, ctx: RouteContext) {
 		.upsert(
 			{
 				id: applicantUid,
-				full_name: reg.real_name as string | null,
+				real_name: reg.real_name as string | null,
 				nickname: reg.nickname as string | null,
 				phone: reg.phone as string | null,
 				address: reg.address as string | null,

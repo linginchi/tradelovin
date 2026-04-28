@@ -73,7 +73,7 @@ export async function GET(req: Request) {
 		if (studIds.length > 0) {
 			const { data: profs } = await supabase
 				.from("profiles")
-				.select("id, student_id, nickname, full_name")
+				.select("id, student_id, nickname, real_name")
 				.in("id", studIds);
 			for (const p of profs ?? []) {
 				profById.set(p.id as string, p as Record<string, unknown>);
@@ -88,7 +88,7 @@ export async function GET(req: Request) {
 				enrollment_id: row.id as string,
 				student_profile_id: sid,
 				student_code: (prof?.student_id as string) ?? "",
-				nickname: (prof?.nickname ?? prof?.full_name) as string | null,
+				nickname: (prof?.nickname ?? prof?.real_name) as string | null,
 				email: studEmailMap.get(sid) ?? "",
 				course_id: row.course_id as string,
 				course_title: courseTitle.get(row.course_id as string) ?? "—",
@@ -103,7 +103,7 @@ export async function GET(req: Request) {
 
 	const { data: profiles, error } = await supabase
 		.from("profiles")
-		.select("id, student_id, nickname, full_name")
+		.select("id, student_id, nickname, real_name")
 		.not("student_id", "is", null)
 		.order("created_at", { ascending: false });
 
@@ -133,7 +133,7 @@ export async function GET(req: Request) {
 	const students = (profiles ?? []).map((p) => ({
 		id: p.id as string,
 		student_id: p.student_id as string,
-		nickname: (p.nickname ?? p.full_name) as string | null,
+		nickname: (p.nickname ?? p.real_name) as string | null,
 		email: rosterEmailMap.get(p.id as string) ?? "",
 		payment_status: aggregatePayment(payByStudent.get(p.id as string) ?? []),
 	}));

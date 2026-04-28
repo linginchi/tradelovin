@@ -52,10 +52,10 @@ export async function GET() {
 	if (instructorIds.length > 0) {
 		const { data: ins } = await supabase
 			.from("profiles")
-			.select("id, full_name, nickname")
+			.select("id, real_name, nickname")
 			.in("id", instructorIds);
 		for (const row of ins ?? []) {
-			const label = ((row.full_name ?? row.nickname) as string) || "—";
+			const label = ((row.real_name ?? row.nickname) as string) || "—";
 			instructorName.set(row.id as string, label);
 		}
 	}

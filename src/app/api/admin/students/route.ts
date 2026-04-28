@@ -133,7 +133,7 @@ export async function GET(req: Request) {
 	if (uids.length > 0) {
 		const { data: profs } = await db
 			.from("profiles")
-			.select("id,full_name,nickname,avatar_url,student_id,emergency_phone,phone")
+			.select("id,real_name,nickname,avatar_url,student_id,emergency_phone,phone")
 			.in("id", uids);
 
 		for (const p of profs ?? []) {

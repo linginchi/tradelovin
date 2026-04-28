@@ -76,8 +76,12 @@ export async function registerUserAndSession(
 	const profileRow = {
 		id: userId,
 		nickname: payload.nickname,
-		full_name: realName ?? null,
+		real_name: realName ?? null,
 		phone: payload.phone ?? null,
+		trading_experience: payload.tradingExperience,
+		trading_style_preferences: payload.tradingStylePreferences,
+		learning_goals: payload.learningGoals ?? null,
+		willing_to_recommend: payload.willingToRecommend,
 		role: "user" as const,
 		specialties: [] as string[],
 		is_instructor: false,

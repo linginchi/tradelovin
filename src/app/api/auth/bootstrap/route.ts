@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 		{
 			id: user.id,
 			nickname,
-			full_name: realName || null,
+			real_name: realName || null,
 			phone: phone || null,
 			role: "user",
 			specialties: [],
