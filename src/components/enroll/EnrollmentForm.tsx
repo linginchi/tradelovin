@@ -14,6 +14,7 @@ import type { RegistrationFormValues } from "@/components/registration-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveNicknameFromMetadata } from "@/lib/auth/profile-resolve";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -117,10 +118,13 @@ export function EnrollmentForm() {
 			}
 			const { data: sess } = await sb.auth.getSession();
 			if (!sess.session) {
-				router.replace("/register");
+				router.replace("/login");
 				return;
 			}
 			const uid = sess.session.user.id;
+			const meta = sess.session.user.user_metadata as Record<string, unknown> | undefined;
+			const nickFromAuth = resolveNicknameFromMetadata(meta, "学员");
+
 			const { data, error } = await sb
 				.from("profiles")
 				.select("nickname,email")
@@ -128,16 +132,27 @@ export function EnrollmentForm() {
 				.maybeSingle();
 
 			if (!alive) return;
-			if (error || !data) {
+			if (error) {
+				console.warn("[enroll profiles]", error.message);
+			}
+
+			const emailAddr =
+				(data?.email != null && String(data.email).trim()) ||
+				sess.session.user.email ||
+				"";
+			if (!emailAddr) {
 				setLoading(false);
 				toast.error(tEnroll("needLogin"));
-				router.replace("/register");
+				router.replace("/login");
 				return;
 			}
+
+			const nickname =
+				(data?.nickname != null && String(data.nickname).trim()) || nickFromAuth;
+
 			setProfile({
-				nickname: (data as { nickname?: string | null }).nickname ?? "—",
-				email:
-					(data as { email?: string | null }).email ?? sess.session.user.email ?? "—",
+				nickname: nickname || "—",
+				email: emailAddr,
 			});
 			setLoading(false);
 		}

@@ -2,12 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { verifyOtp } from "@/lib/auth/admin-otp";
-import {
-	getUserIdByEmail,
-	profileExistsForEmail,
-	registerUserAndSession,
-	signInExistingUserWithFreshPassword,
-} from "@/lib/auth/auto-register";
+import { registerUserAndSession, signInExistingUserWithFreshPassword } from "@/lib/auth/auto-register";
+import { getTradeUserIdByEmail, tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { normalizeRegisterBody, type RegisterPayload } from "@/lib/auth/register-payload";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -95,7 +91,7 @@ export async function POST(request: NextRequest) {
 	await srv.from("email_verification_codes").delete().eq("id", row.id as string);
 
 	if (intent === "register") {
-		const exists = await profileExistsForEmail(srv, email);
+		const exists = await tradeUserExistsForEmail(srv, email);
 		if (exists) {
 			return NextResponse.json(
 				{
@@ -129,7 +125,7 @@ export async function POST(request: NextRequest) {
 	}
 
 	// login
-	const userId = await getUserIdByEmail(srv, email);
+	const userId = await getTradeUserIdByEmail(srv, email);
 	if (!userId) {
 		return NextResponse.json({ success: false, error: "该邮箱尚未注册" }, { status: 404 });
 	}

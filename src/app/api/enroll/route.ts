@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getTradeNicknameAndEmail } from "@/lib/auth/profile-resolve";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -35,11 +36,10 @@ export async function POST(request: Request) {
 	const {
 		data: { user },
 	} = await auth.supabase.auth.getUser();
-	if (!user?.email) return NextResponse.json({ success: false, error: "未登录" }, { status: 401 });
+	if (!user) return NextResponse.json({ success: false, error: "未登录" }, { status: 401 });
 
-	const { data: profile, error: pe } = await srv.from("profiles").select("nickname,email").eq("id", user.id).maybeSingle();
-
-	if (pe || !profile) {
+	const display = await getTradeNicknameAndEmail(srv, user.id, user.email ?? undefined);
+	if (!display) {
 		return NextResponse.json({ success: false, error: "请先完成注册并建档" }, { status: 400 });
 	}
 
@@ -55,8 +55,8 @@ export async function POST(request: Request) {
 
 	const row = {
 		user_id: user.id,
-		email: (user.email ?? (profile as { email: string }).email).toLowerCase(),
-		nickname: (profile as { nickname: string | null }).nickname ?? "学员",
+		email: display.email,
+		nickname: display.nickname,
 		real_name: typeof body.real_name === "string" ? body.real_name.trim() || null : null,
 		phone: typeof body.phone === "string" ? body.phone.trim() || null : null,
 		trading_experience: tradingExp || "none",

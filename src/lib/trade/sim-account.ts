@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+/** 模拟账户仅绑定 auth.users.id，不读 public.profiles。 */
+
 export type SimAccountRow = {
 	id: string;
 	user_id: string;

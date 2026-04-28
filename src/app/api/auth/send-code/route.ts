@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
-import { profileExistsForEmail } from "@/lib/auth/auto-register";
+import { tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 	const email = parsed.data.email.trim().toLowerCase();
 	const { intent } = parsed.data;
 
-	const exists = await profileExistsForEmail(srv, email);
+	const exists = await tradeUserExistsForEmail(srv, email);
 
 	if (intent === "register" && exists) {
 		return NextResponse.json(

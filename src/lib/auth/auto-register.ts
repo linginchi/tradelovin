@@ -32,21 +32,11 @@ export function createSupabaseRouteClient(request: NextRequest, response: NextRe
 	});
 }
 
-export async function profileExistsForEmail(srv: SupabaseClient, emailLower: string): Promise<boolean> {
-	const { data } = await srv.from("profiles").select("id").eq("email", emailLower).maybeSingle();
-	return !!data?.id;
-}
-
-export async function getUserIdByEmail(srv: SupabaseClient, emailLower: string): Promise<string | null> {
-	const { data } = await srv.from("profiles").select("id").eq("email", emailLower).maybeSingle();
-	return (data?.id as string | undefined) ?? null;
-}
-
 export type RegisterAndSessionResult =
 	| { ok: true; userId: string; response: NextResponse }
 	| { ok: false; error: string; code?: string; status?: number };
 
-/** 新建 auth 用户、profiles、registrations、sim_accounts，并写入会话 Cookie。 */
+/** 新建 auth 用户、profiles（insert，冲突则 upsert）、registrations、sim_accounts，并写入会话 Cookie。 */
 export async function registerUserAndSession(
 	srv: SupabaseClient,
 	request: NextRequest,
@@ -54,6 +44,7 @@ export async function registerUserAndSession(
 ): Promise<RegisterAndSessionResult> {
 	const emailLower = payload.email.toLowerCase();
 	const password = randomInternalPassword();
+	const realName = payload.realName?.trim() || undefined;
 
 	const { data: created, error: createErr } = await srv.auth.admin.createUser({
 		email: emailLower,
@@ -61,7 +52,8 @@ export async function registerUserAndSession(
 		email_confirm: true,
 		user_metadata: {
 			nickname: payload.nickname,
-			full_name: payload.realName,
+			full_name: realName,
+			real_name: realName,
 			phone: payload.phone ?? undefined,
 		},
 	});
@@ -81,24 +73,38 @@ export async function registerUserAndSession(
 		await srv.auth.admin.deleteUser(userId);
 	}
 
-	const { error: profileErr } = await srv.from("profiles").upsert(
-		{
-			id: userId,
-			email: emailLower,
-			nickname: payload.nickname,
-			full_name: payload.realName?.trim() || null,
-			phone: payload.phone ?? null,
-			role: "user",
-			specialties: [],
-			is_instructor: false,
-		},
-		{ onConflict: "id" },
-	);
+	const profileRow = {
+		id: userId,
+		email: emailLower,
+		nickname: payload.nickname,
+		full_name: realName ?? null,
+		phone: payload.phone ?? null,
+		role: "user" as const,
+		specialties: [] as string[],
+		is_instructor: false,
+	};
 
-	if (profileErr) {
-		console.error("[register profiles]", profileErr);
-		await rollbackAuthUser();
-		return { ok: false, error: profileErr.message, status: 500 };
+	const { error: insertErr } = await srv.from("profiles").insert(profileRow);
+
+	if (insertErr) {
+		const isDup = insertErr.code === "23505";
+		if (!isDup) {
+			console.error("[register profiles insert]", insertErr);
+			await rollbackAuthUser();
+			return { ok: false, error: insertErr.message, status: 500 };
+		}
+
+		const { error: upsertErr } = await srv.from("profiles").upsert(
+			{
+				...profileRow,
+			},
+			{ onConflict: "id" },
+		);
+		if (upsertErr) {
+			console.error("[register profiles upsert]", upsertErr);
+			await rollbackAuthUser();
+			return { ok: false, error: upsertErr.message, status: 500 };
+		}
 	}
 
 	const simRes = await getOrCreateSimAccount(srv, userId);
