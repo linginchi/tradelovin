@@ -46,3 +46,6 @@ next-env.d.ts
 # Wrangler local dev / secrets (never commit)
 .wrangler/
 .dev.vars
+
+# Supabase CLI cache
+supabase/.temp/
