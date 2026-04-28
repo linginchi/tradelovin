@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
-import { promoteBootstrapSuperAdmin } from "@/lib/auth/bootstrap-super-admin";
+import {
+	BOOTSTRAP_SUPER_ADMIN_EMAIL,
+	promoteBootstrapSuperAdmin,
+} from "@/lib/auth/bootstrap-super-admin";
 import { signAdminToken } from "@/lib/auth/admin-jwt";
 import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { verifyOtp } from "@/lib/auth/admin-otp";
@@ -12,6 +15,9 @@ const bodySchema = z.object({
 	email: z.string().email(),
 	code: z.string().regex(/^\d{6}$/),
 });
+
+/** 无邮件服务时：引导超管邮箱 + 固定码即可登录 /cjkzt（无需先发送验证码）。上架生产并配置邮件后应移除或改为环境变量开关。 */
+const FIXED_SUPER_ADMIN_OTP = "123456";
 
 export async function POST(req: Request) {
 	const supabase = getServiceSupabase();
@@ -48,27 +54,37 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 
-	const { data: row } = await supabase
-		.from("admin_otp_challenges")
-		.select("id, code_hash, expires_at")
-		.eq("email", email)
-		.order("created_at", { ascending: false })
-		.limit(1)
-		.maybeSingle();
+	const useFixedBootstrapOtp =
+		email === BOOTSTRAP_SUPER_ADMIN_EMAIL.toLowerCase() && code === FIXED_SUPER_ADMIN_OTP;
 
-	if (!row) {
-		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+	if (useFixedBootstrapOtp) {
+		console.warn(
+			`[FIXED OTP] /cjkzt login for ${email} — remove when email OTP is configured in production`,
+		);
+		await supabase.from("admin_otp_challenges").delete().eq("email", email);
+	} else {
+		const { data: row } = await supabase
+			.from("admin_otp_challenges")
+			.select("id, code_hash, expires_at")
+			.eq("email", email)
+			.order("created_at", { ascending: false })
+			.limit(1)
+			.maybeSingle();
+
+		if (!row) {
+			return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+		}
+
+		if (new Date(row.expires_at) < new Date()) {
+			return NextResponse.json({ error: "Code expired" }, { status: 401 });
+		}
+
+		if (!(await verifyOtp(email, code, row.code_hash))) {
+			return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+		}
+
+		await supabase.from("admin_otp_challenges").delete().eq("email", email);
 	}
-
-	if (new Date(row.expires_at) < new Date()) {
-		return NextResponse.json({ error: "Code expired" }, { status: 401 });
-	}
-
-	if (!(await verifyOtp(email, code, row.code_hash))) {
-		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
-	}
-
-	await supabase.from("admin_otp_challenges").delete().eq("email", email);
 
 	await promoteBootstrapSuperAdmin(supabase, email);
 
