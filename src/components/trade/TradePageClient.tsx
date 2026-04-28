@@ -298,6 +298,7 @@ export function TradePageClient() {
 
 			if (typeof json.message === "string" && json.message) {
 				toast.warning(json.message);
+				await refreshAllAfterSuccess();
 				return;
 			}
 			if (typeof json.error === "string" && json.error) {

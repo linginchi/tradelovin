@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { placeLimitOrderService } from "@/lib/trade/place-limit-order";
 import { requireTradeUser } from "@/lib/trade/require-user";
+import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
@@ -24,15 +26,15 @@ export async function POST(request: Request) {
 		return NextResponse.json({ success: false, error: "请求体不是合法 JSON" }, { status: 400 });
 	}
 
-	const symbol = typeof body.symbol === "string" ? body.symbol.trim() : "";
-	const side = typeof body.side === "string" ? body.side.trim().toLowerCase() : "";
+	const symbolRaw = typeof body.symbol === "string" ? body.symbol.trim() : "";
+	const sideRaw = typeof body.side === "string" ? body.side.trim().toLowerCase() : "";
 	const price = typeof body.price === "number" ? body.price : Number(body.price);
 	const quantity = typeof body.quantity === "number" ? body.quantity : Number(body.quantity);
 
-	if (!symbol) {
+	if (!symbolRaw) {
 		return NextResponse.json({ success: false, error: "symbol 不能为空" }, { status: 400 });
 	}
-	if (side !== "buy" && side !== "sell") {
+	if (sideRaw !== "buy" && sideRaw !== "sell") {
 		return NextResponse.json({ success: false, error: "side 须为 buy 或 sell" }, { status: 400 });
 	}
 	if (!Number.isFinite(price) || price <= 0) {
@@ -45,8 +47,19 @@ export async function POST(request: Request) {
 		return NextResponse.json({ success: false, error: "quantity 须为 100 的整数倍" }, { status: 400 });
 	}
 
-	return NextResponse.json({
-		success: false,
-		message: "撮合引擎开发中，暂无法下单",
+	const srv = getServiceSupabase();
+	if (!srv) {
+		return NextResponse.json(
+			{ success: false, error: "交易服务不可用（缺少 SUPABASE_SERVICE_ROLE_KEY）" },
+			{ status: 503 },
+		);
+	}
+
+	const result = await placeLimitOrderService(srv, auth.userId, {
+		symbolRaw,
+		limitPrice: price,
+		quantity,
+		side: sideRaw as "buy" | "sell",
 	});
+	return NextResponse.json(result.body, { status: result.status });
 }
