@@ -2,14 +2,16 @@
 	"Metadata": {
 		"siteTitle": "豹仔乐园 — 挖掘你的交易天赋",
 		"siteDescription": "游戏化交易学习：课程、演练与即时反馈，在豹仔乐园挖掘你的交易天赋。",
-		"registerTitle": "课程报名 · 豹仔乐园",
-		"registerDescription": "填写报名信息，加入豹仔乐园日内交易学习。"
+		"registerTitle": "注册 · 开启模拟交易 · 豹仔乐园",
+		"registerDescription": "使用邮箱验证码注册，即可获得模拟交易权限。"
 	},
 	"Nav": {
 		"mainLabel": "主导航",
 		"about": "关于我们",
 		"myScores": "我的成绩",
 		"trade": "模拟交易",
+		"enrollCourses": "报名课程",
+		"career": "求职",
 		"myProfile": "我的"
 	},
 	"LanguageSwitcher": {
@@ -117,7 +119,7 @@
 		"title": "豹仔乐园 — 挖掘你的交易天赋",
 		"subtitle": "没有什么能够阻挡你对大交易员的向往",
 		"ctaTrading": "模拟交易测试入口",
-		"ctaRegister": "立即报名",
+		"ctaRegister": "注册 / 开始交易",
 		"promoKicker": "核心亮点",
 		"promoTitle": "毕业后导师直接推荐求职",
 		"promoSubtitle": "导师、课程和考核标准均紧密结合自营交易机构和资管机构的招聘需求，合格者优先推荐。",
@@ -178,6 +180,55 @@
 		],
 		"complianceTitle": "合规声明",
 		"complianceDisclaimer": "本课程基于「小Q教练模拟交易系统」著作权技术开发，旨在通过游戏化方式挖掘学员的交易天赋，提升交易认知与实操能力。本平台不涉及任何实盘证券交易，不提供投资建议，不推荐股票，不代客理财。所有模拟数据及教学案例仅供学习与训练使用，使用者应自行承担决策风险。本平台并非受监管金融机构，亦不从事任何受证券法规监管之业务。"
+	},
+	"RegisterGate1": {
+		"metaTitle": "注册 · 开启模拟交易",
+		"metaDescription": "分两步填写资料，创建账户后即可进入模拟交易。",
+		"title": "注册 · 开启模拟交易",
+		"intro": "第一步填写昵称与邮箱；第二步可补充信息与交易偏好。提交后直接登录并进入模拟交易页面。",
+		"step1Badge": "步骤 1 · 基本信息",
+		"step2Badge": "步骤 2 · 交易偏好（可选）",
+		"nextStep": "下一步",
+		"submitRegister": "完成注册并开始交易",
+		"registering": "注册中…",
+		"backToStep1": "返回上一步",
+		"dupEmail": "该邮箱已注册，请直接登录",
+		"nickname": "昵称",
+		"email": "邮箱",
+		"errNickname": "请填写昵称",
+		"errEmail": "请填写有效邮箱",
+		"errSupabase": "未配置 Supabase 环境变量。"
+	},
+	"EnrollPage": {
+		"metaTitle": "报名课程 · 豹仔乐园",
+		"metaDescription": "正式学员选课报名，填写交易背景与学习意向。",
+		"back": "← 返回首页",
+		"title": "报名课程",
+		"intro": "以下信息用于审核分班；昵称与邮箱来自账户档案，无需重复填写。",
+		"readOnlyNickname": "昵称",
+		"readOnlyEmail": "邮箱",
+		"realName": "真实姓名",
+		"phone": "手机号",
+		"submit": "提交报名",
+		"submitting": "提交中…",
+		"success": "报名已提交，等待审核。",
+		"needLogin": "请先登录并完成注册。"
+	},
+	"CareerPage": {
+		"metaTitle": "求职意向 · 豹仔乐园",
+		"metaDescription": "提交目标机构与岗位信息，教务将与你联系。",
+		"back": "← 返回首页",
+		"title": "求职意向",
+		"intro": "仅限已注册用户；管理员将在后台跟进。",
+		"targetCompany": "目标机构 / 公司类型",
+		"targetRole": "意向岗位",
+		"salary": "期望薪资（选填）",
+		"location": "工作地点偏好（选填）",
+		"note": "补充说明（选填）",
+		"submit": "提交",
+		"submitting": "提交中…",
+		"success": "提交成功",
+		"needLogin": "请先登录。"
 	},
 	"RegisterPage": {
 		"back": "← 返回首页"

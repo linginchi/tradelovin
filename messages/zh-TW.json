@@ -2,14 +2,16 @@
 	"Metadata": {
 		"siteTitle": "豹仔樂園 — 挖掘你的交易天賦",
 		"siteDescription": "遊戲化交易學習：課程、演練與即時反饋，在豹仔樂園挖掘你的交易天賦。",
-		"registerTitle": "課程報名 · 豹仔樂園",
-		"registerDescription": "填寫報名信息，加入豹仔樂園日內交易學習。"
+		"registerTitle": "註冊 · 開啟模擬交易 · 豹仔樂園",
+		"registerDescription": "使用郵箱驗證碼註冊，即可獲得模擬交易權限。"
 	},
 	"Nav": {
 		"mainLabel": "主導航",
 		"about": "關於我們",
 		"myScores": "我的成績",
 		"trade": "模擬交易",
+		"enrollCourses": "報名課程",
+		"career": "求職",
 		"myProfile": "我的"
 	},
 	"LanguageSwitcher": {
@@ -117,7 +119,7 @@
 		"title": "豹仔樂園 — 挖掘你的交易天賦",
 		"subtitle": "沒有什麼能夠阻擋你對大交易員的嚮往",
 		"ctaTrading": "模擬交易測試入口",
-		"ctaRegister": "立即報名",
+		"ctaRegister": "註冊 / 開始交易",
 		"promoKicker": "核心亮點",
 		"promoTitle": "畢業後導師直接推薦求職",
 		"promoSubtitle": "導師、課程和考核標準均緊密結合自營交易機構和資管機構的招聘需求，合格者優先推薦。",
@@ -181,6 +183,55 @@
 	},
 	"RegisterPage": {
 		"back": "← 返回首頁"
+	},
+	"RegisterGate1": {
+		"metaTitle": "註冊 · 開啟模擬交易",
+		"metaDescription": "分兩步填寫資料，創建帳戶後即可進入模擬交易。",
+		"title": "註冊 · 開啟模擬交易",
+		"intro": "第一步填寫暱稱與郵箱；第二步可補充資訊與交易偏好。提交後直接登錄並進入模擬交易頁面。",
+		"step1Badge": "步驟 1 · 基本資訊",
+		"step2Badge": "步驟 2 · 交易偏好（選填）",
+		"nextStep": "下一步",
+		"submitRegister": "完成註冊並開始交易",
+		"registering": "註冊中…",
+		"backToStep1": "返回上一步",
+		"dupEmail": "該郵箱已註冊，請直接登錄",
+		"nickname": "暱稱",
+		"email": "郵箱",
+		"errNickname": "請填寫暱稱",
+		"errEmail": "請填寫有效郵箱",
+		"errSupabase": "未配置 Supabase 環境變量。"
+	},
+	"EnrollPage": {
+		"metaTitle": "報名課程 · 豹仔樂園",
+		"metaDescription": "正式學員選課報名，填寫交易背景與學習意向。",
+		"back": "← 返回首頁",
+		"title": "報名課程",
+		"intro": "以下信息用於審核分班；暱稱與郵箱來自帳戶檔案，無需重複填寫。",
+		"readOnlyNickname": "暱稱",
+		"readOnlyEmail": "郵箱",
+		"realName": "真實姓名",
+		"phone": "手機號",
+		"submit": "提交報名",
+		"submitting": "提交中…",
+		"success": "報名已提交，等待審核。",
+		"needLogin": "請先登錄並完成註冊。"
+	},
+	"CareerPage": {
+		"metaTitle": "求職意向 · 豹仔樂園",
+		"metaDescription": "提交目標機構與崗位信息，教務將與你聯繫。",
+		"back": "← 返回首頁",
+		"title": "求職意向",
+		"intro": "僅限已註冊用戶；管理員將在後台跟進。",
+		"targetCompany": "目標機構 / 公司類型",
+		"targetRole": "意向崗位",
+		"salary": "期望薪資（選填）",
+		"location": "工作地點偏好（選填）",
+		"note": "補充說明（選填）",
+		"submit": "提交",
+		"submitting": "提交中…",
+		"success": "提交成功",
+		"needLogin": "請先登錄。"
 	},
 	"Registration": {
 		"title": "課程報名",

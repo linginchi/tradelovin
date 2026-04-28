@@ -1,18 +1,55 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { Link } from "@/i18n/navigation";
+import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type Props = {
 	className?: string;
 };
 
-/** 全站顶栏：品牌标题（Home.badge，随语言切换）+ 右上角语言切换 */
+type AuthGate = "loading" | "in" | "out";
+
+/** 顶栏导航：「报名课程」需登录可见；「求职」需已有报名记录（含注册时写入的记录）可见 */
 export function SiteTopBar({ className }: Props) {
 	const tHome = useTranslations("Home");
+	const tNav = useTranslations("Nav");
+
+	const [auth, setAuth] = useState<AuthGate>("loading");
+	const [hasEnrollment, setHasEnrollment] = useState(false);
+
+	useEffect(() => {
+		const sb = getSupabaseBrowserClient();
+		if (!sb) {
+			setAuth("out");
+			return;
+		}
+		let cancelled = false;
+		void (async () => {
+			const {
+				data: { session },
+			} = await sb.auth.getSession();
+			if (cancelled) return;
+			if (!session) {
+				setAuth("out");
+				return;
+			}
+			setAuth("in");
+			const { data } = await sb
+				.from("registrations")
+				.select("id")
+				.eq("user_id", session.user.id)
+				.maybeSingle();
+			if (!cancelled) setHasEnrollment(!!data);
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	return (
 		<header
@@ -29,6 +66,21 @@ export function SiteTopBar({ className }: Props) {
 				>
 					{tHome("badge")}
 				</Link>
+				<nav
+					className="text-muted-foreground flex max-w-[42%] min-w-0 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-[10px] font-medium tracking-tight sm:max-w-none sm:gap-3 sm:text-xs md:text-sm"
+					aria-label={tNav("mainLabel")}
+				>
+					{auth === "in" && (
+						<Link href="/enroll" className="hover:text-foreground truncate transition-colors">
+							{tNav("enrollCourses")}
+						</Link>
+					)}
+					{auth === "in" && hasEnrollment && (
+						<Link href="/career" className="hover:text-foreground truncate transition-colors">
+							{tNav("career")}
+						</Link>
+					)}
+				</nav>
 				<div className="shrink-0">
 					<LanguageSwitcher variant="bar" />
 				</div>
