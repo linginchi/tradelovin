@@ -57,7 +57,11 @@ export function OtpLoginForm() {
 			return;
 		}
 		if (!res.ok || !js.success) {
-			toast.error(typeof js.error === "string" ? js.error : t("busySend"));
+			const errMsg =
+				locale === "en"
+					? (typeof js.errorEn === "string" ? js.errorEn : js.error)
+					: (typeof js.error === "string" ? js.error : js.errorEn);
+			toast.error(typeof errMsg === "string" ? errMsg : t("busySend"));
 			return;
 		}
 		toast.success(locale === "en" ? "Code sent." : "验证码已发送");

@@ -1,19 +1,20 @@
 import { Resend } from "resend";
 
+import { resolveResendEnv } from "@/lib/email/resend-config";
+
 export async function sendAdminEmail(params: {
 	to: string;
 	subject: string;
 	text: string;
 	html?: string;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
-	const resendKey = process.env.RESEND_API_KEY;
-	const from = process.env.RESEND_FROM_EMAIL;
-	if (!resendKey || !from) {
-		return { ok: false, message: "Email not configured" };
+	const cfg = resolveResendEnv();
+	if (!cfg.ok) {
+		return { ok: false, message: cfg.errorEn };
 	}
-	const resend = new Resend(resendKey);
+	const resend = new Resend(cfg.apiKey);
 	const { error } = await resend.emails.send({
-		from,
+		from: cfg.from,
 		to: params.to,
 		subject: params.subject,
 		text: params.text,

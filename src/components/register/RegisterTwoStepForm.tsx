@@ -128,7 +128,11 @@ export function RegisterTwoStepForm() {
 			return;
 		}
 		if (!res.ok || !js.success) {
-			toast.error(typeof js.error === "string" ? js.error : tWizard("sendCodeFailed"));
+			const errMsg =
+				locale === "en"
+					? (typeof js.errorEn === "string" ? js.errorEn : js.error)
+					: (typeof js.error === "string" ? js.error : js.errorEn);
+			toast.error(typeof errMsg === "string" ? errMsg : tWizard("sendCodeFailed"));
 			return;
 		}
 		toast.success(tWizard("codeSent"));

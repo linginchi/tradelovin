@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { resolveResendEnv } from "@/lib/email/resend-config";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const bodySchema = z
@@ -27,10 +28,17 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
 
-	const resendKey = process.env.RESEND_API_KEY;
-	const from = process.env.RESEND_FROM_EMAIL;
-	if (!resendKey || !from) {
-		return NextResponse.json({ error: "Email not configured" }, { status: 503 });
+	const resendCfg = resolveResendEnv();
+	if (!resendCfg.ok) {
+		return NextResponse.json(
+			{
+				error: resendCfg.errorEn,
+				errorZh: resendCfg.error,
+				code: resendCfg.code,
+				missing: resendCfg.missing,
+			},
+			{ status: 503 },
+		);
 	}
 
 	let json: unknown;
@@ -73,7 +81,7 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "No matching students" }, { status: 400 });
 	}
 
-	const resend = new Resend(resendKey);
+	const resend = new Resend(resendCfg.apiKey);
 	const now = new Date().toISOString();
 	let sent = 0;
 	const errors: string[] = [];
@@ -81,7 +89,7 @@ export async function POST(req: Request) {
 	for (const row of approved) {
 		const email = row.email as string;
 		const { error: sendErr } = await resend.emails.send({
-			from,
+			from: resendCfg.from,
 			to: email,
 			subject: parsed.data.subject,
 			text: parsed.data.body,

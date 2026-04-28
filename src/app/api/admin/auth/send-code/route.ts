@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
+import { resolveResendEnv } from "@/lib/email/resend-config";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const bodySchema = z.object({
@@ -46,10 +47,17 @@ export async function POST(req: Request) {
 		return NextResponse.json(neutralMessage);
 	}
 
-	const resendKey = process.env.RESEND_API_KEY;
-	const from = process.env.RESEND_FROM_EMAIL;
-	if (!resendKey || !from) {
-		return NextResponse.json({ error: "Email not configured" }, { status: 503 });
+	const resendCfg = resolveResendEnv();
+	if (!resendCfg.ok) {
+		return NextResponse.json(
+			{
+				error: resendCfg.errorEn,
+				errorZh: resendCfg.error,
+				code: resendCfg.code,
+				missing: resendCfg.missing,
+			},
+			{ status: 503 },
+		);
 	}
 
 	const code = generateOtpCode();
@@ -68,9 +76,9 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Could not create challenge" }, { status: 500 });
 	}
 
-	const resend = new Resend(resendKey);
+	const resend = new Resend(resendCfg.apiKey);
 	const { error: sendErr } = await resend.emails.send({
-		from,
+		from: resendCfg.from,
 		to: email,
 		subject: "管理员登录验证码",
 		text: `您的验证码是：${code}\n10 分钟内有效。如非本人操作请忽略。`,
