@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 import type { RegisterPayload } from "@/lib/auth/register-payload";
+import { mapRegistrationInsertError } from "@/lib/auth/registration-db-errors";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 
 export function randomInternalPassword(): string {
@@ -132,7 +133,7 @@ export async function registerUserAndSession(
 	if (regErr) {
 		console.error("[register registrations]", regErr);
 		await rollbackAuthUser();
-		return { ok: false, error: regErr.message, status: 500 };
+		return { ok: false, error: mapRegistrationInsertError(regErr.message), status: 500 };
 	}
 
 	const response = NextResponse.json({

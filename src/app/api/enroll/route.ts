@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { mapRegistrationInsertError } from "@/lib/auth/registration-db-errors";
 import { getTradeNicknameAndEmail } from "@/lib/auth/profile-resolve";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -81,10 +82,14 @@ export async function POST(request: Request) {
 
 	if ((ex.data as { id?: string })?.id) {
 		const { error } = await srv.from("registrations").update(rowUpdate).eq("user_id", user.id);
-		if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+		if (error) {
+			return NextResponse.json({ success: false, error: mapRegistrationInsertError(error.message) }, { status: 500 });
+		}
 	} else {
 		const { error } = await srv.from("registrations").insert(row);
-		if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+		if (error) {
+			return NextResponse.json({ success: false, error: mapRegistrationInsertError(error.message) }, { status: 500 });
+		}
 	}
 
 	return NextResponse.json({ success: true, message: "报名已提交，请等待审核" });

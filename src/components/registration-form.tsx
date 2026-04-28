@@ -9,7 +9,6 @@ import { z } from "zod";
 import { LazyWhenVisible } from "@/components/LazyWhenVisible";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 const RegistrationFormOptionalFields = dynamic(
 	() => import("@/components/registration-form-optional"),
@@ -140,28 +139,24 @@ export function RegistrationForm() {
 		}
 		setFieldErrors({});
 
-		const supabase = getSupabaseBrowserClient();
-		if (!supabase) {
-			setSubmitError(t("errors.supabaseMissing"));
-			return;
-		}
+		const res = await fetch("/api/registrations/public", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				real_name: parsed.data.real_name?.trim() || null,
+				nickname: parsed.data.nickname.trim(),
+				email: parsed.data.email.trim().toLowerCase(),
+				phone: parsed.data.phone?.trim() || null,
+				trading_experience: parsed.data.trading_experience,
+				trading_style_preferences: parsed.data.trading_style_preferences,
+				learning_goals: parsed.data.learning_goals?.trim() || null,
+				willing_to_recommend: parsed.data.willing_to_recommend === "yes",
+			}),
+		});
 
-		const row = {
-			real_name: parsed.data.real_name?.trim() || null,
-			nickname: parsed.data.nickname.trim(),
-			email: parsed.data.email.trim().toLowerCase(),
-			phone: parsed.data.phone?.trim() || null,
-			trading_experience: parsed.data.trading_experience,
-			trading_style_preferences: parsed.data.trading_style_preferences,
-			learning_goals: parsed.data.learning_goals?.trim() || null,
-			willing_to_recommend: parsed.data.willing_to_recommend === "yes",
-			status: "pending" as const,
-		};
-
-		const { error } = await supabase.from("registrations").insert(row);
-
-		if (error) {
-			setSubmitError(error.message || t("errors.submitFailed"));
+		const json = (await res.json()) as { success?: boolean; error?: string };
+		if (!res.ok || !json.success) {
+			setSubmitError(json.error || t("errors.submitFailed"));
 			return;
 		}
 

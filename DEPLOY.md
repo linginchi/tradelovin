@@ -134,3 +134,22 @@ npm run cf-typegen
 ```
 
 会依据 [`wrangler.jsonc`](wrangler.jsonc) 更新 [`cloudflare-env.d.ts`](cloudflare-env.d.ts)。
+
+---
+
+## 8. Supabase：`registrations` 表与一键注册
+
+前台 **一键注册（免邮箱）**（`/api/auth/quick-register`）与 **登录后报名**（`/api/enroll`）会向 `public.registrations` 写入 **`user_id`**（及 **`status`** 等）。若数据库仍停留在早期 [`supabase/registrations.sql`](supabase/registrations.sql)（仅有匿名插入、无 `user_id`），PostgREST 会报错例如：`Could not find the 'user_id' column of 'registrations' in the schema cache`。
+
+**必做（与仓库迁移对齐）：**
+
+1. 在项目根执行 **`supabase db push`**（或在你的 CI/运维流程中应用 [`supabase/migrations`](supabase/migrations) 下全部迁移）。
+2. 若只能手动执行 SQL，至少按顺序覆盖：  
+   [`20260430121800_registrations_status.sql`](supabase/migrations/20260430121800_registrations_status.sql)、  
+   [`20260430122000_registrations_user_id_policies.sql`](supabase/migrations/20260430122000_registrations_user_id_policies.sql)，  
+   以及幂等补丁 [`20260430124500_registrations_catchup_idempotent.sql`](supabase/migrations/20260430124500_registrations_catchup_idempotent.sql)（含 `auth.users` 邮箱回填 `user_id`、RLS 与 `user_id` 唯一索引）。
+3. 执行后若错误仍存在：在 Supabase Dashboard 中 **重启/刷新 PostgREST** 或等待 schema cache 更新。
+
+**环境变量：** 一键注册与匿名报名表单提交的 API（[`/api/registrations/public`](src/app/api/registrations/public/route.ts)）均依赖服务端 **`SUPABASE_SERVICE_ROLE_KEY`**；未配置时返回 503。
+
+**RLS 说明：** 收紧策略后，浏览器 **不可** 再以 anon 身份直接 `insert` `registrations`；匿名报名须走上述 **public API**（service role 写入）。
