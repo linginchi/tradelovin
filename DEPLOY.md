@@ -141,6 +141,8 @@ npm run cf-typegen
 
 前台 **一键注册（免邮箱）**（`/api/auth/quick-register`）与 **登录后报名**（`/api/enroll`）会向 `public.registrations` 写入 **`user_id`**（及 **`status`** 等）。若数据库仍停留在早期 [`supabase/registrations.sql`](supabase/registrations.sql)（仅有匿名插入、无 `user_id`），PostgREST 会报错例如：`Could not find the 'user_id' column of 'registrations' in the schema cache`。
 
+**运维抄作业：** 详见 [`supabase/manual/APPLY_REGISTRATIONS_SCHEMA.md`](supabase/manual/APPLY_REGISTRATIONS_SCHEMA.md)（CLI 与 SQL Editor 逐步说明）。
+
 **必做（与仓库迁移对齐）：**
 
 1. 在项目根执行 **`supabase db push`**（或在你的 CI/运维流程中应用 [`supabase/migrations`](supabase/migrations) 下全部迁移）。
@@ -148,8 +150,12 @@ npm run cf-typegen
    [`20260430121800_registrations_status.sql`](supabase/migrations/20260430121800_registrations_status.sql)、  
    [`20260430122000_registrations_user_id_policies.sql`](supabase/migrations/20260430122000_registrations_user_id_policies.sql)，  
    以及幂等补丁 [`20260430124500_registrations_catchup_idempotent.sql`](supabase/migrations/20260430124500_registrations_catchup_idempotent.sql)（含 `auth.users` 邮箱回填 `user_id`、RLS 与 `user_id` 唯一索引）。
-3. 执行后若错误仍存在：在 Supabase Dashboard 中 **重启/刷新 PostgREST** 或等待 schema cache 更新。
+3. **讲师角色：** 若曾执行过仅允许 `user|admin|super_admin` 的 `profiles_role_check`，需应用 [`20260430126000_profiles_role_allow_instructor.sql`](supabase/migrations/20260430126000_profiles_role_allow_instructor.sql)，否则后台创建讲师会失败。
+4. 执行后若错误仍存在：在 Supabase Dashboard 中 **重启/刷新 PostgREST** 或等待 schema cache 更新。
 
 **环境变量：** 一键注册与匿名报名表单提交的 API（[`/api/registrations/public`](src/app/api/registrations/public/route.ts)）均依赖服务端 **`SUPABASE_SERVICE_ROLE_KEY`**；未配置时返回 503。
+
+- **`DISABLE_QUICK_REGISTER`**：设为 `true` 或 `1` 时，`POST /api/auth/quick-register` 返回 **403**（生产若改由管理员手动开户可开启）。
+- **`DISABLE_PUBLIC_REGISTRATION`**：设为 `true` 或 `1` 时，`POST /api/registrations/public` 返回 **403**。
 
 **RLS 说明：** 收紧策略后，浏览器 **不可** 再以 anon 身份直接 `insert` `registrations`；匿名报名须走上述 **public API**（service role 写入）。

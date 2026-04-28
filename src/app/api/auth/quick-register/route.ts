@@ -25,6 +25,19 @@ function isEmailAlreadyRegisteredMessage(msg: string | undefined): boolean {
 }
 
 export async function POST(request: NextRequest) {
+	const disabled = process.env.DISABLE_QUICK_REGISTER === "1" || process.env.DISABLE_QUICK_REGISTER === "true";
+	if (disabled) {
+		return NextResponse.json(
+			{
+				success: false,
+				error: "一键注册已关闭。请联系管理员或使用其他方式开户。",
+				errorEn: "Quick registration is disabled. Contact an admin or use another signup path.",
+				code: "QUICK_REGISTER_DISABLED",
+			},
+			{ status: 403 },
+		);
+	}
+
 	const srv = getServiceSupabase();
 	if (!srv) {
 		return NextResponse.json({ success: false, error: "服务端未配置 SUPABASE_SERVICE_ROLE_KEY" }, { status: 503 });

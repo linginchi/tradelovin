@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
 import { requireSuperAdminSession } from "@/lib/auth/admin-api-guard";
-import { randomInternalPassword } from "@/lib/auth/auto-register";
+import { randomInternalPassword, rollbackTradeUserOnboarding } from "@/lib/auth/auto-register";
 import { tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
@@ -73,10 +73,6 @@ export async function POST(req: Request) {
 
 	const userId = created.user.id;
 
-	async function rollbackAuthUser(): Promise<void> {
-		await srv.auth.admin.deleteUser(userId);
-	}
-
 	const profileRow = {
 		id: userId,
 		nickname,
@@ -94,13 +90,13 @@ export async function POST(req: Request) {
 		const isDup = insertProfErr.code === "23505";
 		if (!isDup) {
 			console.error("[admin add-user profiles insert]", insertProfErr);
-			await rollbackAuthUser();
+			await rollbackTradeUserOnboarding(srv, userId);
 			return NextResponse.json({ error: insertProfErr.message }, { status: 500 });
 		}
 		const { error: upsertErr } = await srv.from("profiles").upsert(profileRow, { onConflict: "id" });
 		if (upsertErr) {
 			console.error("[admin add-user profiles upsert]", upsertErr);
-			await rollbackAuthUser();
+			await rollbackTradeUserOnboarding(srv, userId);
 			return NextResponse.json({ error: upsertErr.message }, { status: 500 });
 		}
 	}
@@ -108,7 +104,7 @@ export async function POST(req: Request) {
 	const simRes = await getOrCreateSimAccount(srv, userId);
 	if (simRes.error) {
 		console.error("[admin add-user sim]", simRes.error);
-		await rollbackAuthUser();
+		await rollbackTradeUserOnboarding(srv, userId);
 		return NextResponse.json(
 			{ error: simRes.error.message ?? "模拟账户初始化失败" },
 			{ status: 500 },

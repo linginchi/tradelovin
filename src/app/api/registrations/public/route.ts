@@ -11,6 +11,19 @@ export const runtime = "nodejs";
  * 与 {@link RegistrationForm} 字段一致；不写入 user_id（待用户注册后可由业务回填或重复报名策略处理）。
  */
 export async function POST(request: Request) {
+	const disabled =
+		process.env.DISABLE_PUBLIC_REGISTRATION === "1" || process.env.DISABLE_PUBLIC_REGISTRATION === "true";
+	if (disabled) {
+		return NextResponse.json(
+			{
+				success: false,
+				error: "公开报名已关闭。",
+				code: "PUBLIC_REGISTRATION_DISABLED",
+			},
+			{ status: 403 },
+		);
+	}
+
 	const srv = getServiceSupabase();
 	if (!srv) {
 		return NextResponse.json({ success: false, error: "服务端未配置 SUPABASE_SERVICE_ROLE_KEY" }, { status: 503 });

@@ -37,6 +37,17 @@ export type RegisterAndSessionResult =
 	| { ok: true; userId: string; response: NextResponse }
 	| { ok: false; error: string; code?: string; status?: number };
 
+/**
+ * 注册/手动建号失败时：先删 `registrations` / `sim_accounts` / `profiles`，再删 auth 用户，
+ * 避免仅删 auth 导致 public 表孤儿行（无 FK CASCADE 时）。
+ */
+export async function rollbackTradeUserOnboarding(srv: SupabaseClient, userId: string): Promise<void> {
+	await srv.from("registrations").delete().eq("user_id", userId);
+	await srv.from("sim_accounts").delete().eq("user_id", userId);
+	await srv.from("profiles").delete().eq("id", userId);
+	await srv.auth.admin.deleteUser(userId);
+}
+
 /** 新建 auth 用户、profiles（insert，冲突则 upsert）、registrations、sim_accounts，并写入会话 Cookie。 */
 export async function registerUserAndSession(
 	srv: SupabaseClient,
@@ -70,10 +81,6 @@ export async function registerUserAndSession(
 
 	const userId = created.user.id;
 
-	async function rollbackAuthUser(): Promise<void> {
-		await srv.auth.admin.deleteUser(userId);
-	}
-
 	const profileRow = {
 		id: userId,
 		nickname: payload.nickname,
@@ -92,7 +99,7 @@ export async function registerUserAndSession(
 		const isDup = insertErr.code === "23505";
 		if (!isDup) {
 			console.error("[register profiles insert]", insertErr);
-			await rollbackAuthUser();
+			await rollbackTradeUserOnboarding(srv, userId);
 			return { ok: false, error: insertErr.message, status: 500 };
 		}
 
@@ -104,7 +111,7 @@ export async function registerUserAndSession(
 		);
 		if (upsertErr) {
 			console.error("[register profiles upsert]", upsertErr);
-			await rollbackAuthUser();
+			await rollbackTradeUserOnboarding(srv, userId);
 			return { ok: false, error: upsertErr.message, status: 500 };
 		}
 	}
@@ -112,7 +119,7 @@ export async function registerUserAndSession(
 	const simRes = await getOrCreateSimAccount(srv, userId);
 	if (simRes.error) {
 		console.error("[register sim]", simRes.error);
-		await rollbackAuthUser();
+		await rollbackTradeUserOnboarding(srv, userId);
 		return { ok: false, error: simRes.error.message ?? "模拟账户初始化失败", status: 500 };
 	}
 
@@ -132,7 +139,7 @@ export async function registerUserAndSession(
 	const { error: regErr } = await srv.from("registrations").insert(regRow);
 	if (regErr) {
 		console.error("[register registrations]", regErr);
-		await rollbackAuthUser();
+		await rollbackTradeUserOnboarding(srv, userId);
 		return { ok: false, error: mapRegistrationInsertError(regErr.message), status: 500 };
 	}
 
@@ -150,7 +157,7 @@ export async function registerUserAndSession(
 
 	if (signErr) {
 		console.error("[register signIn]", signErr.message);
-		await rollbackAuthUser();
+		await rollbackTradeUserOnboarding(srv, userId);
 		return { ok: false, error: "会话建立失败：" + signErr.message, status: 500 };
 	}
 

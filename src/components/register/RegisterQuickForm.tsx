@@ -135,6 +135,11 @@ export function RegisterQuickForm() {
 			toast.error(msg);
 			return;
 		}
+		if (res.status === 403 && js.code === "QUICK_REGISTER_DISABLED") {
+			const msg = locale === "en" ? (js.errorEn ?? js.error) : (js.error ?? js.errorEn ?? "");
+			toast.error(msg || t("errors.submitFailed"));
+			return;
+		}
 		if (!res.ok || !js.success) {
 			toast.error(typeof js.error === "string" ? js.error : t("errors.submitFailed"));
 			return;
