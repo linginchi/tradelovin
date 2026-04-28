@@ -9,6 +9,8 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
+const BYPASS_EMAIL = process.env.BYPASS_EMAIL_VERIFICATION === "true";
+
 const bodySchema = z.object({
 	email: z.string().email(),
 	intent: z.enum(["register", "login"]),
@@ -68,20 +70,6 @@ export async function POST(req: Request) {
 		);
 	}
 
-	const resendCfg = resolveResendEnv();
-	if (!resendCfg.ok) {
-		return NextResponse.json(
-			{
-				success: false,
-				code: resendCfg.code,
-				missing: resendCfg.missing,
-				error: resendCfg.error,
-				errorEn: resendCfg.errorEn,
-			},
-			{ status: 503 },
-		);
-	}
-
 	const code = generateOtpCode();
 	const codeHash = await hashOtp(email, code);
 	const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
@@ -98,6 +86,29 @@ export async function POST(req: Request) {
 	if (insertErr) {
 		console.error("[send-code insert]", insertErr);
 		return NextResponse.json({ success: false, error: "无法创建验证码" }, { status: 500 });
+	}
+
+	if (BYPASS_EMAIL) {
+		console.log(`[BYPASS MODE] Verification code for ${email}: ${code}`);
+		return NextResponse.json({
+			success: true,
+			bypass: true,
+			message: "验证码已生成（调试模式），请查看 Worker 日志",
+		});
+	}
+
+	const resendCfg = resolveResendEnv();
+	if (!resendCfg.ok) {
+		return NextResponse.json(
+			{
+				success: false,
+				code: resendCfg.code,
+				missing: resendCfg.missing,
+				error: resendCfg.error,
+				errorEn: resendCfg.errorEn,
+			},
+			{ status: 503 },
+		);
 	}
 
 	const resend = new Resend(resendCfg.apiKey);

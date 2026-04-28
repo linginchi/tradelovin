@@ -91,7 +91,7 @@ export default async function MyProfilePage({ params }: Props) {
 					<p className="text-muted-foreground mt-2 text-sm">{t("subtitle")}</p>
 					<div className="mt-4 flex flex-wrap gap-3">
 						<Link
-							href="/my-courses"
+							href="/my-learning"
 							className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
 						>
 							{t("myCoursesLink")}
@@ -137,7 +137,7 @@ export default async function MyProfilePage({ params }: Props) {
 								<p className="text-muted-foreground mt-1 text-xs">{c.progress}</p>
 								<div className="mt-3 flex justify-end border-border/40 border-t pt-3">
 									<Link
-										href="/my-courses"
+										href="/my-learning"
 										className={cn(
 											buttonVariants({ variant: "outline", size: "sm" }),
 											"shrink-0",

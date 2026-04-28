@@ -13,7 +13,8 @@
 		"trade": "模擬交易",
 		"enrollCourses": "報名課程",
 		"career": "求職",
-		"myProfile": "我的"
+		"myProfile": "我的",
+		"myLearning": "我的學習"
 	},
 	"LanguageSwitcher": {
 		"label": "語言",
@@ -187,13 +188,14 @@
 	},
 	"RegisterGate1": {
 		"metaTitle": "註冊 · 開啟模擬交易",
-		"metaDescription": "使用郵箱驗證碼註冊，創建帳戶後即可進入模擬交易。",
+		"metaDescription": "填寫資料一鍵註冊，創建帳戶後即可進入模擬交易（無需郵箱驗證碼）。",
 		"title": "註冊 · 開啟模擬交易",
-		"intro": "第一步驗證郵箱；第二步輸入驗證碼並填寫暱稱等資訊，提交後自動登錄。",
+		"intro": "填寫暱稱與郵箱等資訊，點擊按鈕即可建立帳戶並自動登入。",
 		"step1Badge": "步驟 1 · 驗證郵箱",
 		"step2Badge": "步驟 2 · 驗證碼與資料",
 		"nextStep": "發送驗證碼",
 		"submitRegister": "驗證並註冊",
+		"submitQuickRegister": "立即註冊並開始交易",
 		"registering": "提交中…",
 		"backToStep1": "返回上一步",
 		"dupEmail": "該郵箱已註冊，請直接登錄",
@@ -273,6 +275,26 @@
 		"grade": "等級",
 		"cert": "證書",
 		"back": "← 返回"
+	},
+	"MyLearningPage": {
+		"metaTitle": "我的學習",
+		"title": "我的學習",
+		"intro": "集中查看已報名課程、審核狀態與課程成績。",
+		"empty": "暫無報名記錄。",
+		"scoreSection": "課程成績",
+		"score": "分數",
+		"grade": "等級",
+		"cert": "證書",
+		"openCertificate": "打開證書連結",
+		"instructor": "講師",
+		"instructorTbd": "講師待定",
+		"schedule": "上課時間",
+		"noCover": "暫無封面",
+		"loginCta": "去登入",
+		"pendingReviewScore": "審核通過後即可查看成績；目前為待審核狀態。",
+		"learningInProgress": "學習中 · 尚未出成績",
+		"pendingScore": "待評分",
+		"scoreNotApplicable": "暫無成績"
 	},
 	"CareerPage": {
 		"metaTitle": "求職意向 · 豹仔樂園",
@@ -465,7 +487,7 @@
 				"current": 0
 			}
 		],
-		"myCoursesLink": "我的課程表",
+		"myCoursesLink": "我的學習",
 		"courseCardScheduleCta": "查看課表"
 	},
 	"MyScores": {

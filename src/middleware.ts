@@ -5,6 +5,33 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
+const LEGACY_LEARNING = [
+	{ from: "my-courses", to: "my-learning" },
+	{ from: "my-scores", to: "my-learning" },
+] as const;
+
+const LOCALES = ["zh", "zh-TW", "en"] as const;
+
+function redirectLegacyLearningPaths(request: NextRequest): NextResponse | null {
+	const pathname = request.nextUrl.pathname;
+	for (const { from, to } of LEGACY_LEARNING) {
+		if (pathname === `/${from}` || pathname.startsWith(`/${from}/`)) {
+			const url = request.nextUrl.clone();
+			url.pathname = pathname.replace(`/${from}`, `/${to}`);
+			return NextResponse.redirect(url, 308);
+		}
+		for (const loc of LOCALES) {
+			const prefix = `/${loc}/${from}`;
+			if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
+				const url = request.nextUrl.clone();
+				url.pathname = pathname.replace(prefix, `/${loc}/${to}`);
+				return NextResponse.redirect(url, 308);
+			}
+		}
+	}
+	return null;
+}
+
 export default function middleware(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 
@@ -18,6 +45,11 @@ export default function middleware(request: NextRequest) {
 
 	if (pathname === "/cjkzt" || pathname.startsWith("/cjkzt/")) {
 		return NextResponse.next();
+	}
+
+	const legacyLearning = redirectLegacyLearningPaths(request);
+	if (legacyLearning) {
+		return legacyLearning;
 	}
 
 	/* guo3guan.com：默认入口为繁体（zh-TW）；tradelovin.com / 其余域名仍为 defaultLocale（zh）。

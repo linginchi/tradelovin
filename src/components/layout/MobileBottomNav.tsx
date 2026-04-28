@@ -1,14 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { BookOpen, Info, LineChart, Medal, UserRound } from "lucide-react";
+import { GraduationCap, Info, LineChart, UserRound } from "lucide-react";
 
 import { Link, usePathname } from "@/i18n/navigation";
 
 const ADMIN_PREFIX = "/cjkzt";
 import { cn } from "@/lib/utils";
 
-const NAV_HREFS = ["/about", "/courses", "/my-scores", "/trade", "/my-profile"] as const;
+const NAV_HREFS = ["/about", "/my-learning", "/trade", "/my-profile"] as const;
 
 export default function MobileBottomNav() {
 	const pathname = usePathname();
@@ -20,10 +20,9 @@ export default function MobileBottomNav() {
 
 	const items = [
 		{ href: NAV_HREFS[0], label: t("about"), icon: Info },
-		{ href: NAV_HREFS[1], label: t("courses"), icon: BookOpen },
-		{ href: NAV_HREFS[2], label: t("myScores"), icon: Medal },
-		{ href: NAV_HREFS[3], label: t("trade"), icon: LineChart },
-		{ href: NAV_HREFS[4], label: t("myProfile"), icon: UserRound },
+		{ href: NAV_HREFS[1], label: t("myLearning"), icon: GraduationCap },
+		{ href: NAV_HREFS[2], label: t("trade"), icon: LineChart },
+		{ href: NAV_HREFS[3], label: t("myProfile"), icon: UserRound },
 	] as const;
 
 	return (

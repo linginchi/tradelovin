@@ -202,7 +202,7 @@ export function EnrollmentForm() {
 			return;
 		}
 		toast.success(tEnroll("success"));
-		router.push("/my-courses");
+		router.push("/my-learning");
 	};
 
 	if (loading) {
