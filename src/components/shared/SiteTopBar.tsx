@@ -19,15 +19,14 @@ export function SiteTopBar({ className }: Props) {
 	const tHome = useTranslations("Home");
 	const tNav = useTranslations("Nav");
 
-	const [auth, setAuth] = useState<AuthGate>("loading");
+	const [auth, setAuth] = useState<AuthGate>(() =>
+		getSupabaseBrowserClient() ? "loading" : "out",
+	);
 	const [hasEnrollment, setHasEnrollment] = useState(false);
 
 	useEffect(() => {
 		const sb = getSupabaseBrowserClient();
-		if (!sb) {
-			setAuth("out");
-			return;
-		}
+		if (!sb) return;
 		let cancelled = false;
 		void (async () => {
 			const {

@@ -11,7 +11,7 @@ export type SinaSymbol = {
 };
 
 export function mapUserSymbolToSina(raw: string): SinaSymbol | null {
-	let s = raw.trim().replace(/\u3000/g, " ");
+	const s = raw.trim().replace(/\u3000/g, " ");
 	if (!s.length) return null;
 
 	const upper = s.toUpperCase();

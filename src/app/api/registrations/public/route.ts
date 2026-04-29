@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { mapRegistrationInsertError, registrationSchemaMismatchMessage } from "@/lib/auth/registration-db-errors";
 import { normalizeRegisterBody } from "@/lib/auth/register-payload";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -11,6 +12,20 @@ export const runtime = "nodejs";
  * 与 {@link RegistrationForm} 字段一致；不写入 user_id（待用户注册后可由业务回填或重复报名策略处理）。
  */
 export async function POST(request: Request) {
+	const ip = clientIpFromHeaders(request.headers);
+	const rate = checkRateLimit({
+		bucket: "public-registration-ip",
+		key: ip,
+		windowMs: 15 * 60 * 1000,
+		maxHits: 6,
+	});
+	if (rate.limited) {
+		return NextResponse.json(
+			{ success: false, error: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+		);
+	}
+
 	const disabled =
 		process.env.DISABLE_PUBLIC_REGISTRATION === "1" || process.env.DISABLE_PUBLIC_REGISTRATION === "true";
 	if (disabled) {

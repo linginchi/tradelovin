@@ -5,8 +5,10 @@ import { useMemo } from "react";
 import { ShieldAlert, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { Toaster } from "sonner";
 
 import { LazyWhenVisible } from "@/components/LazyWhenVisible";
+import { DevTestQuickLoginCard } from "@/components/auth/DevTestQuickLoginCard";
 import { UpcomingCourseTeaser } from "@/components/home/UpcomingCourseTeaser";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -179,7 +181,12 @@ export default function Home() {
 					</p>
 					<p className="text-[11px] leading-relaxed md:text-xs">{t("complianceDisclaimer")}</p>
 				</div>
+
+				<div className="w-full max-w-lg">
+					<DevTestQuickLoginCard showToaster idPrefix="home-dev-test" />
+				</div>
 			</section>
+			<Toaster richColors theme="dark" position="top-center" />
 		</main>
 	);
 }

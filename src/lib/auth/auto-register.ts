@@ -140,7 +140,12 @@ export async function registerUserAndSession(
 	if (regErr) {
 		console.error("[register registrations]", regErr);
 		await rollbackTradeUserOnboarding(srv, userId);
-		return { ok: false, error: mapRegistrationInsertError(regErr.message), status: 500 };
+		return {
+			ok: false,
+			error: mapRegistrationInsertError(regErr.message),
+			code: regErr.code ?? "REGISTRATION_INSERT_FAILED",
+			status: 500,
+		};
 	}
 
 	const response = NextResponse.json({

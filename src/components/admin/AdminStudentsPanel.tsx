@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -94,7 +94,10 @@ export function AdminStudentsPanel() {
 	}, [debouncedSearch, status, t]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	function startEdit(row: RegistrationRow) {
@@ -178,7 +181,7 @@ export function AdminStudentsPanel() {
 	}
 
 	function statusLabel(s: string | null | undefined) {
-		if (!s) return "—";
+		if (!s) return "�";
 		if (STATUSES.includes(s as (typeof STATUSES)[number])) {
 			return t(`status_${s}` as "status_registered");
 		}
@@ -200,7 +203,7 @@ export function AdminStudentsPanel() {
 						sizes="32px"
 					/>
 				) : (
-					<span className="text-muted-foreground text-xs">—</span>
+					<span className="text-muted-foreground text-xs">�</span>
 				),
 		},
 		{
@@ -216,7 +219,7 @@ export function AdminStudentsPanel() {
 		{
 			accessorKey: "real_name",
 			header: t("colRealName"),
-			cell: ({ row }) => <span className="hidden lg:table-cell">{row.original.real_name ?? "—"}</span>,
+			cell: ({ row }) => <span className="hidden lg:table-cell">{row.original.real_name ?? "�"}</span>,
 		},
 		{
 			accessorKey: "email",
@@ -228,12 +231,12 @@ export function AdminStudentsPanel() {
 		{
 			accessorKey: "phone",
 			header: t("colPhone"),
-			cell: ({ row }) => <span className="hidden md:table-cell">{row.original.phone ?? "—"}</span>,
+			cell: ({ row }) => <span className="hidden md:table-cell">{row.original.phone ?? "�"}</span>,
 		},
 		{
 			accessorKey: "student_id",
 			header: t("colStudentId"),
-			cell: ({ row }) => <span className="font-mono text-xs">{row.original.student_id ?? "—"}</span>,
+			cell: ({ row }) => <span className="font-mono text-xs">{row.original.student_id ?? "�"}</span>,
 		},
 		{
 			id: "status",
@@ -317,7 +320,7 @@ export function AdminStudentsPanel() {
 				data={loading ? [] : students}
 				pageSize={15}
 				toolbar={undefined}
-				empty={loading ? "…" : t("empty")}
+				empty={loading ? "..." : t("empty")}
 			/>
 
 			<Dialog

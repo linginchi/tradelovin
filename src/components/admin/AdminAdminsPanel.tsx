@@ -64,7 +64,10 @@ export function AdminAdminsPanel({ currentEmail }: Props) {
 	}, [t]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	async function addAdmin() {
@@ -188,7 +191,7 @@ export function AdminAdminsPanel({ currentEmail }: Props) {
 						{loading ? (
 							<TableRow>
 								<TableCell colSpan={4} className="text-muted-foreground py-10 text-center">
-									…
+									鈥?
 								</TableCell>
 							</TableRow>
 						) : (

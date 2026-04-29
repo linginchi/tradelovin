@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -77,7 +77,10 @@ export function AdminInstructorsPanel() {
 	}, [t]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	function openAdd() {
@@ -250,7 +253,7 @@ export function AdminInstructorsPanel() {
 						{loading ? (
 							<TableRow>
 								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
-									…
+									?
 								</TableCell>
 							</TableRow>
 						) : rows.length === 0 ? (
@@ -273,13 +276,13 @@ export function AdminInstructorsPanel() {
 												sizes="32px"
 											/>
 										) : (
-											<span className="text-muted-foreground text-xs">—</span>
+											<span className="text-muted-foreground text-xs">�</span>
 										)}
 									</TableCell>
 									<TableCell className="font-medium">{r.name}</TableCell>
-									<TableCell className="hidden font-mono text-xs md:table-cell">{r.email ?? "—"}</TableCell>
+									<TableCell className="hidden font-mono text-xs md:table-cell">{r.email ?? "�"}</TableCell>
 									<TableCell className="text-muted-foreground hidden max-w-xs truncate md:table-cell">
-										{r.bio ?? "—"}
+										{r.bio ?? "�"}
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex flex-wrap justify-end gap-1">
@@ -407,7 +410,7 @@ export function AdminInstructorsPanel() {
 								<div className="min-w-0">
 									<p className="text-sm font-medium">{c.title}</p>
 									{c.instructor_id && c.instructor_id !== assignFor?.id ? (
-										<p className="text-muted-foreground text-xs">{t("colInstructor")}: …</p>
+										<p className="text-muted-foreground text-xs">{t("colInstructor")}: ???</p>
 									) : null}
 								</div>
 							</label>

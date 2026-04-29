@@ -25,8 +25,10 @@ function isEmailAlreadyRegisteredMessage(msg: string | undefined): boolean {
 }
 
 export async function POST(request: NextRequest) {
+	const enabled = process.env.ENABLE_QUICK_REGISTER === "1" || process.env.ENABLE_QUICK_REGISTER === "true";
 	const disabled = process.env.DISABLE_QUICK_REGISTER === "1" || process.env.DISABLE_QUICK_REGISTER === "true";
-	if (disabled) {
+	// 默认关闭：仅在显式 ENABLE_QUICK_REGISTER 时开启；DISABLE_QUICK_REGISTER 可强制覆盖关闭。
+	if (!enabled || disabled) {
 		return NextResponse.json(
 			{
 				success: false,

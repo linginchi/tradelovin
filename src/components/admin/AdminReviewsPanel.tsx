@@ -55,7 +55,10 @@ export function AdminReviewsPanel() {
 	}, [t, tab]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	async function approve(id: string) {
@@ -98,7 +101,7 @@ export function AdminReviewsPanel() {
 				return;
 			}
 			if (data.emailWarning) {
-				setError(`邮件未发送：${data.emailWarning}`);
+				setError(`??????${data.emailWarning}`);
 			}
 			setRejectForId(null);
 			setRejectReason("");
@@ -111,8 +114,8 @@ export function AdminReviewsPanel() {
 	}
 
 	function fmtPrefs(p: RegistrationRow["trading_style_preferences"]) {
-		if (!p || !Array.isArray(p)) return "—";
-		return p.length ? p.join(", ") : "—";
+		if (!p || !Array.isArray(p)) return "?";
+		return p.length ? p.join(", ") : "?";
 	}
 
 	function renderTable(mode: "pending" | "history") {
@@ -146,7 +149,7 @@ export function AdminReviewsPanel() {
 									colSpan={mode === "pending" ? 9 : 11}
 									className="text-muted-foreground py-10 text-center"
 								>
-									…
+									??
 								</TableCell>
 							</TableRow>
 						) : rows.length === 0 ? (
@@ -166,21 +169,21 @@ export function AdminReviewsPanel() {
 									</TableCell>
 									{mode === "history" && (
 										<TableCell className="text-muted-foreground font-mono text-xs">
-											{(r as { reviewed_at?: string }).reviewed_at?.slice(0, 16).replace("T", " ") ?? "—"}
+											{(r as { reviewed_at?: string }).reviewed_at?.slice(0, 16).replace("T", " ") ?? "?"}
 										</TableCell>
 									)}
 									<TableCell className="font-medium">{r.nickname}</TableCell>
-									<TableCell>{r.real_name ?? "—"}</TableCell>
+									<TableCell>{r.real_name ?? "?"}</TableCell>
 									<TableCell className="max-w-[160px] truncate font-mono text-xs">{r.email}</TableCell>
-									<TableCell className="hidden xl:table-cell">{r.phone ?? "—"}</TableCell>
+									<TableCell className="hidden xl:table-cell">{r.phone ?? "?"}</TableCell>
 									<TableCell className="hidden max-w-[120px] truncate text-xs lg:table-cell">
-										{r.trading_experience ?? "—"}
+										{r.trading_experience ?? "?"}
 									</TableCell>
 									<TableCell className="hidden max-w-[120px] truncate text-xs lg:table-cell">
 										{fmtPrefs(r.trading_style_preferences)}
 									</TableCell>
 									<TableCell className="text-muted-foreground hidden max-w-[200px] truncate text-xs md:table-cell">
-										{r.learning_goals ?? "—"}
+										{r.learning_goals ?? "?"}
 									</TableCell>
 									{mode === "history" && (
 										<>
@@ -189,10 +192,10 @@ export function AdminReviewsPanel() {
 													? t("status_approved")
 													: r.status === "rejected"
 														? t("status_rejected")
-														: (r.status ?? "—")}
+														: (r.status ?? "?")}
 											</TableCell>
 											<TableCell className="text-muted-foreground hidden max-w-[200px] truncate text-xs lg:table-cell">
-												{r.rejection_reason ?? "—"}
+												{r.rejection_reason ?? "?"}
 											</TableCell>
 										</>
 									)}

@@ -2,7 +2,7 @@
 
 import { Languages } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -25,10 +25,10 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 	const t = useTranslations("LanguageSwitcher");
 	const menuRef = useRef<HTMLDetailsElement>(null);
 
-	const closeMenu = () => {
+	const closeMenu = useCallback(() => {
 		const el = menuRef.current;
 		if (el) el.open = false;
-	};
+	}, []);
 
 	const btn =
 		variant === "compact"
@@ -37,11 +37,13 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 
 	const barBtn = "rounded-md px-2 py-1 text-[11px] font-medium";
 
-	const makeReplace =
-		(next: "zh" | "zh-TW" | "en") => () => {
+	const handleLocaleChange = useCallback(
+		(next: "zh" | "zh-TW" | "en") => {
 			router.replace(pathname, { locale: next });
 			closeMenu();
-		};
+		},
+		[closeMenu, pathname, router],
+	);
 
 	if (variant === "bar") {
 		const currentLabel = locale === "zh" ? t("zh") : locale === "zh-TW" ? t("zhTW") : t("en");
@@ -55,7 +57,7 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 				>
 					<button
 						type="button"
-						onClick={makeReplace("zh")}
+						onClick={() => handleLocaleChange("zh")}
 						className={cn(
 							"transition-colors",
 							barBtn,
@@ -69,7 +71,7 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 					{sep}
 					<button
 						type="button"
-						onClick={makeReplace("zh-TW")}
+						onClick={() => handleLocaleChange("zh-TW")}
 						className={cn(
 							"transition-colors",
 							barBtn,
@@ -83,7 +85,7 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 					{sep}
 					<button
 						type="button"
-						onClick={makeReplace("en")}
+						onClick={() => handleLocaleChange("en")}
 						className={cn(
 							"transition-colors",
 							barBtn,
@@ -114,7 +116,7 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 					>
 						<button
 							type="button"
-							onClick={makeReplace("zh")}
+							onClick={() => handleLocaleChange("zh")}
 							className={cn(
 								"flex w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors",
 								locale === "zh"
@@ -126,7 +128,7 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 						</button>
 						<button
 							type="button"
-							onClick={makeReplace("zh-TW")}
+							onClick={() => handleLocaleChange("zh-TW")}
 							className={cn(
 								"flex w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors",
 								locale === "zh-TW"
@@ -138,7 +140,7 @@ export function LanguageSwitcher({ className, variant = "default" }: Props) {
 						</button>
 						<button
 							type="button"
-							onClick={makeReplace("en")}
+							onClick={() => handleLocaleChange("en")}
 							className={cn(
 								"flex w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors",
 								locale === "en"

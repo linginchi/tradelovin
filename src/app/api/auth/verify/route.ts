@@ -5,6 +5,7 @@ import { verifyOtp } from "@/lib/auth/admin-otp";
 import { registerUserAndSession, signInExistingUserWithFreshPassword } from "@/lib/auth/auto-register";
 import { getTradeUserIdByEmail, tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { normalizeRegisterBody, type RegisterPayload } from "@/lib/auth/register-payload";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -48,6 +49,33 @@ export async function POST(request: NextRequest) {
 
 	const email = parsedBase.data.email.trim().toLowerCase();
 	const { code, intent } = parsedBase.data;
+	const ip = clientIpFromHeaders(request.headers);
+
+	const perIp = checkRateLimit({
+		bucket: "auth-verify-ip",
+		key: ip,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 30,
+	});
+	if (perIp.limited) {
+		return NextResponse.json(
+			{ success: false, error: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perIp.retryAfterSec) } },
+		);
+	}
+
+	const perEmail = checkRateLimit({
+		bucket: "auth-verify-email",
+		key: `${intent}:${email}`,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 10,
+	});
+	if (perEmail.limited) {
+		return NextResponse.json(
+			{ success: false, error: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perEmail.retryAfterSec) } },
+		);
+	}
 
 	let registerPayload: RegisterPayload | null = null;
 	if (intent === "register") {
@@ -118,7 +146,7 @@ export async function POST(request: NextRequest) {
 					{ status: 409 },
 				);
 			}
-			return NextResponse.json({ success: false, error: reg.error, code: reg.code }, { status });
+			return NextResponse.json({ success: false, error: "注册失败，请稍后再试", code: reg.code }, { status });
 		}
 
 		return reg.response;
@@ -132,7 +160,10 @@ export async function POST(request: NextRequest) {
 
 	const sign = await signInExistingUserWithFreshPassword(srv, request, email, userId);
 	if (!sign.ok) {
-		return NextResponse.json({ success: false, error: sign.error, code: sign.code }, { status: sign.status ?? 500 });
+		return NextResponse.json(
+			{ success: false, error: "登录失败，请稍后再试", code: sign.code ?? "SIGNIN_FAILED" },
+			{ status: sign.status ?? 500 },
+		);
 	}
 
 	return sign.response;

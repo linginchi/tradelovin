@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -108,7 +108,10 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	}, [courseId, t]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	async function saveCourse() {
@@ -217,7 +220,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	}
 
 	if (loading && !course) {
-		return <p className="text-muted-foreground text-sm">…</p>;
+		return <p className="text-muted-foreground text-sm">...</p>;
 	}
 	if (!course) {
 		return <p className="text-destructive text-sm">{error ?? t("loadError")}</p>;
@@ -227,7 +230,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		<div className="space-y-8">
 			<p className="text-sm">
 				<Link href="/cjkzt/courses" className="text-cyan-300 underline-offset-4 hover:underline">
-					← {t("coursesTitle")}
+					? {t("coursesTitle")}
 				</Link>
 			</p>
 			{error && <p className="text-destructive text-sm">{error}</p>}
@@ -287,7 +290,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 								onChange={(e) => setInstructorId(e.target.value)}
 								className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm dark:bg-input/30"
 							>
-								<option value="">—</option>
+								<option value="">�</option>
 								{allInstructors.map((ins) => (
 									<option key={ins.id} value={ins.id}>
 										{ins.name}
@@ -314,8 +317,8 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 							className="border-border/40 flex flex-wrap items-center justify-between gap-2 rounded-lg border px-3 py-2"
 						>
 							<span>
-								{s.date} {fmtTime(s.start_time)}–{fmtTime(s.end_time)}
-								{s.location ? ` · ${s.location}` : ""}
+								{s.date} {fmtTime(s.start_time)}-{fmtTime(s.end_time)}
+								{s.location ? ` ?${s.location}` : ""}
 							</span>
 							<Button type="button" variant="outline" size="sm" onClick={() => void deleteSession(s.id)}>
 								{t("removeEnrollment")}
@@ -358,7 +361,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			<Card className="border-border/60 bg-card/35">
 				<CardHeader>
 					<CardTitle className="text-base">
-						{t("enrollTitle")}（{enrollments.length}/{capacity}）
+						{t("enrollTitle")}?{enrollments.length}/{capacity}?
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
@@ -368,7 +371,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 						onChange={(e) => setPickStudent(e.target.value)}
 						className="border-input bg-background h-10 min-w-[200px] rounded-md border px-2 text-sm"
 					>
-						<option value="">—</option>
+						<option value="">-</option>
 						{roster.map((s) => (
 							<option key={s.id} value={s.id}>
 								{s.student_id} {s.nickname ?? s.email}

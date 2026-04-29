@@ -5,11 +5,15 @@ import { z } from "zod";
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
 import { tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { resolveResendEnv } from "@/lib/email/resend-config";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
-const BYPASS_EMAIL = process.env.BYPASS_EMAIL_VERIFICATION === "true";
+function isOtpBypassEnabled(): boolean {
+	const enabled = process.env.BYPASS_EMAIL_VERIFICATION === "true";
+	return enabled && process.env.NODE_ENV !== "production";
+}
 
 const bodySchema = z.object({
 	email: z.string().email(),
@@ -24,6 +28,7 @@ const EMAIL_NOT_FOUND_MSG_CN = "该邮箱尚未注册，请先注册";
 const EMAIL_NOT_FOUND_MSG_EN = "This email is not registered yet. Please sign up first.";
 
 export async function POST(req: Request) {
+	const bypassEmail = isOtpBypassEnabled();
 	const srv = getServiceSupabase();
 	if (!srv) {
 		return NextResponse.json({ success: false, error: "服务端未配置 SUPABASE_SERVICE_ROLE_KEY" }, { status: 503 });
@@ -43,6 +48,33 @@ export async function POST(req: Request) {
 
 	const email = parsed.data.email.trim().toLowerCase();
 	const { intent } = parsed.data;
+	const ip = clientIpFromHeaders(req.headers);
+
+	const perIp = checkRateLimit({
+		bucket: "auth-send-code-ip",
+		key: ip,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 12,
+	});
+	if (perIp.limited) {
+		return NextResponse.json(
+			{ success: false, error: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perIp.retryAfterSec) } },
+		);
+	}
+
+	const perEmail = checkRateLimit({
+		bucket: "auth-send-code-email",
+		key: `${intent}:${email}`,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 4,
+	});
+	if (perEmail.limited) {
+		return NextResponse.json(
+			{ success: false, error: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perEmail.retryAfterSec) } },
+		);
+	}
 
 	const exists = await tradeUserExistsForEmail(srv, email);
 
@@ -88,12 +120,12 @@ export async function POST(req: Request) {
 		return NextResponse.json({ success: false, error: "无法创建验证码" }, { status: 500 });
 	}
 
-	if (BYPASS_EMAIL) {
-		console.log(`[BYPASS MODE] Verification code for ${email}: ${code}`);
+	if (bypassEmail) {
 		return NextResponse.json({
 			success: true,
 			bypass: true,
-			message: "验证码已生成（调试模式），请查看 Worker 日志",
+			message: "验证码已生成（调试模式），请直接输入验证码完成验证",
+			devCode: code,
 		});
 	}
 
@@ -102,10 +134,9 @@ export async function POST(req: Request) {
 		return NextResponse.json(
 			{
 				success: false,
-				code: resendCfg.code,
-				missing: resendCfg.missing,
-				error: resendCfg.error,
-				errorEn: resendCfg.errorEn,
+				code: "EMAIL_PROVIDER_MISCONFIGURED",
+				error: "邮件服务暂不可用，请稍后重试",
+				errorEn: "Email service is temporarily unavailable. Please try again later.",
 			},
 			{ status: 503 },
 		);

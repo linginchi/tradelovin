@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -29,7 +29,10 @@ export function AdminCourseRegistrationsClient() {
 	}, []);
 
 	useEffect(() => {
-		void reload().finally(() => setLoading(false));
+		const timer = window.setTimeout(() => {
+			void reload().finally(() => setLoading(false));
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [reload]);
 
 	async function review(id: string, status: "approved" | "rejected") {
@@ -39,10 +42,10 @@ export function AdminCourseRegistrationsClient() {
 			body: JSON.stringify({ status }),
 		});
 		if (!res.ok) {
-			toast.error("Failed");
+			toast.error(t("saveError"));
 			return;
 		}
-		toast.success("OK");
+		toast.success(t("saved"));
 		void reload();
 	}
 
@@ -53,15 +56,19 @@ export function AdminCourseRegistrationsClient() {
 		const res = await fetch("/api/admin/course-scores", { method: "POST", body: fd });
 		const js = (await res.json()) as { error?: string };
 		if (!res.ok) {
-			toast.error(js.error ?? "Error");
+			toast.error(js.error ?? t("saveError"));
 			return;
 		}
-		toast.success("Saved");
+		toast.success(t("saved"));
 		form.reset();
 	}
 
 	if (loading) {
-		return <p className="text-muted-foreground text-sm">…</p>;
+		return (
+			<p className="text-muted-foreground text-sm" role="status" aria-live="polite">
+				{t("loading")}
+			</p>
+		);
 	}
 
 	return (
@@ -80,11 +87,11 @@ export function AdminCourseRegistrationsClient() {
 					<tbody>
 						{rows.map((r) => (
 							<tr key={r.id} className="border-border/40 border-b">
-								<td className="p-3">{r.courses?.title ?? "—"}</td>
+								<td className="p-3">{r.courses?.title ?? "�"}</td>
 								<td className="p-3">{r.profile?.email ?? r.user_id}</td>
 								<td className="p-3">{r.status}</td>
 								<td className="text-muted-foreground p-3 text-xs">
-									{r.applied_at ? new Date(r.applied_at).toLocaleString() : "—"}
+									{r.applied_at ? new Date(r.applied_at).toLocaleString() : "�"}
 								</td>
 								<td className="p-3">
 									<div className="flex flex-wrap gap-2">
@@ -116,19 +123,19 @@ export function AdminCourseRegistrationsClient() {
 				<h2 className="text-base font-semibold">{t("uploadScore")}</h2>
 				<div className="grid gap-4 sm:grid-cols-2">
 					<div className="space-y-2 sm:col-span-2">
-						<Label htmlFor="registrationId">registration id</Label>
+						<Label htmlFor="registrationId">{t("registrationId")}</Label>
 						<Input id="registrationId" name="registrationId" required className="font-mono text-xs" />
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="score">score</Label>
+						<Label htmlFor="score">{t("score")}</Label>
 						<Input id="score" name="score" type="number" step="0.01" />
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor="grade">grade</Label>
+						<Label htmlFor="grade">{t("grade")}</Label>
 						<Input id="grade" name="grade" />
 					</div>
 					<div className="space-y-2 sm:col-span-2">
-						<Label htmlFor="cfile">certificate file</Label>
+						<Label htmlFor="cfile">{t("certificateFile")}</Label>
 						<Input id="cfile" name="file" type="file" />
 					</div>
 				</div>

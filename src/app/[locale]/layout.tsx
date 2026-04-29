@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -7,16 +6,6 @@ import { notFound } from "next/navigation";
 import { LocaleMainShell } from "@/components/layout/LocaleMainShell";
 import { SiteTopBar } from "@/components/shared/SiteTopBar";
 import { routing } from "@/i18n/routing";
-
-const geistSans = Geist({
-	variable: "--font-geist-sans",
-	subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-	variable: "--font-geist-mono",
-	subsets: ["latin"],
-});
 
 type Props = Readonly<{
 	children: React.ReactNode;
@@ -46,21 +35,11 @@ export default async function LocaleLayout({ children, params }: Props) {
 	setRequestLocale(locale);
 
 	const messages = await getMessages();
-	const htmlLang =
-		locale === "zh" ? "zh-CN" : locale === "zh-TW" ? "zh-Hant" : "en";
 
 	return (
-		<html
-			lang={htmlLang}
-			className={`dark ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-			suppressHydrationWarning
-		>
-			<body className="min-h-full flex flex-col bg-background text-foreground">
-				<NextIntlClientProvider messages={messages}>
-					<SiteTopBar />
-					<LocaleMainShell>{children}</LocaleMainShell>
-				</NextIntlClientProvider>
-			</body>
-		</html>
+		<NextIntlClientProvider locale={locale} messages={messages}>
+			<SiteTopBar />
+			<LocaleMainShell>{children}</LocaleMainShell>
+		</NextIntlClientProvider>
 	);
 }

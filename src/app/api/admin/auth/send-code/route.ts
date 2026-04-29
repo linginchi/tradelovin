@@ -3,8 +3,10 @@ import { Resend } from "resend";
 import { z } from "zod";
 
 import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
+import { isFixedBootstrapOtpEnabled } from "@/lib/auth/bootstrap-super-admin";
 import { generateOtpCode, hashOtp } from "@/lib/auth/admin-otp";
 import { resolveResendEnv } from "@/lib/email/resend-config";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const bodySchema = z.object({
@@ -12,11 +14,6 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-	const supabase = getServiceSupabase();
-	if (!supabase) {
-		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
-	}
-
 	const neutralMessage = { ok: true as const, message: "If this email is authorized, a code was sent." };
 
 	let json: unknown;
@@ -32,9 +29,55 @@ export async function POST(req: Request) {
 	}
 
 	const email = parsed.data.email.trim().toLowerCase();
+	const ip = clientIpFromHeaders(req.headers);
+
+	const perIp = checkRateLimit({
+		bucket: "admin-send-code-ip",
+		key: ip,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 10,
+	});
+	if (perIp.limited) {
+		return NextResponse.json(
+			{ error: "Too many requests", errorZh: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perIp.retryAfterSec) } },
+		);
+	}
+
+	const perEmail = checkRateLimit({
+		bucket: "admin-send-code-email",
+		key: email,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 4,
+	});
+	if (perEmail.limited) {
+		return NextResponse.json(
+			{ error: "Too many requests", errorZh: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perEmail.retryAfterSec) } },
+		);
+	}
 
 	if (!isAdminPortalEmail(email)) {
 		return NextResponse.json(neutralMessage);
+	}
+
+	/**
+	 * 开发/测试阶段开启固定 OTP 时，不依赖邮件验证码：返回中性成功即可。
+	 * 不提示固定邮箱或固定码，避免在 UI 暴露敏感信息。
+	 */
+	if (isFixedBootstrapOtpEnabled()) {
+		return NextResponse.json(neutralMessage);
+	}
+
+	const supabase = getServiceSupabase();
+	if (!supabase) {
+		return NextResponse.json(
+			{
+				error: "Server misconfigured",
+				errorZh: "缺少 NEXT_PUBLIC_SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY，请在 .env.local 配置后重启 dev。",
+			},
+			{ status: 503 },
+		);
 	}
 
 	const { data: admin } = await supabase

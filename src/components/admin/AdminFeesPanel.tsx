@@ -47,10 +47,8 @@ export function AdminFeesPanel() {
 	const [enrollments, setEnrollments] = useState<EnrollRow[]>([]);
 	const [courses, setCourses] = useState<CourseOpt[]>([]);
 	const [selected, setSelected] = useState<Set<string>>(new Set());
-	const [subject, setSubject] = useState("缴费通知");
-	const [body, setBody] = useState(
-		"您好，\n\n请按后续说明完成缴费。\n\n此邮件由系统自动发送。",
-	);
+	const [subject, setSubject] = useState("????");
+	const [body, setBody] = useState("???\n\n???????????\n\n???????????");
 	const [html, setHtml] = useState("");
 	const [courseFilter, setCourseFilter] = useState("");
 	const [payFilter, setPayFilter] = useState("");
@@ -94,11 +92,17 @@ export function AdminFeesPanel() {
 	}, []);
 
 	useEffect(() => {
-		void loadCourses();
+		const timer = window.setTimeout(() => {
+			void loadCourses();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [loadCourses]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	function toggle(id: string) {
@@ -291,7 +295,7 @@ export function AdminFeesPanel() {
 						{loading ? (
 							<TableRow>
 								<TableCell colSpan={9} className="text-muted-foreground py-10 text-center">
-									…
+									???
 								</TableCell>
 							</TableRow>
 						) : enrollments.length === 0 ? (
@@ -312,14 +316,14 @@ export function AdminFeesPanel() {
 									</TableCell>
 									<TableCell className="max-w-[140px] truncate text-sm">{s.course_title}</TableCell>
 									<TableCell className="font-mono text-xs">{s.student_code}</TableCell>
-									<TableCell>{s.nickname ?? "—"}</TableCell>
+									<TableCell>{s.nickname ?? "?"}</TableCell>
 									<TableCell className="max-w-[140px] truncate font-mono text-xs">{s.email}</TableCell>
 									<TableCell className="text-muted-foreground font-mono text-xs tabular-nums">
 										{s.enrolled_at?.slice(0, 10)}
 									</TableCell>
 									<TableCell>{payLabel(s.payment_status)}</TableCell>
 									<TableCell className="text-muted-foreground hidden max-w-[160px] truncate text-xs lg:table-cell">
-										{s.refund_reason ?? "—"}
+										{s.refund_reason ?? "?"}
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex flex-wrap justify-end gap-1">
@@ -378,7 +382,7 @@ export function AdminFeesPanel() {
 							{t("cancel")}
 						</Button>
 						<Button type="button" disabled={sending} onClick={() => void send()}>
-							{sending ? "…" : t("sendFee")}
+							{sending ? "..." : t("sendFee")}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

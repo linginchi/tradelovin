@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
@@ -58,7 +58,10 @@ export function AdminCoursesPanel() {
 	}, [t]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	async function createCourse() {
@@ -168,7 +171,7 @@ export function AdminCoursesPanel() {
 						{loading ? (
 							<TableRow>
 								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
-									…
+									??
 								</TableCell>
 							</TableRow>
 						) : courses.length === 0 ? (
@@ -185,7 +188,7 @@ export function AdminCoursesPanel() {
 									<TableCell className="tabular-nums">{c.capacity}</TableCell>
 									<TableCell className="tabular-nums">{c.enrollment_count}</TableCell>
 									<TableCell className="text-muted-foreground hidden text-sm md:table-cell">
-										{c.instructor_name ?? "—"}
+										{c.instructor_name ?? "�"}
 									</TableCell>
 									<TableCell className="text-right">
 										<Link

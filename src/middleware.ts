@@ -1,5 +1,7 @@
 import createMiddleware from "next-intl/middleware";
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+
+import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
 
 import { routing } from "./i18n/routing";
 
@@ -11,6 +13,19 @@ const LEGACY_LEARNING = [
 ] as const;
 
 const LOCALES = ["zh", "zh-TW", "en"] as const;
+
+/** 供根 layout 设置 `<html lang>`（须写入 request headers，Server Components 才可读） */
+function withInvokePath(request: NextRequest): NextResponse {
+	const headers = new Headers(request.headers);
+	headers.set(INVOKE_PATH_HEADER, request.nextUrl.pathname);
+	return NextResponse.next({ request: { headers } });
+}
+
+function requestWithInvokePath(request: NextRequest): NextRequest {
+	const headers = new Headers(request.headers);
+	headers.set(INVOKE_PATH_HEADER, request.nextUrl.pathname);
+	return new NextRequest(request.url, { headers });
+}
 
 function redirectLegacyLearningPaths(request: NextRequest): NextResponse | null {
 	const pathname = request.nextUrl.pathname;
@@ -44,7 +59,7 @@ export default function middleware(request: NextRequest) {
 	}
 
 	if (pathname === "/cjkzt" || pathname.startsWith("/cjkzt/")) {
-		return NextResponse.next();
+		return withInvokePath(request);
 	}
 
 	const legacyLearning = redirectLegacyLearningPaths(request);
@@ -84,7 +99,7 @@ export default function middleware(request: NextRequest) {
 		}
 	}
 
-	return intlMiddleware(request);
+	return intlMiddleware(requestWithInvokePath(request));
 }
 
 export const config = {

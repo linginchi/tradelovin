@@ -7,10 +7,24 @@ export type AdminJwtPayload = {
 	role: AdminRole;
 };
 
+const DEV_ADMIN_JWT_FALLBACK_SECRET = "dev-admin-jwt-fallback-secret";
+let hasWarnedMissingAdminJwtSecret = false;
+
 function getSecret(): Uint8Array {
-	const s = process.env.ADMIN_JWT_SECRET;
-	if (!s) throw new Error("ADMIN_JWT_SECRET is not set");
-	return new TextEncoder().encode(s);
+	const s = process.env.ADMIN_JWT_SECRET?.trim();
+	if (s) return new TextEncoder().encode(s);
+
+	if (process.env.NODE_ENV !== "production") {
+		if (!hasWarnedMissingAdminJwtSecret) {
+			hasWarnedMissingAdminJwtSecret = true;
+			console.warn(
+				"[admin-jwt] ADMIN_JWT_SECRET is not set; using development fallback secret.",
+			);
+		}
+		return new TextEncoder().encode(DEV_ADMIN_JWT_FALLBACK_SECRET);
+	}
+
+	throw new Error("ADMIN_JWT_SECRET is not set");
 }
 
 export async function signAdminToken(payload: AdminJwtPayload): Promise<string> {

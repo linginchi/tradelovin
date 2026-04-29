@@ -33,7 +33,6 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 type AccountResp = {
@@ -163,6 +162,7 @@ export function TradePageClient() {
 	}, [t]);
 
 	const loadInitial = useCallback(async () => {
+		setBootLoading(true);
 		try {
 			await Promise.all([loadAccount(), loadMarketData()]);
 		} catch (e) {
@@ -181,21 +181,20 @@ export function TradePageClient() {
 	useEffect(() => {
 		let cancelled = false;
 		async function guard() {
-			const supabase = getSupabaseBrowserClient();
-			if (!supabase) {
-				toast.error(t("toast.supabaseMissing"));
+			try {
+				const res = await fetch("/api/trade/account", { credentials: "include" });
+				const json = await parseJson<{ success: boolean }>(res);
+				if (cancelled) return;
+				if (res.ok && json.success) {
+					setSessionReady(true);
+					return;
+				}
 				router.replace("/register");
 				return;
+			} catch {
+				if (cancelled) return;
+				toast.error(t("toast.network"));
 			}
-			const {
-				data: { session },
-			} = await supabase.auth.getSession();
-			if (cancelled) return;
-			if (!session?.user) {
-				router.replace("/register");
-				return;
-			}
-			setSessionReady(true);
 		}
 		void guard();
 		return () => {
@@ -205,8 +204,10 @@ export function TradePageClient() {
 
 	useEffect(() => {
 		if (!sessionReady) return;
-		setBootLoading(true);
-		void loadInitial();
+		const timer = window.setTimeout(() => {
+			void loadInitial();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [sessionReady, loadInitial]);
 
 	useEffect(() => {

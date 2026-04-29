@@ -54,7 +54,7 @@ export function normalizeRegisterBody(raw: unknown): { ok: true; payload: Regist
 		if (p.success) tradingStylePreferences.push(p.data);
 	}
 
-	let tradingExperienceRaw =
+	const tradingExperienceRaw =
 		typeof o.tradingExperience === "string"
 			? o.tradingExperience.trim()
 			: typeof o.trading_experience === "string"

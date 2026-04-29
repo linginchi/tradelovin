@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
 import { toast, Toaster } from "sonner";
 
+import { DevTestQuickLoginCard } from "@/components/auth/DevTestQuickLoginCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +53,10 @@ export function OtpLoginForm() {
 		};
 		setBusy(false);
 		if (res.status === 404) {
-			const msg = locale === "en" ? (js.errorEn ?? js.error ?? "Not found") : (js.error ?? "未找到");
+			const msg =
+				locale === "en"
+					? (js.errorEn ?? js.error ?? t("verifyFailed"))
+					: (js.error ?? js.errorEn ?? t("verifyFailed"));
 			toast.error(msg);
 			return;
 		}
@@ -61,10 +65,10 @@ export function OtpLoginForm() {
 				locale === "en"
 					? (typeof js.errorEn === "string" ? js.errorEn : js.error)
 					: (typeof js.error === "string" ? js.error : js.errorEn);
-			toast.error(typeof errMsg === "string" ? errMsg : t("busySend"));
+			toast.error(typeof errMsg === "string" ? errMsg : t("verifyFailed"));
 			return;
 		}
-		toast.success(locale === "en" ? "Code sent." : "验证码已发送");
+		toast.success(t("codeSent"));
 		setStep(2);
 	};
 
@@ -72,7 +76,7 @@ export function OtpLoginForm() {
 		const email = values.email.trim().toLowerCase();
 		const code = values.otp.trim();
 		if (code.length !== 6) {
-			toast.error(locale === "en" ? "Enter the 6-digit code." : "请填写 6 位验证码");
+			toast.error(t("enter6Digit"));
 			return;
 		}
 		setBusy(true);
@@ -82,10 +86,14 @@ export function OtpLoginForm() {
 			credentials: "include",
 			body: JSON.stringify({ email, code, intent: "login" }),
 		});
-		const js = (await res.json()) as { success?: boolean; error?: string };
+		const js = (await res.json()) as { success?: boolean; error?: string; errorEn?: string };
 		setBusy(false);
 		if (!res.ok || !js.success) {
-			toast.error(typeof js.error === "string" ? js.error : "Error");
+			const errMsg =
+				locale === "en"
+					? (js.errorEn ?? js.error ?? t("verifyFailed"))
+					: (js.error ?? js.errorEn ?? t("verifyFailed"));
+			toast.error(errMsg);
 			return;
 		}
 		router.replace("/trade");
@@ -121,7 +129,7 @@ export function OtpLoginForm() {
 								autoComplete="email"
 								{...register("email", { required: true })}
 							/>
-							{errors.email && <p className="text-destructive text-xs">Invalid email</p>}
+							{errors.email && <p className="text-destructive text-xs">{t("invalidEmail")}</p>}
 						</div>
 						<Button type="submit" disabled={busy} className={busy ? "gap-2" : ""}>
 							{busy ? (
@@ -162,6 +170,8 @@ export function OtpLoginForm() {
 						</Button>
 					</div>
 				)}
+
+				<DevTestQuickLoginCard idPrefix="otp-login-dev-test" />
 			</form>
 			<Toaster richColors theme="dark" position="top-center" />
 		</>

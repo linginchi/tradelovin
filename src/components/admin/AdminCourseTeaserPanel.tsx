@@ -56,7 +56,10 @@ export function AdminCourseTeaserPanel() {
 	}, [t]);
 
 	useEffect(() => {
-		void load();
+		const timer = window.setTimeout(() => {
+			void load();
+		}, 0);
+		return () => window.clearTimeout(timer);
 	}, [load]);
 
 	async function save() {
@@ -97,7 +100,7 @@ export function AdminCourseTeaserPanel() {
 	}
 
 	if (loading) {
-		return <p className="text-muted-foreground text-sm">…</p>;
+		return <p className="text-muted-foreground text-sm">...</p>;
 	}
 
 	return (
@@ -109,7 +112,7 @@ export function AdminCourseTeaserPanel() {
 					value={row.content}
 					onChange={(e) => setRow({ ...row, content: e.target.value })}
 					rows={5}
-					placeholder="新一起的干货课程，敬请期待"
+					placeholder="?????????????"
 				/>
 			</div>
 			<div className="flex items-center gap-2">
@@ -123,7 +126,7 @@ export function AdminCourseTeaserPanel() {
 				</label>
 			</div>
 			<Button type="button" onClick={() => void save()} disabled={saving || !row.content.trim()}>
-				{saving ? "…" : t("courseTeaserSave")}
+				{saving ? "..." : t("courseTeaserSave")}
 			</Button>
 			{message && <p className="text-sm text-emerald-600 dark:text-emerald-400">{message}</p>}
 			{error && <p className="text-destructive text-sm">{error}</p>}
