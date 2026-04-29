@@ -106,12 +106,30 @@ export async function POST(req: Request) {
 		const { error: ensureErr } = await ensureBootstrapSuperAdminRow(supabase);
 		if (ensureErr) {
 			console.error("[admin verify-code] ensureBootstrapSuperAdminRow", ensureErr);
-			return NextResponse.json({ error: "Server error" }, { status: 500 });
 		}
 		console.warn(
 			`[FIXED OTP] /cjkzt login for ${email} with explicit env toggle`,
 		);
 		await supabase.from("admin_otp_challenges").delete().eq("email", email);
+
+		// Fixed OTP is an operational break-glass path: mint token directly
+		// even if admins table bootstrap cannot be guaranteed at this moment.
+		const token = await signAdminToken({
+			email,
+			role: "super_admin",
+		});
+		const res = NextResponse.json({
+			ok: true,
+			role: "super_admin",
+		});
+		res.cookies.set(ADMIN_TOKEN_COOKIE, token, {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			path: "/",
+			maxAge: 60 * 60 * 24 * 7,
+		});
+		return res;
 	} else {
 		const { data: admin, error: adminErr } = await supabase
 			.from("admins")
