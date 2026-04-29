@@ -5,7 +5,7 @@ import {
 	hasServiceRoleKey,
 } from "@/lib/supabase/service";
 
-const DEFAULT_CONTENT = "新一起的干货课程，敬请期待";
+const DEFAULT_CONTENT = "新一期的干货课程，敬请期待";
 
 /** 公开：当前启用的预告文案（最多一条，按 updated_at 最新） */
 export async function GET() {
