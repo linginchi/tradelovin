@@ -53,6 +53,7 @@ export function DevTestQuickLoginCard({
 		}
 
 		router.replace("/trade");
+		router.refresh();
 	};
 
 	return (

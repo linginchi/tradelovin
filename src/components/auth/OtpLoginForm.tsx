@@ -97,6 +97,7 @@ export function OtpLoginForm() {
 			return;
 		}
 		router.replace("/trade");
+		router.refresh();
 	};
 
 	return (

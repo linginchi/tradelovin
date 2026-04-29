@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
-import { Link } from "@/i18n/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,41 +13,90 @@ type Props = {
 
 type AuthGate = "loading" | "in" | "out";
 
+type MeApi = {
+	success?: boolean;
+	loggedIn?: boolean;
+	nickname?: string | null;
+	hasEnrollment?: boolean;
+};
+
 /** 顶栏导航：「报名课程」需登录可见；「求职」需已有报名记录（含注册时写入的记录）可见 */
 export function SiteTopBar({ className }: Props) {
 	const tHome = useTranslations("Home");
 	const tNav = useTranslations("Nav");
+	const router = useRouter();
+	const pathname = usePathname();
 
-	const [auth, setAuth] = useState<AuthGate>(() =>
-		getSupabaseBrowserClient() ? "loading" : "out",
-	);
+	const [auth, setAuth] = useState<AuthGate>("loading");
+	const [nickname, setNickname] = useState("");
 	const [hasEnrollment, setHasEnrollment] = useState(false);
+	const [busyLogout, setBusyLogout] = useState(false);
+
+	const refreshMe = useCallback(async () => {
+		const res = await fetch("/api/auth/me", {
+			method: "GET",
+			credentials: "include",
+			cache: "no-store",
+		});
+		const js = (await res.json()) as MeApi;
+		if (!res.ok || !js.success) {
+			return { auth: "out" as const, nickname: "", hasEnrollment: false };
+		}
+		if (!js.loggedIn) {
+			return { auth: "out" as const, nickname: "", hasEnrollment: false };
+		}
+		return {
+			auth: "in" as const,
+			nickname: (typeof js.nickname === "string" && js.nickname.trim()) || "",
+			hasEnrollment: !!js.hasEnrollment,
+		};
+	}, []);
 
 	useEffect(() => {
-		const sb = getSupabaseBrowserClient();
-		if (!sb) return;
 		let cancelled = false;
+
+		const applyState = (next: { auth: AuthGate; nickname: string; hasEnrollment: boolean }) => {
+			setTimeout(() => {
+				if (cancelled) return;
+				setAuth(next.auth);
+				setNickname(next.nickname);
+				setHasEnrollment(next.hasEnrollment);
+			}, 0);
+		};
+
 		void (async () => {
-			const {
-				data: { session },
-			} = await sb.auth.getSession();
-			if (cancelled) return;
-			if (!session) {
-				setAuth("out");
-				return;
+			try {
+				const next = await refreshMe();
+				applyState(next);
+			} catch {
+				applyState({ auth: "out", nickname: "", hasEnrollment: false });
 			}
-			setAuth("in");
-			const { data } = await sb
-				.from("registrations")
-				.select("id")
-				.eq("user_id", session.user.id)
-				.maybeSingle();
-			if (!cancelled) setHasEnrollment(!!data);
 		})();
 		return () => {
 			cancelled = true;
 		};
-	}, []);
+	}, [refreshMe, pathname]);
+
+	const onLogout = useCallback(async () => {
+		if (busyLogout) return;
+		setBusyLogout(true);
+		try {
+			await fetch("/api/auth/logout", {
+				method: "POST",
+				credentials: "include",
+				headers: { "Content-Type": "application/json" },
+			});
+		} finally {
+			setBusyLogout(false);
+			setTimeout(() => {
+				setAuth("out");
+				setNickname("");
+				setHasEnrollment(false);
+			}, 0);
+			router.replace("/login");
+			router.refresh();
+		}
+	}, [busyLogout, router]);
 
 	return (
 		<header
@@ -70,6 +118,9 @@ export function SiteTopBar({ className }: Props) {
 					aria-label={tNav("mainLabel")}
 				>
 					{auth === "in" && (
+						<span className="text-foreground/90 max-w-[8rem] truncate">{nickname || tNav("userFallback")}</span>
+					)}
+					{auth === "in" && (
 						<Link href="/enroll" className="hover:text-foreground truncate transition-colors">
 							{tNav("enrollCourses")}
 						</Link>
@@ -78,6 +129,18 @@ export function SiteTopBar({ className }: Props) {
 						<Link href="/career" className="hover:text-foreground truncate transition-colors">
 							{tNav("career")}
 						</Link>
+					)}
+					{auth === "in" && (
+						<button
+							type="button"
+							onClick={() => {
+								void onLogout();
+							}}
+							disabled={busyLogout}
+							className="hover:text-foreground disabled:text-muted-foreground truncate transition-colors disabled:cursor-not-allowed"
+						>
+							{busyLogout ? tNav("loggingOut") : tNav("logout")}
+						</button>
 					)}
 				</nav>
 				<div className="shrink-0">

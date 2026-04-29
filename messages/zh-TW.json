@@ -14,7 +14,10 @@
 		"enrollCourses": "報名課程",
 		"career": "求職",
 		"myProfile": "我的",
-		"myLearning": "我的學習"
+		"myLearning": "我的學習",
+		"logout": "退出",
+		"loggingOut": "退出中...",
+		"userFallback": "用戶"
 	},
 	"LanguageSwitcher": {
 		"label": "語言",

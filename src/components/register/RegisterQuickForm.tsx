@@ -145,7 +145,8 @@ export function RegisterQuickForm() {
 			return;
 		}
 		setFinished(true);
-		router.push("/trade");
+		router.replace("/trade");
+		router.refresh();
 	};
 
 	return (

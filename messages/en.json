@@ -14,7 +14,10 @@
 		"enrollCourses": "Course enrollment",
 		"career": "Careers",
 		"myProfile": "Profile",
-		"myLearning": "My learning"
+		"myLearning": "My learning",
+		"logout": "Log out",
+		"loggingOut": "Logging out...",
+		"userFallback": "User"
 	},
 	"LanguageSwitcher": {
 		"label": "Language",
