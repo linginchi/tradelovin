@@ -3,28 +3,25 @@ import { z } from "zod";
 
 import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
 import {
-	BOOTSTRAP_SUPER_ADMIN_EMAIL,
+	ensureBootstrapSuperAdminRow,
+	isBootstrapSuperAdminEmail,
+	isFixedBootstrapOtpEnabled,
+	isSuperAdminRole,
 	promoteBootstrapSuperAdmin,
 } from "@/lib/auth/bootstrap-super-admin";
 import { signAdminToken } from "@/lib/auth/admin-jwt";
 import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { verifyOtp } from "@/lib/auth/admin-otp";
+import { checkRateLimit, clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { BOOTSTRAP_SUPER_ADMIN_FIXED_OTP } from "@/lib/auth/admin-portal-constants";
 
 const bodySchema = z.object({
 	email: z.string().email(),
 	code: z.string().regex(/^\d{6}$/),
 });
 
-/** 无邮件服务时：引导超管邮箱 + 固定码即可登录 /cjkzt（无需先发送验证码）。上架生产并配置邮件后应移除或改为环境变量开关。 */
-const FIXED_SUPER_ADMIN_OTP = "123456";
-
 export async function POST(req: Request) {
-	const supabase = getServiceSupabase();
-	if (!supabase) {
-		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
-	}
-
 	let json: unknown;
 	try {
 		json = await req.json();
@@ -39,30 +36,93 @@ export async function POST(req: Request) {
 
 	const email = parsed.data.email.trim().toLowerCase();
 	const code = parsed.data.code;
+	const fixedOtpEnabled = isFixedBootstrapOtpEnabled();
+	const ip = clientIpFromHeaders(req.headers);
+
+	const perIp = checkRateLimit({
+		bucket: "admin-verify-code-ip",
+		key: ip,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 20,
+	});
+	if (perIp.limited) {
+		return NextResponse.json(
+			{ error: "Too many requests", errorZh: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perIp.retryAfterSec) } },
+		);
+	}
+
+	const perEmail = checkRateLimit({
+		bucket: "admin-verify-code-email",
+		key: email,
+		windowMs: 10 * 60 * 1000,
+		maxHits: 8,
+	});
+	if (perEmail.limited) {
+		return NextResponse.json(
+			{ error: "Too many requests", errorZh: "请求过于频繁，请稍后重试", code: "RATE_LIMITED" },
+			{ status: 429, headers: { "Retry-After": String(perEmail.retryAfterSec) } },
+		);
+	}
 
 	if (!isAdminPortalEmail(email)) {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 
-	const { data: admin, error: adminErr } = await supabase
-		.from("admins")
-		.select("email, role")
-		.eq("email", email)
-		.maybeSingle();
+	const useFixedBootstrapOtp =
+		fixedOtpEnabled && isBootstrapSuperAdminEmail(email) && code === BOOTSTRAP_SUPER_ADMIN_FIXED_OTP;
 
-	if (adminErr || !admin) {
-		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+	const supabase = getServiceSupabase();
+	if (!supabase) {
+		if (useFixedBootstrapOtp) {
+			const token = await signAdminToken({
+				email,
+				role: "super_admin",
+			});
+
+			const res = NextResponse.json({
+				ok: true,
+				role: "super_admin",
+			});
+			res.cookies.set(ADMIN_TOKEN_COOKIE, token, {
+				httpOnly: true,
+				secure: process.env.NODE_ENV === "production",
+				sameSite: "lax",
+				path: "/",
+				maxAge: 60 * 60 * 24 * 7,
+			});
+			return res;
+		}
+		return NextResponse.json(
+			{
+				error: "Server misconfigured",
+				errorZh: "缺少 NEXT_PUBLIC_SUPABASE_URL 或 SUPABASE_SERVICE_ROLE_KEY，请在 .env.local 配置后重启 dev。",
+			},
+			{ status: 503 },
+		);
 	}
 
-	const useFixedBootstrapOtp =
-		email === BOOTSTRAP_SUPER_ADMIN_EMAIL.toLowerCase() && code === FIXED_SUPER_ADMIN_OTP;
-
 	if (useFixedBootstrapOtp) {
+		const { error: ensureErr } = await ensureBootstrapSuperAdminRow(supabase);
+		if (ensureErr) {
+			console.error("[admin verify-code] ensureBootstrapSuperAdminRow", ensureErr);
+			return NextResponse.json({ error: "Server error" }, { status: 500 });
+		}
 		console.warn(
-			`[FIXED OTP] /cjkzt login for ${email} — remove when email OTP is configured in production`,
+			`[FIXED OTP] /cjkzt login for ${email} with explicit env toggle`,
 		);
 		await supabase.from("admin_otp_challenges").delete().eq("email", email);
 	} else {
+		const { data: admin, error: adminErr } = await supabase
+			.from("admins")
+			.select("email, role")
+			.eq("email", email)
+			.maybeSingle();
+
+		if (adminErr || !admin) {
+			return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
+		}
+
 		const { data: row } = await supabase
 			.from("admin_otp_challenges")
 			.select("id, code_hash, expires_at")
@@ -98,18 +158,18 @@ export async function POST(req: Request) {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 
-	if (adminFresh.role !== "super_admin") {
+	if (!isSuperAdminRole(adminFresh.role)) {
 		return NextResponse.json({ error: "Invalid code or email" }, { status: 401 });
 	}
 
 	const token = await signAdminToken({
 		email: adminFresh.email,
-		role: adminFresh.role as "super_admin" | "admin",
+		role: "super_admin",
 	});
 
 	const res = NextResponse.json({
 		ok: true,
-		role: adminFresh.role,
+		role: "super_admin",
 	});
 	res.cookies.set(ADMIN_TOKEN_COOKIE, token, {
 		httpOnly: true,

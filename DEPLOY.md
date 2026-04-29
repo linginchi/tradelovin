@@ -78,6 +78,17 @@ Remove-Item -Recurse -Force .open-next
 - **成功**：进程退出码 **0**；日志中出现 **Uploaded** / **Deployed** 以及 **`*.workers.dev`** URL。
 - **告警（非必然失败）**：若 `wrangler deploy` 提示 **本地 `wrangler.jsonc` 与 Dashboard 中该 Worker 的远程路由/自定义域配置不一致**、部署将覆盖远程配置，应提醒维护者核对 **自定义域** 与 **Workers 触发器**，不要仅凭 WARNING 误判为部署失败。
 
+### 2.6 用户数据边界（IDOR）冒烟检查
+
+上线前建议至少跑一次用户隔离冒烟（两组不同用户 cookie）：
+
+```bash
+BASE_URL=http://localhost:3000 USER_A_COOKIE="<cookie-a>" USER_B_COOKIE="<cookie-b>" node scripts/security/idor-smoke.mjs
+```
+
+脚本位置：[`scripts/security/idor-smoke.mjs`](scripts/security/idor-smoke.mjs)  
+若任一接口返回两用户可疑“同形同内容”结果，会以非 0 退出。
+
 ### 2.5 优先策略
 
 生产与可重复构建仍以 **Linux CI / WSL**（§1）为先。仅在需要本机 Wrangler 发布时走 Windows，且 **必须** 完成 §2.2 的占用排查。
@@ -98,7 +109,9 @@ npm run deploy:cloudflare
 
 ## 4. 自定义域名（`tradelovin.com`）
 
-[`wrangler.jsonc`](wrangler.jsonc) 中已配置 `routes` 指向 `tradelovin.com/*`（`custom_domain: true`）。首次绑定仍需在 **Cloudflare Dashboard** 中完成 DNS 与路由生效（以控制台提示为准）。
+当前仓库内的 [`wrangler.jsonc`](wrangler.jsonc) **未提交 `routes`**；自定义域名路由由 **Cloudflare Dashboard** 托管（避免本地/测试分支误覆盖生产路由）。
+
+首次绑定或变更仍需在 **Cloudflare Dashboard** 中完成 DNS 与路由生效（以控制台提示为准）。
 
 ### 与 Pages 的切换（domain-cutover）
 
@@ -119,9 +132,60 @@ npm run deploy:cloudflare
 
 ---
 
-## 6. 可选：静态资源绝对前缀
+## 6. 静态资源前缀 `assetPrefix`（仅 Cloudflare 构建）
 
-默认 **不要** 在 `next.config` 里写死 `https://...workers.dev` 作为 `assetPrefix`。若将来使用独立 CDN，可在构建/部署环境设置环境变量 **`ASSET_PREFIX`**（见 [`next.config.ts`](next.config.ts)）。
+[`next.config.ts`](next.config.ts) 仅在设置了 **`NEXT_ASSET_PREFIX`** 或 **`ASSET_PREFIX`**（二选一，无尾部斜杠）时才会启用 Next 的 `assetPrefix`。这样本地 `npm run dev` 会使用同源 `/_next/static`，避免页面「像纯 HTML、无 CSS」。
+
+| 场景 | 是否设置 |
+| --- | --- |
+| 本地 `next dev` / `npm run build && npm start` | **不要** 设置 |
+| `npm run build:cloudflare` / `deploy:cloudflare` | **建议** 设为当前 Worker 对外 URL，例如 `https://tradelovin.mark-377.workers.dev`（以你账号实际域名为准）；若将来用独立 CDN，则设为该 CDN 源站前缀 |
+
+**本机发布 Workers 前（PowerShell 示例）：**
+
+```powershell
+$env:NEXT_ASSET_PREFIX = "https://tradelovin.mark-377.workers.dev"
+npm run deploy:cloudflare
+```
+
+**GitHub Actions：** 在仓库 **Settings → Secrets and variables → Actions → Variables** 中配置 **`NEXT_ASSET_PREFIX`**（与上面同源 URL 一致），工作流已将该变量注入 **`OpenNext` 构建步骤**。未配置时构建产物使用相对路径；若线上 Worker 强依赖绝对静态 URL，请务必配置该变量。
+
+---
+
+## 6.1 构建期变量 vs 运行期密钥（避免“CI 绿但线上 503”）
+
+| 类别 | 变量 | 用途 | 建议配置位置 |
+| --- | --- | --- | --- |
+| 构建期（Next 打包） | `NEXT_PUBLIC_SUPABASE_URL` | 前端与服务端共享公开 Supabase URL | GitHub Actions Secrets / 本地 shell |
+| 构建期（Next 打包） | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 前端匿名访问 key（公开） | GitHub Actions Secrets / 本地 shell |
+| 构建期（可选） | `NEXT_ASSET_PREFIX` | 仅 Cloudflare 构建时设置静态资源绝对前缀 | GitHub Actions Variables / 部署命令前设置 |
+| 运行期（Worker Secret） | `SUPABASE_SERVICE_ROLE_KEY` | 服务端 API 写库、后台管理、受保护流程 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `ADMIN_JWT_SECRET` | 管理后台 JWT 签发与校验 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `RESEND_API_KEY` | 邮件验证码与通知邮件 | Cloudflare Worker Secrets |
+| 运行期（Worker Var/Secret） | `RESEND_FROM_EMAIL` | 发件人地址 | Cloudflare Worker Variables/Secrets |
+| 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP` | 开启后台固定码登录（仅开发/测试建议） | Cloudflare Worker Variables / 本地 `.env` |
+| 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION` | 生产环境二次确认固定码（默认不启用） | Cloudflare Worker Variables |
+| 构建期（Next 打包） | `NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS` | 前台显示开发/测试快捷登录入口（kk/william/mark） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `1`） |
+| 构建期（Next 打包） | `NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN` | `/cjkzt/login` 显示「一键登录（测试）」按钮（仍需 Worker 打开固定管理员 OTP） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `1`） |
+| 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS` | 启用 `/api/auth/dev-test-login`（固定测试账号入口） | Worker Variables（不设时 workflow 部署默认 `1`，正式环境请改） |
+| 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION` | 生产环境二次确认 dev 测试账号入口（默认不启用） | Worker Variables（不设时 workflow 部署默认 `1`，正式环境请改） |
+
+### 6.2 GitHub Actions：推送到 `main` 自动部署 Workers（推荐路径）
+
+- 工作流：[`.github/workflows/opennext-build.yml`](.github/workflows/opennext-build.yml)；向 **`main`** 推送且构建成功后会执行 `npx wrangler deploy`。
+- **Secrets（Actions）**：`CLOUDFLARE_API_TOKEN`，以及用于 Next 打包的 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`。
+- **Variables（Actions）**：建议配置 `NEXT_ASSET_PREFIX`（与当前 Worker 对外 URL 同源无尾斜杠，见上文「静态资源前缀」）。
+- **重要**：不带 `--var` 的 `wrangler deploy` 会按本次发布覆盖 Worker 上对应 **vars**；此前仅用本地命令行注入的 `ALLOW_*` / `ENABLE_*` 可能在一次 CI 发布后被清空，表现为**后台固定码 / 前台测试登录「像退回老版本」**。当前工作流在部署步骤会**始终传入**下列变量（未在仓库 Variables 中设置时默认 `1`，偏 staging / `workers.dev`；正式自定义域名上线请在 **Settings → Variables** 中显式设为 `0` 或 `false` 收紧）：
+  - `ALLOW_FIXED_ADMIN_OTP`
+  - `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION`
+  - `ENABLE_DEV_TEST_ACCOUNTS`
+  - `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION`
+- **构建期**（未在 Variables 中设置时 workflow 默认 `1`）：`NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS`、`NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN`。
+- **Pull Request**：只跑构建校验，不部署；合并进 `main` 后由推送触发部署。
+
+> 说明：`quick-register` 已改为默认关闭，需显式设置 `ENABLE_QUICK_REGISTER=1` 才启用。
+> 说明：后台固定码登录（`mark@hkfac.com + 123456`）仅在 `ALLOW_FIXED_ADMIN_OTP=1|true` 时可用；生产环境还需 `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION=1|true`。
+> 说明：前台快捷登录测试账号固定为 `kk / william / mark`（密码 `123456`），仅在 `NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS=1` 且 `ENABLE_DEV_TEST_ACCOUNTS=1` 时可用。
 
 ---
 
@@ -139,7 +203,9 @@ npm run cf-typegen
 
 ## 8. Supabase：`registrations` 表与一键注册
 
-前台 **一键注册（免邮箱）**（`/api/auth/quick-register`）与 **登录后报名**（`/api/enroll`）会向 `public.registrations` 写入 **`user_id`**（及 **`status`** 等）。若数据库仍停留在早期 [`supabase/registrations.sql`](supabase/registrations.sql)（仅有匿名插入、无 `user_id`），PostgREST 会报错例如：`Could not find the 'user_id' column of 'registrations' in the schema cache`。
+前台 **一键注册（免邮箱）**（`/api/auth/quick-register`）与 **登录后报名**（`/api/enroll`）会向 `public.registrations` 写入 **`user_id`**（及 **`status`** 等）。  
+注意：`quick-register` 现为 **默认关闭**，仅在设置 `ENABLE_QUICK_REGISTER=1` 时开启。  
+若数据库仍停留在早期 [`supabase/registrations.sql`](supabase/registrations.sql)（仅有匿名插入、无 `user_id`），PostgREST 会报错例如：`Could not find the 'user_id' column of 'registrations' in the schema cache`。
 
 **运维抄作业：** 详见 [`supabase/manual/APPLY_REGISTRATIONS_SCHEMA.md`](supabase/manual/APPLY_REGISTRATIONS_SCHEMA.md)（CLI 与 SQL Editor 逐步说明）。
 
@@ -155,7 +221,7 @@ npm run cf-typegen
 
 **环境变量：** 一键注册与匿名报名表单提交的 API（[`/api/registrations/public`](src/app/api/registrations/public/route.ts)）均依赖服务端 **`SUPABASE_SERVICE_ROLE_KEY`**；未配置时返回 503。
 
-- **`DISABLE_QUICK_REGISTER`**：设为 `true` 或 `1` 时，`POST /api/auth/quick-register` 返回 **403**（生产若改由管理员手动开户可开启）。
+- **`ENABLE_QUICK_REGISTER`**：仅当设为 `true` 或 `1` 时，`POST /api/auth/quick-register` 才开启（默认关闭）。
 - **`DISABLE_PUBLIC_REGISTRATION`**：设为 `true` 或 `1` 时，`POST /api/registrations/public` 返回 **403**。
 
 **RLS 说明：** 收紧策略后，浏览器 **不可** 再以 anon 身份直接 `insert` `registrations`；匿名报名须走上述 **public API**（service role 写入）。

@@ -222,7 +222,15 @@
 		"back": "← 返回",
 		"noAccount": "没有账号？",
 		"goRegister": "去注册",
-		"otpLabel": "6 位验证码"
+		"otpLabel": "6 位验证码",
+		"invalidEmail": "请输入有效邮箱",
+		"codeSent": "验证码已发送",
+		"enter6Digit": "请填写 6 位验证码",
+		"verifyFailed": "请求失败，请稍后重试。",
+		"devQuickLoginTitle": "开发/测试快捷登录",
+		"devAccountLabel": "测试账号",
+		"devPasswordLabel": "密码",
+		"devLoginButton": "快捷登录"
 	},
 	"EnrollPage": {
 		"metaTitle": "报名课程 · 豹仔乐园",
@@ -425,12 +433,30 @@
 		"copyrightTitle": "软件著作权（摘要）",
 		"copyrightHint": "以下为登记信息文字摘要，便于了解课程体系的技术依托；不代表电子或纸质证书本身。",
 		"copyrightRows": [
-			{ "label": "软件名称", "value": "小Q教练模拟交易系统（简称：小Q教练）" },
-			{ "label": "著作权人", "value": "深圳大湾区智慧科技有限公司" },
-			{ "label": "证书编号", "value": "软著登字第4361890号" },
-			{ "label": "登记号", "value": "2019SR0941133" },
-			{ "label": "发证机关", "value": "中华人民共和国国家版权局" },
-			{ "label": "开发完成日期", "value": "2019年07月10日" }
+			{
+				"label": "软件名称",
+				"value": "小Q教练模拟交易系统（简称：小Q教练）"
+			},
+			{
+				"label": "著作权人",
+				"value": "深圳大湾区智慧科技有限公司"
+			},
+			{
+				"label": "证书编号",
+				"value": "软著登字第4361890号"
+			},
+			{
+				"label": "登记号",
+				"value": "2019SR0941133"
+			},
+			{
+				"label": "发证机关",
+				"value": "中华人民共和国国家版权局"
+			},
+			{
+				"label": "开发完成日期",
+				"value": "2019年07月10日"
+			}
 		]
 	},
 	"MyProfile": {
@@ -460,17 +486,30 @@
 		"jobs": [
 			{
 				"company": "某自营交易台",
-				"steps": ["简历初筛", "交易考核", "面试", "Offer"],
+				"steps": [
+					"简历初筛",
+					"交易考核",
+					"面试",
+					"Offer"
+				],
 				"current": 2
 			},
 			{
 				"company": "资管公司 A",
-				"steps": ["简历初筛", "笔试", "面试"],
+				"steps": [
+					"简历初筛",
+					"笔试",
+					"面试"
+				],
 				"current": 1
 			},
 			{
 				"company": "独立交易员路径",
-				"steps": ["方案提交", "模拟盘复核", "签约意向"],
+				"steps": [
+					"方案提交",
+					"模拟盘复核",
+					"签约意向"
+				],
 				"current": 0
 			}
 		],
@@ -485,16 +524,46 @@
 		"radarLabel": "能力画像雷达图（演示数据）",
 		"examTitle": "考试成绩",
 		"axes": [
-			{ "key": "技术面", "value": 85 },
-			{ "key": "风控", "value": 72 },
-			{ "key": "心态", "value": 68 },
-			{ "key": "执行", "value": 90 },
-			{ "key": "复盘", "value": 79 }
+			{
+				"key": "技术面",
+				"value": 85
+			},
+			{
+				"key": "风控",
+				"value": 72
+			},
+			{
+				"key": "心态",
+				"value": 68
+			},
+			{
+				"key": "执行",
+				"value": 90
+			},
+			{
+				"key": "复盘",
+				"value": 79
+			}
 		],
 		"exams": [
-			{ "name": "日内结构与关键位", "score": 88, "grade": "优良", "date": "2026-04-12" },
-			{ "name": "风控与仓位管理", "score": 76, "grade": "良好", "date": "2026-04-01" },
-			{ "name": "执行纪律模拟测", "score": 92, "grade": "优秀", "date": "2026-03-18" }
+			{
+				"name": "日内结构与关键位",
+				"score": 88,
+				"grade": "优良",
+				"date": "2026-04-12"
+			},
+			{
+				"name": "风控与仓位管理",
+				"score": 76,
+				"grade": "良好",
+				"date": "2026-04-01"
+			},
+			{
+				"name": "执行纪律模拟测",
+				"score": 92,
+				"grade": "优秀",
+				"date": "2026-03-18"
+			}
 		]
 	},
 	"MyCourses": {
@@ -713,7 +782,6 @@
 		"colReviewedAt": "审核时间",
 		"colExp": "交易经验",
 		"colStyle": "风格偏好",
-		"colCourse": "课程",
 		"colEnrolledAt": "选课时间",
 		"filterCourse": "课程",
 		"filterPayment": "缴费状态",
@@ -729,12 +797,21 @@
 		"changeRole": "更改角色",
 		"applyRole": "应用",
 		"allCourses": "全部课程",
-		"envHint": "配置 SUPABASE_SERVICE_ROLE_KEY、RESEND_API_KEY、RESEND_FROM_EMAIL、ADMIN_JWT_SECRET 后方可使用登录与 API。"
+		"envHint": "配置 SUPABASE_SERVICE_ROLE_KEY、RESEND_API_KEY、RESEND_FROM_EMAIL、ADMIN_JWT_SECRET 后方可使用登录与 API。",
+		"status_reviewing": "审核中",
+		"loading": "加载中…",
+		"jobAppId": "申请 ID",
+		"notes": "备注",
+		"registrationId": "报名 ID",
+		"score": "分数",
+		"grade": "等级",
+		"certificateFile": "证书文件"
 	},
 	"AdminAuth": {
 		"title": "管理员登录",
 		"subtitle": "使用管理员邮箱接收验证码（Resend）。",
 		"emailLabel": "邮箱",
+		"emailPlaceholder": "请输入管理员邮箱",
 		"sendCode": "发送验证码",
 		"sending": "发送中…",
 		"codeSentHint": "若该邮箱已授权为管理员，您将收到一封邮件。",
@@ -745,6 +822,8 @@
 		"back": "更换邮箱",
 		"backSite": "返回首页",
 		"errorGeneric": "请求失败，请稍后重试。",
-		"invalidCode": "验证码无效或已过期。"
+		"invalidCode": "验证码无效或已过期。",
+		"quickLogin": "一键登录（测试）",
+		"quickLoginHint": "需云端已开启固定管理员验证码；等价于引导超级管理员的受控登录流程。"
 	}
 }

@@ -8,6 +8,10 @@ on:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: opennext-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,11 +27,16 @@ jobs:
         run: npm ci
 
       # NEXT_PUBLIC_* 在 next build 时写入浏览器包；仅向 Worker 设 secret 不会更新已打包的 JS，必须在构建步骤提供。
+      # 注意：fork PR 默认拿不到 secrets（GitHub 安全策略），该场景若失败属于预期。
+      # wrangler deploy 会覆盖 Worker 上由本次发布声明的 vars；若部署命令不传这些开关，此前用 CLI 设置的 ALLOW_* / ENABLE_* 会被清空，线上会表现为「退回老流程 / 一键失效」。
       - name: OpenNext Cloudflare build
         run: npm run build:cloudflare
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_ASSET_PREFIX: ${{ vars.NEXT_ASSET_PREFIX }}
+          NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS || '1' }}
+          NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN: ${{ vars.NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN || '1' }}
 
       - name: Debug - List .open-next/assets/_next/static contents
         run: |
@@ -38,10 +47,19 @@ jobs:
 
       # 需在仓库 Settings → Secrets and variables → Actions 中设置 CLOUDFLARE_API_TOKEN
       #（Workers 写权限的 API 令牌；未设置时本步骤会失败，可先只保留上方构建任务）
+      # 下方 ALLOW_* / ENABLE_* 默认值偏「staging（workers.dev）可用」；正式域名上线请在 Actions Variables 显式设为 0/false 以收紧。
       - name: Deploy to Cloudflare Workers
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: npm run deploy:cloudflare
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          ALLOW_FIXED_ADMIN_OTP: ${{ vars.ALLOW_FIXED_ADMIN_OTP || '1' }}
+          ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION: ${{ vars.ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION || '1' }}
+          ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS || '1' }}
+          ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION || '1' }}
+        run: |
+          set -euo pipefail
+          npx wrangler deploy --config wrangler.jsonc \
+            --var "ALLOW_FIXED_ADMIN_OTP=${ALLOW_FIXED_ADMIN_OTP}" \
+            --var "ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION=${ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION}" \
+            --var "ENABLE_DEV_TEST_ACCOUNTS=${ENABLE_DEV_TEST_ACCOUNTS}" \
+            --var "ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION=${ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION}"

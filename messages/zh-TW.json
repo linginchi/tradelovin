@@ -225,7 +225,15 @@
 		"back": "← 返回",
 		"noAccount": "沒有帳號？",
 		"goRegister": "去註冊",
-		"otpLabel": "6 位驗證碼"
+		"otpLabel": "6 位驗證碼",
+		"invalidEmail": "請輸入有效郵箱",
+		"codeSent": "驗證碼已發送",
+		"enter6Digit": "請填寫 6 位驗證碼",
+		"verifyFailed": "請求失敗，請稍後重試。",
+		"devQuickLoginTitle": "開發/測試快捷登錄",
+		"devAccountLabel": "測試賬號",
+		"devPasswordLabel": "密碼",
+		"devLoginButton": "快捷登錄"
 	},
 	"EnrollPage": {
 		"metaTitle": "報名課程 · 豹仔樂園",
@@ -425,12 +433,30 @@
 		"copyrightTitle": "軟件著作權（摘要）",
 		"copyrightHint": "以下為登記信息文字摘要，便於了解課程體系的技術依託；不代表電子或紙質證書本身。",
 		"copyrightRows": [
-			{ "label": "軟件名稱", "value": "小Q教練模擬交易系統（簡稱：小Q教練）" },
-			{ "label": "著作權人", "value": "深圳大灣區智慧科技有限公司" },
-			{ "label": "證書編號", "value": "軟著登字第4361890號" },
-			{ "label": "登記號", "value": "2019SR0941133" },
-			{ "label": "發證機關", "value": "中華人民共和國國家版權局" },
-			{ "label": "開發完成日期", "value": "2019年07月10日" }
+			{
+				"label": "軟件名稱",
+				"value": "小Q教練模擬交易系統（簡稱：小Q教練）"
+			},
+			{
+				"label": "著作權人",
+				"value": "深圳大灣區智慧科技有限公司"
+			},
+			{
+				"label": "證書編號",
+				"value": "軟著登字第4361890號"
+			},
+			{
+				"label": "登記號",
+				"value": "2019SR0941133"
+			},
+			{
+				"label": "發證機關",
+				"value": "中華人民共和國國家版權局"
+			},
+			{
+				"label": "開發完成日期",
+				"value": "2019年07月10日"
+			}
 		]
 	},
 	"MyProfile": {
@@ -756,7 +782,6 @@
 		"colReviewedAt": "審核時間",
 		"colExp": "交易經驗",
 		"colStyle": "風格偏好",
-		"colCourse": "課程",
 		"colEnrolledAt": "選課時間",
 		"filterCourse": "課程",
 		"filterPayment": "繳費狀態",
@@ -772,12 +797,21 @@
 		"changeRole": "更改角色",
 		"applyRole": "應用",
 		"allCourses": "全部課程",
-		"envHint": "配置 SUPABASE_SERVICE_ROLE_KEY、RESEND_API_KEY、RESEND_FROM_EMAIL、ADMIN_JWT_SECRET 後方可使用登錄與 API。"
+		"envHint": "配置 SUPABASE_SERVICE_ROLE_KEY、RESEND_API_KEY、RESEND_FROM_EMAIL、ADMIN_JWT_SECRET 後方可使用登錄與 API。",
+		"status_reviewing": "審核中",
+		"loading": "加載中…",
+		"jobAppId": "申請 ID",
+		"notes": "備註",
+		"registrationId": "報名 ID",
+		"score": "分數",
+		"grade": "等級",
+		"certificateFile": "證書文件"
 	},
 	"AdminAuth": {
 		"title": "管理員登錄",
 		"subtitle": "使用管理員郵箱接收驗證碼（Resend）。",
 		"emailLabel": "郵箱",
+		"emailPlaceholder": "請輸入管理員郵箱",
 		"sendCode": "發送驗證碼",
 		"sending": "發送中…",
 		"codeSentHint": "若該郵箱已授權為管理員，您將收到一封郵件。",
@@ -788,6 +822,8 @@
 		"back": "更換郵箱",
 		"backSite": "返回首頁",
 		"errorGeneric": "請求失敗，請稍後重試。",
-		"invalidCode": "驗證碼無效或已過期。"
+		"invalidCode": "驗證碼無效或已過期。",
+		"quickLogin": "一鍵登錄（測試）",
+		"quickLoginHint": "需雲端已開啟固定管理員驗證碼；等同於引導超級管理員的受控登錄流程。"
 	}
 }

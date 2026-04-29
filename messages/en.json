@@ -225,7 +225,15 @@
 		"back": "← Back",
 		"noAccount": "No account yet?",
 		"goRegister": "Create one",
-		"otpLabel": "6-digit code"
+		"otpLabel": "6-digit code",
+		"invalidEmail": "Enter a valid email",
+		"codeSent": "Code sent.",
+		"enter6Digit": "Enter the 6-digit code.",
+		"verifyFailed": "Request failed. Please try again.",
+		"devQuickLoginTitle": "Dev/Test quick login",
+		"devAccountLabel": "Test account",
+		"devPasswordLabel": "Password",
+		"devLoginButton": "Quick login"
 	},
 	"EnrollPage": {
 		"metaTitle": "Course enrollment · Tradelovin",
@@ -437,12 +445,18 @@
 				"label": "Certificate No.",
 				"value": "软著登字第4361890号 (Software copyright registration)"
 			},
-			{ "label": "Registration No.", "value": "2019SR0941133" },
+			{
+				"label": "Registration No.",
+				"value": "2019SR0941133"
+			},
 			{
 				"label": "Issuing authority",
 				"value": "National Copyright Administration of the People’s Republic of China"
 			},
-			{ "label": "Development completed", "value": "July 10, 2019" }
+			{
+				"label": "Development completed",
+				"value": "July 10, 2019"
+			}
 		]
 	},
 	"MyProfile": {
@@ -472,17 +486,30 @@
 		"jobs": [
 			{
 				"company": "Prop desk (sample)",
-				"steps": ["Resume screen", "Trading eval", "Interview", "Offer"],
+				"steps": [
+					"Resume screen",
+					"Trading eval",
+					"Interview",
+					"Offer"
+				],
 				"current": 2
 			},
 			{
 				"company": "Asset manager A",
-				"steps": ["Resume screen", "Written test", "Interview"],
+				"steps": [
+					"Resume screen",
+					"Written test",
+					"Interview"
+				],
 				"current": 1
 			},
 			{
 				"company": "Independent path",
-				"steps": ["Plan submission", "Sim review", "Intent to sign"],
+				"steps": [
+					"Plan submission",
+					"Sim review",
+					"Intent to sign"
+				],
 				"current": 0
 			}
 		],
@@ -497,16 +524,46 @@
 		"radarLabel": "Skill radar (demo data)",
 		"examTitle": "Exam results",
 		"axes": [
-			{ "key": "Technical", "value": 85 },
-			{ "key": "Risk", "value": 72 },
-			{ "key": "Mindset", "value": 68 },
-			{ "key": "Execution", "value": 90 },
-			{ "key": "Review", "value": 79 }
+			{
+				"key": "Technical",
+				"value": 85
+			},
+			{
+				"key": "Risk",
+				"value": 72
+			},
+			{
+				"key": "Mindset",
+				"value": 68
+			},
+			{
+				"key": "Execution",
+				"value": 90
+			},
+			{
+				"key": "Review",
+				"value": 79
+			}
 		],
 		"exams": [
-			{ "name": "Intraday structure & levels", "score": 88, "grade": "Strong", "date": "2026-04-12" },
-			{ "name": "Risk & position sizing", "score": 76, "grade": "Good", "date": "2026-04-01" },
-			{ "name": "Execution discipline sim", "score": 92, "grade": "Excellent", "date": "2026-03-18" }
+			{
+				"name": "Intraday structure & levels",
+				"score": 88,
+				"grade": "Strong",
+				"date": "2026-04-12"
+			},
+			{
+				"name": "Risk & position sizing",
+				"score": 76,
+				"grade": "Good",
+				"date": "2026-04-01"
+			},
+			{
+				"name": "Execution discipline sim",
+				"score": 92,
+				"grade": "Excellent",
+				"date": "2026-03-18"
+			}
 		]
 	},
 	"MyCourses": {
@@ -725,7 +782,6 @@
 		"colReviewedAt": "Reviewed at",
 		"colExp": "Experience",
 		"colStyle": "Style prefs",
-		"colCourse": "Course",
 		"colEnrolledAt": "Enrolled at",
 		"filterCourse": "Course",
 		"filterPayment": "Payment status",
@@ -741,12 +797,21 @@
 		"changeRole": "Change role",
 		"applyRole": "Apply",
 		"allCourses": "All courses",
-		"envHint": "Set SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, and ADMIN_JWT_SECRET for login and APIs."
+		"envHint": "Set SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, and ADMIN_JWT_SECRET for login and APIs.",
+		"status_reviewing": "Reviewing",
+		"loading": "Loading…",
+		"jobAppId": "Application ID",
+		"notes": "Notes",
+		"registrationId": "Registration ID",
+		"score": "Score",
+		"grade": "Grade",
+		"certificateFile": "Certificate file"
 	},
 	"AdminAuth": {
 		"title": "Admin sign-in",
 		"subtitle": "Email one-time code via Resend.",
 		"emailLabel": "Email",
+		"emailPlaceholder": "Administrator email",
 		"sendCode": "Send code",
 		"sending": "Sending…",
 		"codeSentHint": "If your email is authorized, you will receive a message.",
@@ -757,6 +822,8 @@
 		"back": "Change email",
 		"backSite": "Back to home",
 		"errorGeneric": "Something went wrong. Try again.",
-		"invalidCode": "Invalid or expired code."
+		"invalidCode": "Invalid or expired code.",
+		"quickLogin": "Quick login (test)",
+		"quickLoginHint": "Requires fixed admin OTP to be enabled on the server (bootstrap super-admin flow)."
 	}
 }
