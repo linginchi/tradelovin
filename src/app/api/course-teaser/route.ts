@@ -7,6 +7,14 @@ import {
 
 const DEFAULT_CONTENT = "新一期的干货课程，敬请期待";
 
+function normalizeTeaserContent(input: string | null): string | null {
+	if (!input) return null;
+	const trimmed = input.trim();
+	if (!trimmed) return null;
+	// 兼容历史错别字，避免线上旧数据继续展示“新一起”。
+	return trimmed.replaceAll("新一起", "新一期");
+}
+
 /** 公开：当前启用的预告文案（最多一条，按 updated_at 最新） */
 export async function GET() {
 	const supabase = getServerSupabasePreferService();
@@ -51,7 +59,7 @@ export async function GET() {
 		return NextResponse.json({ content: null, error: error.message }, { status: 500 });
 	}
 
-	const content = data?.content?.trim() ? data.content : null;
+	const content = normalizeTeaserContent(data?.content ?? null);
 	const headers = {
 		"Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
 	};
