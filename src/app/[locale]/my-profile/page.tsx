@@ -1,6 +1,7 @@
 import { ArrowLeft, Building2, GraduationCap } from "lucide-react";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
+import MyMembershipSection from "@/components/profile/MyMembershipSection";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -114,6 +115,8 @@ export default async function MyProfilePage({ params }: Props) {
 						</div>
 					</dl>
 				</section>
+
+				<MyMembershipSection />
 
 				<section className="border-border/80 bg-card/30 rounded-2xl border p-6 backdrop-blur-md md:p-8">
 					<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">

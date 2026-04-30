@@ -60,15 +60,6 @@ type TqFeatureItem = {
 	calcTime?: string;
 };
 
-type MembershipData = {
-	tier: "T1" | "T2" | "T3";
-	trialEndAt: string;
-	trialDaysLeft: number;
-	currentPeriodEnd: string | null;
-	pointsBalance: number;
-	redeemPlans: Array<{ planId: string; days: number; pointsCost: number }>;
-};
-
 function formatSchedule(start: string | null, end: string | null, locale: string): string {
 	if (!start && !end) return "—";
 	const loc = locale === "zh-TW" ? "zh-Hant" : locale === "en" ? "en" : "zh-CN";
@@ -111,17 +102,14 @@ export default function MyLearningClient() {
 	const [tq, setTq] = useState<TqScore | null>(null);
 	const [tqFeatures, setTqFeatures] = useState<TqFeatureItem[]>([]);
 	const [tqLoading, setTqLoading] = useState(false);
-	const [membership, setMembership] = useState<MembershipData | null>(null);
-	const [redeemingPlanId, setRedeemingPlanId] = useState<string>("");
 	const [err, setErr] = useState<string | null>(null);
 
 	useEffect(() => {
 		let alive = true;
 		async function run() {
-			const [regRes, scoreRes, membershipRes] = await Promise.all([
+			const [regRes, scoreRes] = await Promise.all([
 				fetch("/api/courses/my-registrations", { credentials: "include" }),
 				fetch("/api/courses/my-scores", { credentials: "include" }),
-				fetch("/api/membership/me", { credentials: "include" }),
 			]);
 			const regJson = (await regRes.json()) as {
 				success?: boolean;
@@ -132,10 +120,6 @@ export default function MyLearningClient() {
 				success?: boolean;
 				scores?: ApiScoreItem[];
 				error?: string;
-			};
-			const membershipJson = (await membershipRes.json()) as {
-				success?: boolean;
-				data?: MembershipData;
 			};
 			if (!alive) return;
 
@@ -158,9 +142,6 @@ export default function MyLearningClient() {
 			}
 			setScoreMap(m);
 			setRows(regJson.registrations ?? []);
-			if (membershipRes.ok && membershipJson.success && membershipJson.data) {
-				setMembership(membershipJson.data);
-			}
 		}
 		void run();
 		return () => {
@@ -215,30 +196,6 @@ export default function MyLearningClient() {
 			alive = false;
 		};
 	}, [tqEnv]);
-
-	async function redeemPlan(planId: string) {
-		setRedeemingPlanId(planId);
-		try {
-			const res = await fetch("/api/membership/redeem-t3", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify({ planId }),
-			});
-			const json = (await res.json()) as {
-				success?: boolean;
-				data?: { membership?: MembershipData };
-			};
-			if (res.ok && json.success && json.data?.membership) {
-				setMembership({
-					...json.data.membership,
-					redeemPlans: membership?.redeemPlans ?? [],
-				});
-			}
-		} finally {
-			setRedeemingPlanId("");
-		}
-	}
 
 	if (rows === null && !err) {
 		return (
@@ -354,42 +311,6 @@ export default function MyLearningClient() {
 					tqFeatures={tqFeatures}
 					updateHint={t("tqUpdateCadence")}
 				/>
-				{membership ? (
-					<div className="border-border/70 bg-card/50 rounded-2xl border p-4">
-						<div className="flex flex-wrap items-center justify-between gap-2">
-							<p className="text-sm font-semibold">{t("membershipTitle")}</p>
-							<span className="bg-cyan-500/15 text-cyan-200 rounded-full px-2 py-0.5 text-xs font-semibold">
-								{membership.tier}
-							</span>
-						</div>
-						<p className="text-muted-foreground mt-2 text-xs">
-							{membership.tier === "T1"
-								? t("trialDaysLeft", { days: membership.trialDaysLeft })
-								: membership.tier === "T3" && membership.currentPeriodEnd
-									? t("t3ValidUntil", { date: formatSchedule(membership.currentPeriodEnd, null, locale) })
-									: t("t2Benefits")}
-						</p>
-						<div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-							<p className="text-sm">
-								{t("pointsBalance")}：
-								<span className="ml-1 font-semibold tabular-nums">{membership.pointsBalance}</span>
-							</p>
-							<div className="flex flex-wrap gap-2">
-								{membership.redeemPlans.map((plan) => (
-									<button
-										key={plan.planId}
-										type="button"
-										disabled={redeemingPlanId === plan.planId}
-										onClick={() => void redeemPlan(plan.planId)}
-										className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs"
-									>
-										{t("redeemPlan", { days: plan.days, points: plan.pointsCost })}
-									</button>
-								))}
-							</div>
-						</div>
-					</div>
-				) : null}
 			</section>
 
 			<section className="space-y-3">
