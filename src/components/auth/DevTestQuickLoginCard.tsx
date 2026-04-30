@@ -5,6 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { toast, Toaster } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -25,21 +27,24 @@ export function DevTestQuickLoginCard({
 	const locale = useLocale();
 	const t = useTranslations("OtpLogin");
 	const [busy, setBusy] = useState(false);
+	const [account, setAccount] = useState<DevTestAccount>("kk");
+	const [password, setPassword] = useState("");
 
-	const enabledByPublicSwitch =
-		process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS === "1" ||
-		process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS === "true";
-	const enabled = process.env.NODE_ENV !== "production" || enabledByPublicSwitch;
+	const enabled = process.env.NODE_ENV !== "production";
 
 	if (!enabled) return null;
 
-	const onQuickLogin = async (account: DevTestAccount) => {
+	const onQuickLogin = async () => {
+		if (!password.trim()) {
+			toast.error(t("verifyFailed"));
+			return;
+		}
 		setBusy(true);
 		const res = await fetch("/api/auth/dev-test-login", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",
-			body: JSON.stringify({ account, password: "123456" }),
+			body: JSON.stringify({ account, password }),
 		});
 		const js = (await res.json()) as { success?: boolean; error?: string; errorEn?: string };
 		setBusy(false);
@@ -60,20 +65,41 @@ export function DevTestQuickLoginCard({
 		<>
 			<div className={cn("space-y-3 rounded-md border border-border/60 p-3", className)}>
 				<p className="text-muted-foreground text-xs font-medium">{t("devQuickLoginTitle")}</p>
-				<p className="text-muted-foreground text-xs">kk / william / mark（密码：123456）</p>
-				<div className="grid gap-2 sm:grid-cols-3">
-					{(["kk", "william", "mark"] as const).map((account) => (
-						<Button
-							key={account}
-							id={`${idPrefix}-${account}`}
-							type="button"
-							variant="outline"
-							disabled={busy}
-							onClick={() => void onQuickLogin(account)}
-						>
-							{busy ? t("busyVerify") : account}
-						</Button>
-					))}
+				<div className="space-y-2">
+					<Label htmlFor={`${idPrefix}-account`}>{t("devAccountLabel")}</Label>
+					<select
+						id={`${idPrefix}-account`}
+						value={account}
+						disabled={busy}
+						onChange={(e) => setAccount(e.target.value as DevTestAccount)}
+						className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<option value="kk">kk</option>
+						<option value="william">william</option>
+						<option value="mark">mark</option>
+					</select>
+				</div>
+				<div className="space-y-2">
+					<Label htmlFor={`${idPrefix}-password`}>{t("devPasswordLabel")}</Label>
+					<Input
+						id={`${idPrefix}-password`}
+						type="password"
+						value={password}
+						disabled={busy}
+						onChange={(e) => setPassword(e.target.value)}
+						placeholder="123456"
+					/>
+				</div>
+				<div className="pt-1">
+					<Button
+						id={`${idPrefix}-login`}
+						type="button"
+						variant="outline"
+						disabled={busy}
+						onClick={() => void onQuickLogin()}
+					>
+						{busy ? t("busyVerify") : t("devLoginButton")}
+					</Button>
 				</div>
 			</div>
 			{showToaster ? <Toaster richColors theme="dark" position="top-center" /> : null}

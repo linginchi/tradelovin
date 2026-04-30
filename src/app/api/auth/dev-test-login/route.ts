@@ -23,15 +23,8 @@ const DEV_TEST_ACCOUNT_EMAIL: Record<"kk" | "william" | "mark", string> = {
 };
 
 function isDevTestLoginEnabled(): boolean {
-	if (process.env.NODE_ENV !== "production") return true;
-
-	const enabled =
-		process.env.ENABLE_DEV_TEST_ACCOUNTS === "1" || process.env.ENABLE_DEV_TEST_ACCOUNTS === "true";
-	if (!enabled) return false;
-	return (
-		process.env.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION === "1" ||
-		process.env.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION === "true"
-	);
+	// 本项目约定：测试快捷登录仅用于开发/测试环境，生产始终关闭。
+	return process.env.NODE_ENV !== "production";
 }
 
 function buildRegisterPayload(account: "kk" | "william" | "mark", email: string): RegisterPayload {
@@ -101,7 +94,14 @@ async function createDevTestUserWithMinimalProfile(
 
 export async function POST(request: NextRequest) {
 	if (!isDevTestLoginEnabled()) {
-		return NextResponse.json({ success: false, error: "Not found" }, { status: 404 });
+		return NextResponse.json(
+			{
+				success: false,
+				error: "Not found",
+				code: "DEV_TEST_LOGIN_DISABLED",
+			},
+			{ status: 404 },
+		);
 	}
 
 	const srv = getServiceSupabase();
@@ -122,7 +122,15 @@ export async function POST(request: NextRequest) {
 	}
 
 	if (parsed.data.password !== DEV_TEST_PASSWORD) {
-		return NextResponse.json({ success: false, error: "账号或密码错误" }, { status: 401 });
+		return NextResponse.json(
+			{
+				success: false,
+				error: "账号或密码错误",
+				errorEn: "Invalid account or password",
+				code: "INVALID_DEV_PASSWORD",
+			},
+			{ status: 401 },
+		);
 	}
 
 	const email = DEV_TEST_ACCOUNT_EMAIL[parsed.data.account];
