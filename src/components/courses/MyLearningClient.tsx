@@ -1,7 +1,6 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -103,6 +102,7 @@ function statusBadgeClass(status: string) {
 export default function MyLearningClient() {
 	const t = useTranslations("MyLearningPage");
 	const tc = useTranslations("CoursesPage");
+	const tProfile = useTranslations("MyProfile");
 	const locale = useLocale();
 
 	const [rows, setRows] = useState<RegRow[] | null>(null);
@@ -264,57 +264,138 @@ export default function MyLearningClient() {
 		return <p className="text-destructive text-center text-sm">{err}</p>;
 	}
 
+	const legacyEnrolled = tProfile.raw("enrolled") as Array<{
+		name: string;
+		progress: string;
+		status: string;
+	}>;
+
 	return (
 		<div className="mx-auto max-w-3xl space-y-5">
-			{membership ? (
-				<div className="border-border/70 bg-card/50 rounded-2xl border p-4">
-					<div className="flex flex-wrap items-center justify-between gap-2">
-						<p className="text-sm font-semibold">{t("membershipTitle")}</p>
-						<span className="bg-cyan-500/15 text-cyan-200 rounded-full px-2 py-0.5 text-xs font-semibold">
-							{membership.tier}
-						</span>
-					</div>
-					<p className="text-muted-foreground mt-2 text-xs">
-						{membership.tier === "T1"
-							? t("trialDaysLeft", { days: membership.trialDaysLeft })
-							: membership.tier === "T3" && membership.currentPeriodEnd
-								? t("t3ValidUntil", { date: formatSchedule(membership.currentPeriodEnd, null, locale) })
-								: t("t2Benefits")}
-					</p>
-					<div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-						<p className="text-sm">
-							{t("pointsBalance")}：
-							<span className="ml-1 font-semibold tabular-nums">{membership.pointsBalance}</span>
-						</p>
-						<div className="flex flex-wrap gap-2">
-							{membership.redeemPlans.map((plan) => (
-								<button
-									key={plan.planId}
-									type="button"
-									disabled={redeemingPlanId === plan.planId}
-									onClick={() => void redeemPlan(plan.planId)}
-									className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs"
+			<section className="space-y-3">
+				<h2 className="text-base font-semibold tracking-tight">{t("courseInfoTitle")}</h2>
+				{rows?.length ? (
+					<ul className="space-y-3">
+						{rows.map((r) => {
+							const c = r.courses;
+							const title = c?.title ?? "—";
+							const modeLabel =
+								c?.mode === "online"
+									? tc("modeOnline")
+									: c?.mode === "offline"
+										? tc("modeOffline")
+										: null;
+							const statusLabel =
+								r.status === "pending"
+									? tc("pending")
+									: r.status === "approved"
+										? tc("approved")
+										: tc("rejected");
+
+							return (
+								<li
+									key={`course-${r.id}`}
+									className="border-border/80 bg-card/45 rounded-2xl border p-4 shadow-[0_0_0_1px_oklch(0.55_0.14_195/0.08)]"
 								>
-									{t("redeemPlan", { days: plan.days, points: plan.pointsCost })}
-								</button>
-							))}
+									<div className="flex flex-wrap items-start justify-between gap-2">
+										<div className="min-w-0">
+											<p className="text-sm font-semibold">{title}</p>
+											<p className="text-muted-foreground mt-1 text-xs">
+												{c?.instructor_label
+													? `${t("instructor")}：${c.instructor_label}`
+													: t("instructorTbd")}
+											</p>
+											<p className="text-muted-foreground mt-0.5 text-xs">
+												{t("schedule")}：
+												{formatSchedule(c?.start_date ?? null, c?.end_date ?? null, locale)}
+												{modeLabel ? ` · ${modeLabel}` : ""}
+												{c?.location ? ` · ${c.location}` : ""}
+											</p>
+										</div>
+										<span
+											className={cn(
+												"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1",
+												statusBadgeClass(r.status),
+											)}
+										>
+											{statusLabel}
+										</span>
+									</div>
+								</li>
+							);
+						})}
+					</ul>
+				) : legacyEnrolled.length ? (
+					<ul className="space-y-3">
+						{legacyEnrolled.map((item) => (
+							<li
+								key={`legacy-${item.name}`}
+								className="border-border/80 bg-card/45 rounded-2xl border p-4 shadow-[0_0_0_1px_oklch(0.55_0.14_195/0.08)]"
+							>
+								<p className="text-sm font-semibold">{item.name}</p>
+								<p className="text-muted-foreground mt-1 text-xs">{item.progress}</p>
+								<p className="text-muted-foreground mt-0.5 text-xs">{item.status}</p>
+							</li>
+						))}
+					</ul>
+				) : (
+					<p className="text-muted-foreground text-sm">{t("empty")}</p>
+				)}
+			</section>
+
+			<section className="space-y-3">
+				<h2 className="text-base font-semibold tracking-tight">{t("tqSectionTitle")}</h2>
+				<TqScoreCard
+					locale={locale}
+					tqEnv={tqEnv}
+					onEnvChange={setTqEnv}
+					loading={tqLoading}
+					tq={tq}
+					tqFeatures={tqFeatures}
+					updateHint={t("tqUpdateCadence")}
+				/>
+				{membership ? (
+					<div className="border-border/70 bg-card/50 rounded-2xl border p-4">
+						<div className="flex flex-wrap items-center justify-between gap-2">
+							<p className="text-sm font-semibold">{t("membershipTitle")}</p>
+							<span className="bg-cyan-500/15 text-cyan-200 rounded-full px-2 py-0.5 text-xs font-semibold">
+								{membership.tier}
+							</span>
+						</div>
+						<p className="text-muted-foreground mt-2 text-xs">
+							{membership.tier === "T1"
+								? t("trialDaysLeft", { days: membership.trialDaysLeft })
+								: membership.tier === "T3" && membership.currentPeriodEnd
+									? t("t3ValidUntil", { date: formatSchedule(membership.currentPeriodEnd, null, locale) })
+									: t("t2Benefits")}
+						</p>
+						<div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+							<p className="text-sm">
+								{t("pointsBalance")}：
+								<span className="ml-1 font-semibold tabular-nums">{membership.pointsBalance}</span>
+							</p>
+							<div className="flex flex-wrap gap-2">
+								{membership.redeemPlans.map((plan) => (
+									<button
+										key={plan.planId}
+										type="button"
+										disabled={redeemingPlanId === plan.planId}
+										onClick={() => void redeemPlan(plan.planId)}
+										className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs"
+									>
+										{t("redeemPlan", { days: plan.days, points: plan.pointsCost })}
+									</button>
+								))}
+							</div>
 						</div>
 					</div>
-				</div>
-			) : null}
-			<TqScoreCard
-				locale={locale}
-				tqEnv={tqEnv}
-				onEnvChange={setTqEnv}
-				loading={tqLoading}
-				tq={tq}
-				tqFeatures={tqFeatures}
-				updateHint={t("tqUpdateCadence")}
-			/>
-			{!rows?.length ? (
-				<p className="text-muted-foreground text-center text-sm">{t("empty")}</p>
-			) : (
-				<ul className="space-y-5">
+				) : null}
+			</section>
+
+			<section className="space-y-3">
+				<h2 className="text-base font-semibold tracking-tight">{t("mentorScoreTitle")}</h2>
+				{rows?.length ? (
+					<ul className="space-y-3">
 					{rows.map((r) => {
 						const c = r.courses;
 						const title = c?.title ?? "—";
@@ -332,13 +413,6 @@ export default function MyLearningClient() {
 											uploaded_at: "",
 										}
 									: fromReg;
-
-						const modeLabel =
-							c?.mode === "online"
-								? tc("modeOnline")
-								: c?.mode === "offline"
-									? tc("modeOffline")
-									: null;
 
 						let scoreBlurb: { kind: "pending" | "learning" | "graded" | "na"; text: string } = {
 							kind: "na",
@@ -365,52 +439,22 @@ export default function MyLearningClient() {
 
 						return (
 						<li
-							key={r.id}
-							className="border-border/80 bg-card/45 overflow-hidden rounded-2xl border shadow-[0_0_0_1px_oklch(0.55_0.14_195/0.08)] backdrop-blur-md"
+							key={`score-${r.id}`}
+							className="border-border/80 bg-card/45 rounded-2xl border p-4 shadow-[0_0_0_1px_oklch(0.55_0.14_195/0.08)]"
 						>
-							<div className="flex flex-col gap-4 p-5 sm:flex-row sm:gap-5">
-								<div className="bg-muted/30 relative aspect-[16/10] w-full shrink-0 overflow-hidden rounded-xl sm:aspect-square sm:h-28 sm:w-28">
-									{c?.cover_image ? (
-										<Image
-											src={c.cover_image}
-											alt={title}
-											fill
-											sizes="(max-width: 640px) 100vw, 112px"
-											className="object-cover"
-										/>
-									) : (
-										<div className="text-muted-foreground/40 flex size-full items-center justify-center text-xs">
-											{t("noCover")}
-										</div>
-									)}
+							<div className="min-w-0 flex-1">
+								<div className="flex flex-wrap items-start justify-between gap-2">
+									<p className="text-sm font-semibold">{title}</p>
+									<span
+										className={cn(
+											"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1",
+											statusBadgeClass(r.status),
+										)}
+									>
+										{statusLabel}
+									</span>
 								</div>
-								<div className="min-w-0 flex-1">
-									<div className="flex flex-wrap items-start justify-between gap-2">
-										<div className="min-w-0">
-											<h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-											<p className="text-muted-foreground mt-1 text-xs">
-												{c?.instructor_label
-													? `${t("instructor")}：${c.instructor_label}`
-													: t("instructorTbd")}
-											</p>
-											<p className="text-muted-foreground mt-0.5 text-xs">
-												{t("schedule")}：
-												{formatSchedule(c?.start_date ?? null, c?.end_date ?? null, locale)}
-												{modeLabel ? ` · ${modeLabel}` : ""}
-												{c?.location ? ` · ${c.location}` : ""}
-											</p>
-										</div>
-										<span
-											className={cn(
-												"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1",
-												statusBadgeClass(r.status),
-											)}
-										>
-											{statusLabel}
-										</span>
-									</div>
-
-									<div className="border-border/60 bg-background/40 mt-4 rounded-xl border px-4 py-3">
+								<div className="border-border/60 bg-background/40 mt-3 rounded-xl border px-4 py-3">
 										<p className="text-muted-foreground text-[11px] font-medium tracking-wide uppercase">
 											{t("scoreSection")}
 										</p>
@@ -456,14 +500,16 @@ export default function MyLearningClient() {
 												{scoreBlurb.text}
 											</p>
 										)}
-									</div>
 								</div>
 							</div>
 						</li>
 						);
 					})}
 				</ul>
-			)}
+				) : (
+					<p className="text-muted-foreground text-sm">{t("mentorScoreEmpty")}</p>
+				)}
+			</section>
 		</div>
 	);
 }

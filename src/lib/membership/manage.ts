@@ -33,7 +33,11 @@ export async function upsertBaseMembership(
 		trial_start_at: now.toISOString(),
 		trial_end_at: addDaysIso(now, 7),
 	});
-	if (error) throw new Error(error.message);
+	if (error) {
+		// 并发初始化时允许唯一键冲突，后续读取即可。
+		if ((error as { code?: string }).code === "23505") return;
+		throw new Error(error.message);
+	}
 }
 
 export async function grantMembershipByAdmin(

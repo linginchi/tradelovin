@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { upsertBaseMembership } from "@/lib/membership/manage";
 import { getMembershipSnapshot } from "@/lib/membership/service";
 import type { MembershipCapability, MembershipSnapshot } from "@/lib/membership/types";
+import { getServiceSupabase } from "@/lib/supabase/service";
 
 export type MembershipGuardOk = { membership: MembershipSnapshot };
 
@@ -49,7 +51,18 @@ export async function requireMembershipCapability(
 	userId: string,
 	capability: MembershipCapability,
 ): Promise<MembershipGuardOk | NextResponse> {
-	const snapshot = await getMembershipSnapshot(supabase, userId);
+	let snapshot = await getMembershipSnapshot(supabase, userId);
+	if (!snapshot) {
+		const srv = getServiceSupabase();
+		if (srv) {
+			try {
+				await upsertBaseMembership(srv, userId);
+				snapshot = await getMembershipSnapshot(supabase, userId);
+			} catch {
+				// 初始化失败时保持原有拒绝行为
+			}
+		}
+	}
 	if (!snapshot || !capabilityAllowed(snapshot, capability)) {
 		const deny = denyPayload(capability, snapshot);
 		return NextResponse.json(deny.body, { status: deny.status });
