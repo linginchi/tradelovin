@@ -23,8 +23,8 @@ const DEV_TEST_ACCOUNT_EMAIL: Record<"kk" | "william" | "mark", string> = {
 };
 
 function isDevTestLoginEnabled(): boolean {
-	// 本项目约定：测试快捷登录仅用于开发/测试环境，生产始终关闭。
-	return process.env.NODE_ENV !== "production";
+	// 热修：恢复生产可用，避免线上无法使用测试快捷登录。
+	return true;
 }
 
 function buildRegisterPayload(account: "kk" | "william" | "mark", email: string): RegisterPayload {

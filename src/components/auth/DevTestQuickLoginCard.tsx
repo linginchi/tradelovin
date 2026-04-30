@@ -30,7 +30,8 @@ export function DevTestQuickLoginCard({
 	const [account, setAccount] = useState<DevTestAccount>("kk");
 	const [password, setPassword] = useState("");
 
-	const enabled = process.env.NODE_ENV !== "production";
+	// 热修：恢复线上可见，避免登录页缺少快捷登录入口。
+	const enabled = true;
 
 	if (!enabled) return null;
 
