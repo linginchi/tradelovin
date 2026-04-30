@@ -20,6 +20,12 @@ type MembershipEntitlementRow = {
 	advanced_order_bundle: boolean;
 };
 
+function isMissingMembershipSchema(error: unknown): boolean {
+	if (!error || typeof error !== "object") return false;
+	const msg = String((error as { message?: string }).message ?? "");
+	return msg.includes("public.membership_accounts") && msg.includes("schema cache");
+}
+
 export function isPeriodActive(periodEnd: string | null): boolean {
 	if (!periodEnd) return false;
 	const t = new Date(periodEnd).getTime();
@@ -96,7 +102,35 @@ export async function getMembershipSnapshot(
 				.maybeSingle(),
 		]);
 
-	if (accountErr || !account) {
+	if (accountErr) {
+		// 线上应急兼容：当数据库尚未应用会员表迁移时，先回退为可用快照，
+		// 避免学习页与交易/TQ能力完全不可见。后续仍应执行DB迁移。
+		if (isMissingMembershipSchema(accountErr)) {
+			const now = new Date();
+			const trialStartAt = now.toISOString();
+			const trialEndAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+			return {
+				userId,
+				tier: "T2",
+				status: "active",
+				trialStartAt,
+				trialEndAt,
+				currentPeriodStart: null,
+				currentPeriodEnd: null,
+				lastPaidAt: null,
+				pointsBalance: 0,
+				effective: {
+					simTrading: true,
+					tqReport: true,
+					l2Market: false,
+					advancedOrderBundle: false,
+				},
+			};
+		}
+		return null;
+	}
+
+	if (!account) {
 		return null;
 	}
 
