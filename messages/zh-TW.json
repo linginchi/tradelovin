@@ -14,7 +14,7 @@
 		"enrollCourses": "報名課程",
 		"career": "求職",
 		"myProfile": "我的",
-		"myLearning": "我的學習",
+		"myLearning": "學習與成績",
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用戶"
@@ -236,7 +236,8 @@
 		"devQuickLoginTitle": "開發/測試快捷登錄",
 		"devAccountLabel": "測試賬號",
 		"devPasswordLabel": "密碼",
-		"devLoginButton": "快捷登錄"
+		"devLoginButton": "快捷登錄",
+		"devPasswordRequired": "請輸入密碼"
 	},
 	"EnrollPage": {
 		"metaTitle": "報名課程 · 豹仔樂園",
@@ -288,9 +289,15 @@
 		"back": "← 返回"
 	},
 	"MyLearningPage": {
-		"metaTitle": "我的學習",
-		"title": "我的學習",
+		"metaTitle": "學習與成績",
+		"title": "學習與成績",
 		"intro": "集中查看已報名課程、審核狀態與課程成績。",
+		"membershipTitle": "會員狀態",
+		"trialDaysLeft": "T1 試用剩餘 {days} 天",
+		"t3ValidUntil": "T3 有效期至 {date}",
+		"t2Benefits": "T2 可免費使用全部模擬交易與 TQ 報告",
+		"pointsBalance": "TQ積分",
+		"redeemPlan": "兌換T3 {days}天（{points}分）",
 		"empty": "暫無報名記錄。",
 		"scoreSection": "課程成績",
 		"score": "分數",
@@ -432,39 +439,29 @@
 		"teamBody": "核心團隊由交易員、教研與產品組成，持續迭代課程內容與演練工具。我們重視覆盤文化、風險邊界與執行力——不承諾暴富，只交付可重複訓練的方法論。",
 		"contactTitle": "聯繫方式",
 		"contactPrefix": "商務與合作：",
-		"contactNote": "（示例郵箱，後續可替換）",
+		"contactNote": "",
+		"complianceTitle": "合規聲明",
+		"complianceText": "本模擬系統以投資者教育為出發點，僅用於交易認知與訓練，不提供任何投資建議；不涉及任何實盤交易；不會誘導開戶、代客理財或開展其他屬於證券監管範圍的業務。",
 		"copyrightTitle": "軟件著作權（摘要）",
 		"copyrightHint": "以下為登記信息文字摘要，便於了解課程體系的技術依託；不代表電子或紙質證書本身。",
 		"copyrightRows": [
 			{
-				"label": "軟件名稱",
-				"value": "小Q教練模擬交易系統（簡稱：小Q教練）"
-			},
-			{
-				"label": "著作權人",
-				"value": "深圳大灣區智慧科技有限公司"
+				"label": "專利號碼",
+				"value": "2019SR0941133"
 			},
 			{
 				"label": "證書編號",
 				"value": "軟著登字第4361890號"
 			},
 			{
-				"label": "登記號",
-				"value": "2019SR0941133"
-			},
-			{
-				"label": "發證機關",
+				"label": "發出機構",
 				"value": "中華人民共和國國家版權局"
-			},
-			{
-				"label": "開發完成日期",
-				"value": "2019年07月10日"
 			}
 		]
 	},
 	"MyProfile": {
 		"title": "我的",
-		"subtitle": "個人資料、課程與求職進度（演示數據）",
+		"subtitle": "個人資料與求職進度",
 		"profileTitle": "個人資料",
 		"nickname": "暱稱",
 		"email": "郵箱",
@@ -516,7 +513,7 @@
 				"current": 0
 			}
 		],
-		"myCoursesLink": "我的學習",
+		"myCoursesLink": "學習與成績",
 		"courseCardScheduleCta": "查看課表"
 	},
 	"MyScores": {

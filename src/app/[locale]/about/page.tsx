@@ -17,6 +17,7 @@ export default async function AboutPage({ params }: Props) {
 	const tCommon = await getTranslations("Common");
 	const tHome = await getTranslations("Home");
 	const copyrightRows = t.raw("copyrightRows") as Array<{ label: string; value: string }>;
+	const contactNote = t("contactNote").trim();
 
 	return (
 		<main className="relative flex min-h-full flex-1 flex-col">
@@ -95,18 +96,23 @@ export default async function AboutPage({ params }: Props) {
 						<Mail className="text-primary size-4 shrink-0" />
 						<span>{t("contactPrefix")}</span>
 						<a
-							href="mailto:hello@tradelovin.example"
+							href="mailto:contact@tradelovin.com"
 							className="text-cyan-300 underline-offset-4 hover:underline"
 						>
-							hello@tradelovin.example
+							contact@tradelovin.com
 						</a>
-						<span className="text-muted-foreground">{t("contactNote")}</span>
+						{contactNote ? <span className="text-muted-foreground">{contactNote}</span> : null}
 					</p>
 					<div className="mt-6">
 						<Link href="/register" className={cn(buttonVariants({ size: "lg" }))}>
 							{tHome("ctaRegister")}
 						</Link>
 					</div>
+				</section>
+
+				<section className="border-border/80 bg-card/25 mt-6 rounded-2xl border p-6 backdrop-blur-md">
+					<h2 className="text-base font-semibold tracking-tight">{t("complianceTitle")}</h2>
+					<p className="text-muted-foreground mt-3 text-sm leading-relaxed">{t("complianceText")}</p>
 				</section>
 			</div>
 		</main>

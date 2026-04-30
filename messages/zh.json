@@ -14,7 +14,7 @@
 		"enrollCourses": "报名课程",
 		"career": "求职",
 		"myProfile": "我的",
-		"myLearning": "我的学习",
+		"myLearning": "学习与成绩",
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用户"
@@ -233,7 +233,8 @@
 		"devQuickLoginTitle": "开发/测试快捷登录",
 		"devAccountLabel": "测试账号",
 		"devPasswordLabel": "密码",
-		"devLoginButton": "快捷登录"
+		"devLoginButton": "快捷登录",
+		"devPasswordRequired": "请输入密码"
 	},
 	"EnrollPage": {
 		"metaTitle": "报名课程 · 豹仔乐园",
@@ -285,9 +286,15 @@
 		"back": "← 返回"
 	},
 	"MyLearningPage": {
-		"metaTitle": "我的学习",
-		"title": "我的学习",
+		"metaTitle": "学习与成绩",
+		"title": "学习与成绩",
 		"intro": "集中查看已报名课程、审核状态与课程成绩。",
+		"membershipTitle": "会员状态",
+		"trialDaysLeft": "T1 试用剩余 {days} 天",
+		"t3ValidUntil": "T3 有效期至 {date}",
+		"t2Benefits": "T2 可免费使用全部模拟交易与 TQ 报告",
+		"pointsBalance": "TQ积分",
+		"redeemPlan": "兑换T3 {days}天（{points}分）",
 		"empty": "暂无报名记录。",
 		"scoreSection": "课程成绩",
 		"score": "分数",
@@ -432,39 +439,29 @@
 		"teamBody": "核心团队由交易员、教研与产品组成，持续迭代课程内容与演练工具。我们重视复盘文化、风险边界与执行力——不承诺暴富，只交付可重复训练的方法论。",
 		"contactTitle": "联系方式",
 		"contactPrefix": "商务与合作：",
-		"contactNote": "（示例邮箱，后续可替换）",
+		"contactNote": "",
+		"complianceTitle": "合规声明",
+		"complianceText": "本模拟系统以投资者教育为出发点，仅用于交易认知与训练，不提供任何投资建议；不涉及任何实盘交易；不会诱导开户、代客理财或开展其他属于证券监管范围的业务。",
 		"copyrightTitle": "软件著作权（摘要）",
 		"copyrightHint": "以下为登记信息文字摘要，便于了解课程体系的技术依托；不代表电子或纸质证书本身。",
 		"copyrightRows": [
 			{
-				"label": "软件名称",
-				"value": "小Q教练模拟交易系统（简称：小Q教练）"
-			},
-			{
-				"label": "著作权人",
-				"value": "深圳大湾区智慧科技有限公司"
+				"label": "专利号码",
+				"value": "2019SR0941133"
 			},
 			{
 				"label": "证书编号",
 				"value": "软著登字第4361890号"
 			},
 			{
-				"label": "登记号",
-				"value": "2019SR0941133"
-			},
-			{
-				"label": "发证机关",
+				"label": "发出机构",
 				"value": "中华人民共和国国家版权局"
-			},
-			{
-				"label": "开发完成日期",
-				"value": "2019年07月10日"
 			}
 		]
 	},
 	"MyProfile": {
 		"title": "我的",
-		"subtitle": "个人资料、课程与求职进度（演示数据）",
+		"subtitle": "个人资料与求职进度",
 		"profileTitle": "个人资料",
 		"nickname": "昵称",
 		"email": "邮箱",
@@ -516,7 +513,7 @@
 				"current": 0
 			}
 		],
-		"myCoursesLink": "我的学习",
+		"myCoursesLink": "学习与成绩",
 		"courseCardScheduleCta": "查看课表"
 	},
 	"MyScores": {

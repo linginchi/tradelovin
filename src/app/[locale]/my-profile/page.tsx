@@ -54,11 +54,6 @@ export default async function MyProfilePage({ params }: Props) {
 	const t = await getTranslations("MyProfile");
 	const tCommon = await getTranslations("Common");
 
-	const enrolled = t.raw("enrolled") as Array<{
-		name: string;
-		progress: string;
-		status: string;
-	}>;
 	const jobs = t.raw("jobs") as Array<{
 		company: string;
 		steps: string[];
@@ -118,37 +113,6 @@ export default async function MyProfilePage({ params }: Props) {
 							<dd className="mt-0.5 font-mono">{t("demoPhone")}</dd>
 						</div>
 					</dl>
-				</section>
-
-				<section className="border-border/80 bg-card/30 mb-6 rounded-2xl border p-6 backdrop-blur-md md:p-8">
-					<h2 className="text-base font-semibold tracking-tight">{t("coursesTitle")}</h2>
-					<ul className="mt-4 space-y-3">
-						{enrolled.map((c) => (
-							<li
-								key={c.name}
-								className="border-border/60 flex flex-col rounded-xl border bg-black/20 px-4 py-3"
-							>
-								<div className="flex flex-wrap items-center justify-between gap-2">
-									<p className="text-sm font-medium">{c.name}</p>
-									<span className="bg-primary/15 text-primary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase">
-										{c.status}
-									</span>
-								</div>
-								<p className="text-muted-foreground mt-1 text-xs">{c.progress}</p>
-								<div className="mt-3 flex justify-end border-border/40 border-t pt-3">
-									<Link
-										href="/my-learning"
-										className={cn(
-											buttonVariants({ variant: "outline", size: "sm" }),
-											"shrink-0",
-										)}
-									>
-										{t("courseCardScheduleCta")}
-									</Link>
-								</div>
-							</li>
-						))}
-					</ul>
 				</section>
 
 				<section className="border-border/80 bg-card/30 rounded-2xl border p-6 backdrop-blur-md md:p-8">

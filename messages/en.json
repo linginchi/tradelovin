@@ -14,7 +14,7 @@
 		"enrollCourses": "Course enrollment",
 		"career": "Careers",
 		"myProfile": "Profile",
-		"myLearning": "My learning",
+		"myLearning": "Learning & Scores",
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
 		"userFallback": "User"
@@ -236,7 +236,8 @@
 		"devQuickLoginTitle": "Dev/Test quick login",
 		"devAccountLabel": "Test account",
 		"devPasswordLabel": "Password",
-		"devLoginButton": "Quick login"
+		"devLoginButton": "Quick login",
+		"devPasswordRequired": "Please input password"
 	},
 	"EnrollPage": {
 		"metaTitle": "Course enrollment · Tradelovin",
@@ -288,9 +289,15 @@
 		"back": "← Back"
 	},
 	"MyLearningPage": {
-		"metaTitle": "My learning",
-		"title": "My learning",
+		"metaTitle": "Learning & Scores",
+		"title": "Learning & Scores",
 		"intro": "See your enrollments, review status, and course grades in one place.",
+		"membershipTitle": "Membership",
+		"trialDaysLeft": "T1 trial: {days} day(s) left",
+		"t3ValidUntil": "T3 valid until {date}",
+		"t2Benefits": "T2 includes full simulated trading and free TQ reports.",
+		"pointsBalance": "TQ points",
+		"redeemPlan": "Redeem T3 {days}d ({points} pts)",
 		"empty": "No enrollments yet.",
 		"scoreSection": "Grades",
 		"score": "Score",
@@ -432,39 +439,29 @@
 		"teamBody": "Our core team blends traders, educators, and product builders—continuously iterating on content and drill tools. We value review culture, risk boundaries, and execution—we don’t promise get‑rich shortcuts; we teach repeatable training methods.",
 		"contactTitle": "Contact",
 		"contactPrefix": "Business & partnerships:",
-		"contactNote": "(placeholder email—replace later)",
+		"contactNote": "",
+		"complianceTitle": "Compliance Notice",
+		"complianceText": "This simulation system is built for investor education and training only. It does not provide investment advice, does not support live trading, and does not induce account opening, discretionary management, or any other activities within securities-regulated business scope.",
 		"copyrightTitle": "Software copyright (summary)",
 		"copyrightHint": "Text summary of the registered work for context only—not a substitute for the official certificate.",
 		"copyrightRows": [
 			{
-				"label": "Software name",
-				"value": "Coach Xiao Q Simulation Trading System (abbrev.: Coach Xiao Q)"
-			},
-			{
-				"label": "Copyright owner",
-				"value": "Shenzhen Greater Bay Area Zhihui Technology Co., Ltd."
-			},
-			{
-				"label": "Certificate No.",
-				"value": "软著登字第4361890号 (Software copyright registration)"
-			},
-			{
-				"label": "Registration No.",
+				"label": "Patent Number",
 				"value": "2019SR0941133"
+			},
+			{
+				"label": "Certificate Number",
+				"value": "软著登字第4361890号 (Software copyright registration)"
 			},
 			{
 				"label": "Issuing authority",
 				"value": "National Copyright Administration of the People’s Republic of China"
-			},
-			{
-				"label": "Development completed",
-				"value": "July 10, 2019"
 			}
 		]
 	},
 	"MyProfile": {
 		"title": "Profile",
-		"subtitle": "Account, courses, and job pipeline (demo data)",
+		"subtitle": "Account and job pipeline",
 		"profileTitle": "Account",
 		"nickname": "Nickname",
 		"email": "Email",
@@ -516,7 +513,7 @@
 				"current": 0
 			}
 		],
-		"myCoursesLink": "My learning",
+		"myCoursesLink": "Learning & Scores",
 		"courseCardScheduleCta": "View schedule"
 	},
 	"MyScores": {
