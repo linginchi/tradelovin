@@ -4,10 +4,23 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+/**
+ * 仅 OpenNext / Workers 生产构建应设置（与最终对外 Worker 或 CDN 同源、无尾部斜杠）。
+ * 本地 `next dev` 切勿设置，否则 `/_next/static` 会指到远程，导致本地页面无 CSS。
+ */
+function resolveAssetPrefix(): string | undefined {
+	const raw =
+		(typeof process.env.NEXT_ASSET_PREFIX === "string" && process.env.NEXT_ASSET_PREFIX.trim()) ||
+		(typeof process.env.ASSET_PREFIX === "string" && process.env.ASSET_PREFIX.trim()) ||
+		"";
+	if (!raw) return undefined;
+	return raw.replace(/\/+$/, "");
+}
+
+const assetPrefix = resolveAssetPrefix();
+
 const nextConfig: NextConfig = {
-	// 关键：明确告诉 Next.js 生产环境下所有静态资源的绝对 URL 前缀
-	// 使用你的 Worker 实际部署后的域名（不含尾部斜杠）
-	assetPrefix: "https://tradelovin.mark-377.workers.dev",
+	...(assetPrefix ? { assetPrefix } : {}),
 
 	// 保持构建输出目录标准
 	distDir: ".next",

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { requireMembershipCapability } from "@/lib/membership/guard";
 import { cancelLimitOrderService } from "@/lib/trade/cancel-limit-order";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -14,6 +15,10 @@ export async function POST(request: Request) {
 	const auth = await requireTradeUser();
 	if (auth instanceof NextResponse) {
 		return auth;
+	}
+	const membership = await requireMembershipCapability(auth.supabase, auth.userId, "sim_trading");
+	if (membership instanceof NextResponse) {
+		return membership;
 	}
 
 	let orderId = "";

@@ -120,6 +120,14 @@ BEGIN
 		WHERE
 			table_schema = 'public'
 			AND table_name = 'career_applications'
+	) AND NOT EXISTS (
+		SELECT
+			1
+		FROM
+			information_schema.tables
+		WHERE
+			table_schema = 'public'
+			AND table_name = 'job_applications'
 	) THEN
 		ALTER TABLE public.career_applications RENAME TO job_applications;
 	END IF;

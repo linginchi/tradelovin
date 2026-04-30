@@ -56,6 +56,17 @@ export default async function CjkztDashboardPage() {
 						<CardDescription>{t("schedulesHint")}</CardDescription>
 					</CardHeader>
 				</Card>
+				<Card className="border-border/80 bg-card/35 backdrop-blur-md">
+					<CardHeader>
+						<CardTitle className="text-base">TradeQuotient 引擎</CardTitle>
+						<CardDescription>管理 TQ 特征权重、维度权重并触发全量重算。</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Link href={`${ADMIN_BASE_PATH}/tq`} className={cn(buttonVariants({ size: "sm" }))}>
+							进入 TQ 评分配置
+						</Link>
+					</CardContent>
+				</Card>
 			</div>
 		</main>
 	);

@@ -173,8 +173,13 @@ npm run deploy:cloudflare
 ### 6.2 GitHub Actions：推送到 `main` 自动部署 Workers（推荐路径）
 
 - 工作流：[`.github/workflows/opennext-build.yml`](.github/workflows/opennext-build.yml)；向 **`main`** 推送且构建成功后会执行 `npx wrangler deploy`。
+- 同一工作流已内置 **工作日 16:05（Asia/Hong_Kong）** 的定时任务（UTC `5 8 * * 1-5`），调用 `POST /api/tq/cron/recalculate`。
 - **Secrets（Actions）**：`CLOUDFLARE_API_TOKEN`，以及用于 Next 打包的 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`。
 - **Variables（Actions）**：建议配置 `NEXT_ASSET_PREFIX`（与当前 Worker 对外 URL 同源无尾斜杠，见上文「静态资源前缀」）。
+- **TQ 定时重算必配项**：
+  - Actions Secret：`TQ_CRON_API_KEY`（与 Worker 运行环境变量 `TQ_CRON_API_KEY` 保持一致）。
+  - Actions Variable：`TQ_CRON_BASE_URL`（例如 `https://tradelovin.com`）。
+  - 接口在服务端会二次判断：仅交易日且香港时间 16:00 后执行；非交易日或 16:00 前会返回 `skipped=true`。
 - **重要**：不带 `--var` 的 `wrangler deploy` 会按本次发布覆盖 Worker 上对应 **vars**；此前仅用本地命令行注入的 `ALLOW_*` / `ENABLE_*` 可能在一次 CI 发布后被清空，表现为**后台固定码 / 前台测试登录「像退回老版本」**。当前工作流在部署步骤会**始终传入**下列变量（未在仓库 Variables 中设置时默认 `1`，偏 staging / `workers.dev`；正式自定义域名上线请在 **Settings → Variables** 中显式设为 `0` 或 `false` 收紧）：
   - `ALLOW_FIXED_ADMIN_OTP`
   - `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION`
@@ -225,3 +230,43 @@ npm run cf-typegen
 - **`DISABLE_PUBLIC_REGISTRATION`**：设为 `true` 或 `1` 时，`POST /api/registrations/public` 返回 **403**。
 
 **RLS 说明：** 收紧策略后，浏览器 **不可** 再以 anon 身份直接 `insert` `registrations`；匿名报名须走上述 **public API**（service role 写入）。
+
+---
+
+## 9. 内地测试入口（阿里云香港反向代理）
+
+当 `tradelovin.com` 在内地网络存在访问不稳定或被拦截时，可临时提供一个 **阿里云香港域名入口** 供测试使用，保持现有 Workers 发布链路不变。
+
+### 9.1 推荐拓扑
+
+`Mainland User -> Aliyun HK Nginx -> tradelovin.<account>.workers.dev -> Supabase`
+
+### 9.2 仓库内现成脚本
+
+见 [`ops/mainland-access/README.md`](ops/mainland-access/README.md)，包含：
+
+- Nginx 模板：[`ops/mainland-access/nginx-tradelovin.conf.template`](ops/mainland-access/nginx-tradelovin.conf.template)
+- 一键部署：[`ops/mainland-access/setup-hk-proxy.sh`](ops/mainland-access/setup-hk-proxy.sh)
+- 连通性验证：[`ops/mainland-access/verify-mainland-proxy.sh`](ops/mainland-access/verify-mainland-proxy.sh)
+
+### 9.3 快速执行
+
+先在阿里云 DNS 将新域名 `@`/`www` 的 `A` 记录指向香港服务器 IP，然后在服务器执行：
+
+```bash
+chmod +x setup-hk-proxy.sh verify-mainland-proxy.sh
+./setup-hk-proxy.sh <your-domain.com> <worker-host>
+./verify-mainland-proxy.sh <your-domain.com> <worker-host>
+```
+
+示例：
+
+```bash
+./setup-hk-proxy.sh tradelovin-hk.com tradelovin.mark-377.workers.dev
+./verify-mainland-proxy.sh tradelovin-hk.com tradelovin.mark-377.workers.dev
+```
+
+### 9.4 注意事项
+
+- 该方案适合“先让内地同事可测”，不等同于内地合规落地托管。
+- 生产长期方案若需更稳定，建议评估“双入口架构”（内地入口 + 海外入口）与合规要求（备案/CDN）。

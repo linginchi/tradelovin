@@ -49,3 +49,6 @@ next-env.d.ts
 
 # Supabase CLI cache
 supabase/.temp/
+
+# Shared agent skills (junction → C:\projects\.agents\skills)
+.agents/

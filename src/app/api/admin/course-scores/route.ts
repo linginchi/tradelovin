@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { awardPoints, TQ_POINTS_RULES } from "@/lib/membership/points";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -84,7 +85,11 @@ export async function POST(req: Request) {
 		certificateUrl = parsed.data.certificateUrl ?? null;
 	}
 
-	const { data: reg } = await srv.from("course_registrations").select("id").eq("id", registrationId).maybeSingle();
+	const { data: reg } = await srv
+		.from("course_registrations")
+		.select("id,user_id")
+		.eq("id", registrationId)
+		.maybeSingle();
 	if (!reg) {
 		return NextResponse.json({ error: "Registration not found" }, { status: 404 });
 	}
@@ -103,6 +108,18 @@ export async function POST(req: Request) {
 
 	if (error) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
+	}
+
+	const userId = reg.user_id as string | null;
+	if (userId) {
+		await awardPoints(srv, {
+			userId,
+			source: TQ_POINTS_RULES.courseUnitPassed.source,
+			delta: TQ_POINTS_RULES.courseUnitPassed.points,
+			dailyCap: TQ_POINTS_RULES.courseUnitPassed.dailyCap,
+			referenceId: registrationId,
+			metadata: { trigger: "course_score_uploaded" },
+		});
 	}
 
 	return NextResponse.json({ score: inserted });

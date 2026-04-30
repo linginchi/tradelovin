@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { maybeAwardDailyLogin } from "@/lib/membership/points";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -64,6 +66,14 @@ export async function GET() {
 
 	const userId = user.id;
 	const email = String(user.email ?? "").trim().toLowerCase() || null;
+	const srv = getServiceSupabase();
+	if (srv) {
+		try {
+			await maybeAwardDailyLogin(srv, userId);
+		} catch {
+			// 积分奖励失败不影响主流程
+		}
+	}
 
 	const [{ data: profile }, { data: enrollment }] = await Promise.all([
 		supabase.from("profiles").select("nickname").eq("id", userId).maybeSingle(),

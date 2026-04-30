@@ -298,6 +298,7 @@
 		"t2Benefits": "T2 includes full simulated trading and free TQ reports.",
 		"pointsBalance": "TQ points",
 		"redeemPlan": "Redeem T3 {days}d ({points} pts)",
+		"tqUpdateCadence": "TQ snapshot updates daily at 16:00 HKT on trading days",
 		"empty": "No enrollments yet.",
 		"scoreSection": "Grades",
 		"score": "Score",
@@ -451,7 +452,7 @@
 			},
 			{
 				"label": "Certificate Number",
-				"value": "软著登字第4361890号 (Software copyright registration)"
+				"value": "软著登字第4361890号"
 			},
 			{
 				"label": "Issuing authority",

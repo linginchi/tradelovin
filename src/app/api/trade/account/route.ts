@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { requireMembershipCapability } from "@/lib/membership/guard";
+import { getMarketQuote } from "@/lib/market/market-domain";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 
@@ -12,6 +14,10 @@ export async function GET() {
 	}
 
 	const { supabase, userId } = ctx;
+	const membership = await requireMembershipCapability(supabase, userId, "sim_trading");
+	if (membership instanceof NextResponse) {
+		return membership;
+	}
 
 	const { data: account, error: accErr } = await getOrCreateSimAccount(supabase, userId);
 	if (accErr || !account) {
@@ -20,12 +26,23 @@ export async function GET() {
 
 	const { data: positions } = await supabase
 		.from("sim_positions")
-		.select("market_value")
+		.select("symbol,quantity,market_value")
 		.eq("account_id", account.id);
 
 	let positionsMarketValue = 0;
 	for (const row of positions ?? []) {
-		const mv = Number((row as { market_value?: string | number | null }).market_value ?? 0);
+		const item = row as { symbol?: string | null; quantity?: number | null; market_value?: string | number | null };
+		const symbol = item.symbol ?? "";
+		const quantity = Number(item.quantity ?? 0);
+		let quote: Awaited<ReturnType<typeof getMarketQuote>> = null;
+		if (symbol) {
+			try {
+				quote = await getMarketQuote(symbol);
+			} catch {
+				quote = null;
+			}
+		}
+		const mv = quote ? quote.price * quantity : Number(item.market_value ?? 0);
 		if (!Number.isNaN(mv)) positionsMarketValue += mv;
 	}
 

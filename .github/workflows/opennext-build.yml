@@ -7,6 +7,9 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # 16:05 Asia/Hong_Kong on weekdays (UTC+8 => 08:05 UTC)
+    - cron: "5 8 * * 1-5"
 
 concurrency:
   group: opennext-${{ github.workflow }}-${{ github.ref }}
@@ -63,3 +66,21 @@ jobs:
             --var "ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION:${ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION}" \
             --var "ENABLE_DEV_TEST_ACCOUNTS:${ENABLE_DEV_TEST_ACCOUNTS}" \
             --var "ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION:${ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION}"
+
+  tq-recalculate:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger TQ recalculate endpoint
+        env:
+          TQ_CRON_BASE_URL: ${{ vars.TQ_CRON_BASE_URL }}
+          TQ_CRON_API_KEY: ${{ secrets.TQ_CRON_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TQ_CRON_BASE_URL:-}" ] || [ -z "${TQ_CRON_API_KEY:-}" ]; then
+            echo "Missing TQ_CRON_BASE_URL or TQ_CRON_API_KEY, skip scheduled recalculation."
+            exit 0
+          fi
+          curl -fsS -X POST "${TQ_CRON_BASE_URL%/}/api/tq/cron/recalculate" \
+            -H "x-tq-cron-key: ${TQ_CRON_API_KEY}" \
+            -H "Content-Type: application/json"

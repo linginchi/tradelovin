@@ -8,5 +8,9 @@
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
+	},
+	"vars": {
+		"TQ_CRON_TIMEZONE": "Asia/Hong_Kong",
+		"TQ_CRON_TARGET_HOUR": "16"
 	}
 }

@@ -10,6 +10,7 @@ import {
 	totalBuyerCost,
 	totalSellerProceeds,
 } from "@/lib/trade/fees";
+import { getInstrumentRule, type InstrumentRule } from "@/lib/trade/instrument-rules";
 import { getCurrentPrice } from "@/lib/trade/get-current-price";
 import { matchLimitAgainstQuote } from "@/lib/trade/match-engine";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
@@ -26,6 +27,26 @@ export type ApiJson = Record<string, unknown>;
 
 function jsonError(error: string, status = 400): { status: number; body: ApiJson } {
 	return { status, body: { success: false, error } };
+}
+
+async function logOrderEvent(
+	srv: SupabaseClient,
+	orderId: string,
+	eventType: string,
+	payload: Record<string, unknown>,
+) {
+	await srv.from("sim_order_events").insert({
+		order_id: orderId,
+		event_type: eventType,
+		payload,
+	});
+}
+
+function resolveFilledQuantity(totalQty: number, lotSize: number): number {
+	const partialThreshold = lotSize * 20;
+	if (totalQty <= partialThreshold) return totalQty;
+	const candidate = Math.floor((totalQty * 0.6) / lotSize) * lotSize;
+	return Math.max(lotSize, Math.min(totalQty, candidate));
 }
 
 async function reloadAccountRow(
@@ -138,6 +159,7 @@ export async function placeLimitOrderService(
 
 	const refPx = quote.price;
 	const sym = quote.displaySymbol;
+	const rule = getInstrumentRule(sym);
 	const qty = Math.trunc(Number(body.quantity));
 	const lp = Number(body.limitPrice);
 
@@ -157,6 +179,7 @@ export async function placeLimitOrderService(
 
 		const avail = pos ? Number((pos as { available_qty: number }).available_qty) : 0;
 		const vSell = validateSellOrder({
+			symbolRaw: sym,
 			availableQty: avail,
 			limitPrice: lp,
 			quantity: qty,
@@ -183,6 +206,7 @@ export async function placeLimitOrderService(
 					filled_qty: 0,
 					status: "pending",
 					order_type: "limit",
+					instrument_type: rule.instrument,
 					reserved_cash: null,
 					reserved_shares: qty,
 					updated_at: new Date().toISOString(),
@@ -194,6 +218,13 @@ export async function placeLimitOrderService(
 				throw new Error(ins.error?.message ?? "创建委托失败");
 			}
 			orderId = (ins.data as { id: string }).id;
+			await logOrderEvent(srv, orderId, "submitted", {
+				side: "sell",
+				symbol: sym,
+				limitPrice: lp,
+				quantity: qty,
+				instrument: rule.instrument,
+			});
 		} catch (e) {
 			await unfreezeSell(srv, accountId, sym, qty);
 			return jsonError(e instanceof Error ? e.message : "挂单失败");
@@ -211,7 +242,28 @@ export async function placeLimitOrderService(
 		}
 
 		try {
-			await executeSellFilled(srv, orderId, accountId, sym, qty, refPx);
+			const filledQty = resolveFilledQuantity(qty, rule.lotSize);
+			await executeSellFilled(srv, orderId, accountId, sym, qty, filledQty, refPx, rule);
+			await logOrderEvent(srv, orderId, "matched", {
+				execPrice: refPx,
+				filledQty,
+				remainingQty: qty - filledQty,
+			});
+			if (filledQty < qty) {
+				return {
+					status: 200,
+					body: {
+						success: true,
+						data: {
+							orderId,
+							status: "partial",
+							filledQty,
+							remainingQty: qty - filledQty,
+							message: "委托已部分成交，剩余挂单中",
+						},
+					},
+				};
+			}
 		} catch (e) {
 			return jsonError(e instanceof Error ? e.message : "撮合失败");
 		}
@@ -233,13 +285,14 @@ export async function placeLimitOrderService(
 	/** buy */
 	const vBuy = validateBuyOrder({
 		account: accRow,
+		symbolRaw: sym,
 		limitPrice: lp,
 		quantity: qty,
 		referencePrice: refPx,
 	});
 	if (vBuy) return jsonError(vBuy);
 
-	const freezeAmt = estimateBuyFreezeAmount(lp, qty);
+	const freezeAmt = estimateBuyFreezeAmount(lp, qty, rule);
 
 	try {
 		await freezeBuy(srv, accountId, freezeAmt);
@@ -260,6 +313,7 @@ export async function placeLimitOrderService(
 				filled_qty: 0,
 				status: "pending",
 				order_type: "limit",
+					instrument_type: rule.instrument,
 				reserved_cash: freezeAmt,
 				reserved_shares: null,
 				updated_at: new Date().toISOString(),
@@ -271,6 +325,14 @@ export async function placeLimitOrderService(
 			throw new Error(ins.error?.message ?? "创建委托失败");
 		}
 		orderId = (ins.data as { id: string }).id;
+		await logOrderEvent(srv, orderId, "submitted", {
+			side: "buy",
+			symbol: sym,
+			limitPrice: lp,
+			quantity: qty,
+			reservedCash: freezeAmt,
+			instrument: rule.instrument,
+		});
 	} catch (e) {
 		await unfreezeBuy(srv, accountId, freezeAmt);
 		return jsonError(e instanceof Error ? e.message : "挂单失败");
@@ -288,7 +350,40 @@ export async function placeLimitOrderService(
 	}
 
 	try {
-		await executeBuyFilled(srv, accountId, orderId, sym, quote.name, freezeAmt, qty, refPx);
+		const filledQty = resolveFilledQuantity(qty, rule.lotSize);
+		await executeBuyFilled(
+			srv,
+			accountId,
+			orderId,
+			sym,
+			quote.name,
+			freezeAmt,
+			qty,
+			filledQty,
+			lp,
+			refPx,
+			rule,
+		);
+		await logOrderEvent(srv, orderId, "matched", {
+			execPrice: refPx,
+			filledQty,
+			remainingQty: qty - filledQty,
+		});
+		if (filledQty < qty) {
+			return {
+				status: 200,
+				body: {
+					success: true,
+					data: {
+						orderId,
+						status: "partial",
+						filledQty,
+						remainingQty: qty - filledQty,
+						message: "委托已部分成交，剩余挂单中",
+					},
+				},
+			};
+		}
 	} catch (e) {
 		return jsonError(e instanceof Error ? e.message : "撮合失败");
 	}
@@ -313,11 +408,16 @@ async function executeBuyFilled(
 	orderId: string,
 	displaySymbol: string,
 	nameGuess: string | undefined,
-	reservedCash: number,
-	qty: number,
+	totalReservedCash: number,
+	orderQty: number,
+	filledQty: number,
+	limitPrice: number,
 	execPx: number,
+	rule: InstrumentRule,
 ) {
-	const totalCost = totalBuyerCost(execPx, qty);
+	const totalCost = totalBuyerCost(execPx, filledQty, rule);
+	const settledReserve = estimateBuyFreezeAmount(limitPrice, filledQty, rule);
+	const remainingReserve = Math.max(0, round2(totalReservedCash - settledReserve));
 
 	const row = await reloadAccountRow(srv, accountId);
 	if (!row) throw new Error("账户读取失败");
@@ -325,8 +425,8 @@ async function executeBuyFilled(
 	const cb = Number(row.current_balance);
 	const fb = Number(row.frozen_balance);
 
-	const nc = cb + (reservedCash - totalCost);
-	const nf = fb - reservedCash;
+	const nc = cb + (settledReserve - totalCost);
+	const nf = fb - settledReserve;
 
 	if (nf < -1e-9 || nc < -1e-9) throw new Error("资金结算异常");
 
@@ -340,7 +440,7 @@ async function executeBuyFilled(
 		.eq("id", accountId);
 	if (uerr) throw uerr;
 
-	const mv = round2(execPx * qty);
+	const mv = round2(execPx * filledQty);
 
 	const { data: pos0 } = await srv
 		.from("sim_positions")
@@ -354,8 +454,8 @@ async function executeBuyFilled(
 			account_id: accountId,
 			symbol: displaySymbol,
 			name: nameGuess ?? displaySymbol,
-			quantity: qty,
-			available_qty: qty,
+			quantity: filledQty,
+			available_qty: filledQty,
 			frozen_qty: 0,
 			cost_price: execPx,
 			market_value: mv,
@@ -367,26 +467,30 @@ async function executeBuyFilled(
 		const oldC = Number((pos0 as { cost_price: number }).cost_price);
 		const aq = Number((pos0 as { available_qty: number }).available_qty);
 		const avg =
-			pq + qty > 0 ? round4((pq * oldC + execPx * qty) / (pq + qty)) : round4(execPx);
+			pq + filledQty > 0
+				? round4((pq * oldC + execPx * filledQty) / (pq + filledQty))
+				: round4(execPx);
 
 		const u = await srv
 			.from("sim_positions")
 			.update({
-				quantity: pq + qty,
-				available_qty: aq + qty,
+				quantity: pq + filledQty,
+				available_qty: aq + filledQty,
 				cost_price: avg,
-				market_value: round2(execPx * (pq + qty)),
+				market_value: round2(execPx * (pq + filledQty)),
 				updated_at: new Date().toISOString(),
 			})
 			.eq("id", (pos0 as { id: string }).id);
 		if (u.error) throw u.error;
 	}
 
+	const status = filledQty >= orderQty ? "filled" : "partial";
 	const ou = await srv
 		.from("sim_orders")
 		.update({
-			filled_qty: qty,
-			status: "filled",
+			filled_qty: filledQty,
+			status,
+			reserved_cash: remainingReserve,
 			updated_at: new Date().toISOString(),
 		})
 		.eq("id", orderId);
@@ -398,8 +502,8 @@ async function executeBuyFilled(
 		symbol: displaySymbol,
 		side: "buy",
 		price: execPx,
-		quantity: qty,
-		commission: commissionColumnBuy(execPx, qty),
+		quantity: filledQty,
+		commission: commissionColumnBuy(execPx, filledQty, rule),
 		stamp_tax: 0,
 		trade_time: new Date().toISOString(),
 	});
@@ -411,10 +515,12 @@ async function executeSellFilled(
 	orderId: string,
 	accountId: string,
 	displaySymbol: string,
-	qty: number,
+	orderQty: number,
+	filledQty: number,
 	execPx: number,
+	rule: InstrumentRule,
 ) {
-	const net = totalSellerProceeds(execPx, qty);
+	const net = totalSellerProceeds(execPx, filledQty, rule);
 
 	const row = await reloadAccountRow(srv, accountId);
 	if (!row) throw new Error("账户读取失败");
@@ -441,8 +547,8 @@ async function executeSellFilled(
 	const pid = (pos as { id: string }).id;
 	const q0 = Number((pos as { quantity: number }).quantity);
 	const fr = Number((pos as { frozen_qty: number }).frozen_qty);
-	const qLeft = q0 - qty;
-	const frNext = fr - qty;
+	const qLeft = q0 - filledQty;
+	const frNext = fr - filledQty;
 	if (qLeft < 0 || frNext < -1e-9) throw new Error("持仓数量异常");
 
 	if (qLeft <= 0) {
@@ -461,11 +567,14 @@ async function executeSellFilled(
 		if (u.error) throw u.error;
 	}
 
+	const status = filledQty >= orderQty ? "filled" : "partial";
+	const remainShares = Math.max(0, orderQty - filledQty);
 	const ou = await srv
 		.from("sim_orders")
 		.update({
-			filled_qty: qty,
-			status: "filled",
+			filled_qty: filledQty,
+			status,
+			reserved_shares: remainShares,
 			updated_at: new Date().toISOString(),
 		})
 		.eq("id", orderId);
@@ -477,9 +586,9 @@ async function executeSellFilled(
 		symbol: displaySymbol,
 		side: "sell",
 		price: execPx,
-		quantity: qty,
-		commission: commissionColumnSell(execPx, qty),
-		stamp_tax: stampColumnSell(execPx, qty),
+		quantity: filledQty,
+		commission: commissionColumnSell(execPx, filledQty, rule),
+		stamp_tax: stampColumnSell(execPx, filledQty, rule),
 		trade_time: new Date().toISOString(),
 	});
 	if (ti.error) throw ti.error;

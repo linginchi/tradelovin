@@ -31,6 +31,16 @@ type ProgressRow = {
 	updated_at: string | null;
 };
 
+type TqResp = {
+	totalScore: number;
+	dimensions: {
+		profitability: number;
+		riskControl: number;
+		consistency: number;
+		activeness: number;
+	};
+};
+
 function stepToTKey(step: string): CareerStepTKey | null {
 	const map: Record<string, CareerStepTKey> = {
 		resume_screening: "step_resume_screening",
@@ -55,6 +65,7 @@ export function CareerIntentForm() {
 	const [ready, setReady] = useState(false);
 	const [progress, setProgress] = useState<ProgressRow[]>([]);
 	const [hasApplication, setHasApplication] = useState(false);
+	const [tqScore, setTqScore] = useState<TqResp | null>(null);
 
 	const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormValues>({
 		defaultValues: {
@@ -89,6 +100,17 @@ export function CareerIntentForm() {
 			if (alive && res.ok && js.application) {
 				setHasApplication(true);
 				setProgress(js.progress ?? []);
+			}
+			const tqRes = await fetch("/api/tq/score?env=sim&period=all", { credentials: "include" });
+			const tqJson = (await tqRes.json()) as {
+				success?: boolean;
+				data?: { totalScore: number; dimensions: TqResp["dimensions"] };
+			};
+			if (alive && tqRes.ok && tqJson.success && tqJson.data) {
+				setTqScore({
+					totalScore: tqJson.data.totalScore,
+					dimensions: tqJson.data.dimensions,
+				});
 			}
 			if (alive) setReady(true);
 		}
@@ -137,6 +159,15 @@ export function CareerIntentForm() {
 	return (
 		<>
 			<div className="mx-auto w-full max-w-lg space-y-8">
+				<section className="border-border/80 bg-card/40 rounded-xl border p-6 backdrop-blur-md">
+					<p className="text-muted-foreground text-xs uppercase tracking-wide">TradeQuotient</p>
+					<p className="mt-1 text-2xl font-semibold">{tqScore ? tqScore.totalScore.toFixed(2) : "暂无评分"}</p>
+					<p className="text-muted-foreground mt-1 text-xs">
+						{tqScore
+							? `盈利 ${tqScore.dimensions.profitability.toFixed(1)} · 风控 ${tqScore.dimensions.riskControl.toFixed(1)} · 一致性 ${tqScore.dimensions.consistency.toFixed(1)} · 活跃 ${tqScore.dimensions.activeness.toFixed(1)}`
+							: "该分数将用于求职推荐与晋级筛选。"}
+					</p>
+				</section>
 				{hasApplication && progress.length > 0 ? (
 					<section className="border-border/80 bg-card/40 rounded-xl border p-6 backdrop-blur-md">
 						<h2 className="text-base font-semibold">{t("progressTitle")}</h2>

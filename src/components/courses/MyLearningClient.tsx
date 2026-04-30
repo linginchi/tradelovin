@@ -309,6 +309,7 @@ export default function MyLearningClient() {
 				loading={tqLoading}
 				tq={tq}
 				tqFeatures={tqFeatures}
+				updateHint={t("tqUpdateCadence")}
 			/>
 			{!rows?.length ? (
 				<p className="text-muted-foreground text-center text-sm">{t("empty")}</p>

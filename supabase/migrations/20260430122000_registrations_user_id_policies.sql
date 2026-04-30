@@ -5,15 +5,35 @@ ALTER TABLE public.registrations
 
 COMMENT ON COLUMN public.registrations.user_id IS '报名人（需已登录）；与 auth.users.id 对齐';
 
--- 使用 profiles.email 回填历史记录的 user_id（无匹配则保持 NULL）
-UPDATE public.registrations r
-SET user_id = p.id
-FROM public.profiles p
-WHERE
-	r.user_id IS NULL
-	AND p.email IS NOT NULL
-	AND r.email IS NOT NULL
-	AND lower(trim(r.email)) = lower(trim(p.email));
+-- 使用 profiles.email（若存在）或 auth.users.email 回填历史记录的 user_id（无匹配则保持 NULL）
+DO $$
+BEGIN
+	IF EXISTS (
+		SELECT 1
+		FROM information_schema.columns
+		WHERE table_schema = 'public'
+			AND table_name = 'profiles'
+			AND column_name = 'email'
+	) THEN
+		UPDATE public.registrations r
+		SET user_id = p.id
+		FROM public.profiles p
+		WHERE
+			r.user_id IS NULL
+			AND p.email IS NOT NULL
+			AND r.email IS NOT NULL
+			AND lower(trim(r.email)) = lower(trim(p.email));
+	ELSE
+		UPDATE public.registrations r
+		SET user_id = au.id
+		FROM auth.users au
+		WHERE
+			r.user_id IS NULL
+			AND au.email IS NOT NULL
+			AND r.email IS NOT NULL
+			AND lower(trim(r.email)) = lower(trim(au.email));
+	END IF;
+END $$;
 
 -- 若历史数据存在多条相同 email（旧匿名报名），仅在已关联 user_id 后可能冲突；
 -- user_id 唯一索引仅对有值的行生效，便于逐步清理 NULL 行。

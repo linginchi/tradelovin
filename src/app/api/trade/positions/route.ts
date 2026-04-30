@@ -1,22 +1,36 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
+import { requireMembershipCapability } from "@/lib/membership/guard";
+import { getMarketQuote } from "@/lib/market/market-domain";
+import { localizeNameBySymbol } from "@/lib/trade/get-current-price";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+function readLocale(v: string | null): "zh" | "zh-TW" | "en" {
+	if (v === "en" || v === "zh-TW") return v;
+	return "zh";
+}
+
+export async function GET(request: NextRequest) {
 	const ctx = await requireTradeUser();
 	if (ctx instanceof NextResponse) {
 		return ctx;
 	}
 
 	const { supabase, userId } = ctx;
+	const membership = await requireMembershipCapability(supabase, userId, "sim_trading");
+	if (membership instanceof NextResponse) {
+		return membership;
+	}
 
 	const { data: account, error: accErr } = await getOrCreateSimAccount(supabase, userId);
 	if (accErr || !account) {
 		return NextResponse.json({ success: false, error: accErr?.message ?? "读取账户失败" }, { status: 500 });
 	}
+
+	const locale = readLocale(request.nextUrl.searchParams.get("locale"));
 
 	const { data: rows, error: qErr } = await supabase
 		.from("sim_positions")
@@ -29,19 +43,33 @@ export async function GET() {
 		return NextResponse.json({ success: false, error: qErr.message }, { status: 500 });
 	}
 
-	const data = (rows ?? []).map((r: Record<string, unknown>) => {
+	const data = await Promise.all((rows ?? []).map(async (r: Record<string, unknown>) => {
 		const cost = Number(r.cost_price ?? 0);
+		const symbol = r.symbol as string;
+		let quote: Awaited<ReturnType<typeof getMarketQuote>> = null;
+		try {
+			quote = await getMarketQuote(symbol, locale);
+		} catch {
+			quote = null;
+		}
+		const currentPrice = quote?.price ?? cost;
+		const quantity = Number(r.quantity ?? 0);
+		const fallbackName = localizeNameBySymbol(
+			symbol,
+			((r.name as string | null) ?? undefined) as string | undefined,
+			locale,
+		);
 		return {
-			symbol: r.symbol as string,
-			name: (r.name ?? null) as string | null,
-			quantity: r.quantity as number,
+			symbol,
+			name: (quote?.name as string | undefined) ?? fallbackName ?? null,
+			quantity,
 			available_qty: r.available_qty as number,
 			frozen_qty: r.frozen_qty as number,
 			cost_price: cost,
-			market_value: Number(r.market_value ?? 0),
-			current_price: cost,
+			market_value: Number((currentPrice * quantity).toFixed(2)),
+			current_price: currentPrice,
 		};
-	});
+	}));
 
 	return NextResponse.json({ success: true, data });
 }

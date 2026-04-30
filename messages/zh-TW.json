@@ -298,6 +298,7 @@
 		"t2Benefits": "T2 可免費使用全部模擬交易與 TQ 報告",
 		"pointsBalance": "TQ積分",
 		"redeemPlan": "兌換T3 {days}天（{points}分）",
+		"tqUpdateCadence": "TQ 快照每日 16:00（香港時間，交易日）更新",
 		"empty": "暫無報名記錄。",
 		"scoreSection": "課程成績",
 		"score": "分數",

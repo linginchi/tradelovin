@@ -3,12 +3,14 @@
 import {
 	ArrowLeft,
 	CircleSlash,
+	Crown,
+	Gamepad2,
 	LineChart,
 	Loader2,
 	TrendingDown,
 	TrendingUp,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "sonner";
 
@@ -33,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
+import { mapUserSymbolToSina } from "@/lib/trade/symbol-mapping";
 import { cn } from "@/lib/utils";
 
 type AccountResp = {
@@ -57,6 +60,7 @@ type PosRow = {
 type OrderRow = {
 	id: string;
 	symbol: string;
+	name?: string | null;
 	side: string;
 	price: number;
 	quantity: number;
@@ -69,12 +73,43 @@ type TradeRow = {
 	id: string;
 	order_id: string | null;
 	symbol: string;
+	name?: string | null;
 	side: string;
 	price: number;
 	quantity: number;
 	commission: number;
 	stamp_tax: number;
 	trade_time: string;
+};
+
+type QuoteResp = {
+	symbol: string;
+	price: number;
+	name?: string;
+	source: "tushare" | "sina";
+	instrument: "stock" | "etf" | "cbond";
+	lot_size: number;
+	limit_band_ratio: number;
+};
+
+type ChallengeResp = {
+	code: string;
+	name: string;
+	durationMin: number;
+	objective: string;
+	rewardTitle: string;
+	progress: {
+		played: number;
+		bestTalent: number;
+	};
+};
+
+type LeaderboardRow = {
+	rank: number;
+	userTag: string;
+	talentScore: number;
+	challengeName: string;
+	createdAt: string;
 };
 
 function fmtMoney(n: number) {
@@ -102,6 +137,7 @@ async function parseJson<T>(res: Response): Promise<T> {
 export function TradePageClient() {
 	const t = useTranslations("Trade");
 	const tCommon = useTranslations("Common");
+	const locale = useLocale();
 	const router = useRouter();
 
 	const [sessionReady, setSessionReady] = useState(false);
@@ -118,6 +154,11 @@ export function TradePageClient() {
 
 	const [bootLoading, setBootLoading] = useState(true);
 	const [marketLoading, setMarketLoading] = useState(false);
+	const [trainingLoading, setTrainingLoading] = useState(false);
+
+	const [quote, setQuote] = useState<QuoteResp | null>(null);
+	const [challenges, setChallenges] = useState<ChallengeResp[]>([]);
+	const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
 
 	const loadAccount = useCallback(async () => {
 		const res = await fetch("/api/trade/account", { credentials: "include" });
@@ -132,9 +173,9 @@ export function TradePageClient() {
 		setMarketLoading(true);
 		try {
 			const [pRes, oRes, trRes] = await Promise.all([
-				fetch("/api/trade/positions", { credentials: "include" }),
-				fetch("/api/trade/orders", { credentials: "include" }),
-				fetch("/api/trade/trades", { credentials: "include" }),
+				fetch(`/api/trade/positions?locale=${encodeURIComponent(locale)}`, { credentials: "include" }),
+				fetch(`/api/trade/orders?locale=${encodeURIComponent(locale)}`, { credentials: "include" }),
+				fetch(`/api/trade/trades?locale=${encodeURIComponent(locale)}`, { credentials: "include" }),
 			]);
 
 			const [pJson, oJson, trJson] = await Promise.all([
@@ -159,12 +200,31 @@ export function TradePageClient() {
 		} finally {
 			setMarketLoading(false);
 		}
-	}, [t]);
+	}, [locale, t]);
+
+	const loadTrainingData = useCallback(async () => {
+		setTrainingLoading(true);
+		try {
+			const [challengeRes, boardRes] = await Promise.all([
+				fetch("/api/training/challenges", { credentials: "include" }),
+				fetch("/api/training/leaderboard", { credentials: "include" }),
+			]);
+
+			const [challengeJson, boardJson] = await Promise.all([
+				parseJson<{ success: boolean; data?: ChallengeResp[] }>(challengeRes),
+				parseJson<{ success: boolean; data?: LeaderboardRow[] }>(boardRes),
+			]);
+			if (challengeJson.success && challengeJson.data) setChallenges(challengeJson.data);
+			if (boardJson.success && boardJson.data) setLeaderboard(boardJson.data);
+		} finally {
+			setTrainingLoading(false);
+		}
+	}, []);
 
 	const loadInitial = useCallback(async () => {
 		setBootLoading(true);
 		try {
-			await Promise.all([loadAccount(), loadMarketData()]);
+			await Promise.all([loadAccount(), loadMarketData(), loadTrainingData()]);
 		} catch (e) {
 			const msg =
 				e instanceof Error
@@ -176,17 +236,21 @@ export function TradePageClient() {
 		} finally {
 			setBootLoading(false);
 		}
-	}, [loadAccount, loadMarketData, t]);
+	}, [loadAccount, loadMarketData, loadTrainingData, t]);
 
 	useEffect(() => {
 		let cancelled = false;
 		async function guard() {
 			try {
 				const res = await fetch("/api/trade/account", { credentials: "include" });
-				const json = await parseJson<{ success: boolean }>(res);
+				const json = await parseJson<{ success: boolean; code?: string }>(res);
 				if (cancelled) return;
 				if (res.ok && json.success) {
 					setSessionReady(true);
+					return;
+				}
+				if (json.code === "TRIAL_EXPIRED" || json.code === "MEMBERSHIP_FORBIDDEN") {
+					router.replace("/my-learning");
 					return;
 				}
 				router.replace("/register");
@@ -225,6 +289,10 @@ export function TradePageClient() {
 	}, [account]);
 
 	const normalizedSymbol = useMemo(() => symbol.trim().toUpperCase(), [symbol]);
+	const normalizedMappedSymbol = useMemo(
+		() => mapUserSymbolToSina(normalizedSymbol)?.displaySymbol.toUpperCase() ?? normalizedSymbol,
+		[normalizedSymbol],
+	);
 
 	const selectedPosition = useMemo(() => {
 		if (!normalizedSymbol) return null;
@@ -232,6 +300,34 @@ export function TradePageClient() {
 			positions.find((p) => p.symbol.trim().toUpperCase() === normalizedSymbol) ?? null
 		);
 	}, [normalizedSymbol, positions]);
+
+	const activeQuote = useMemo(() => {
+		if (!normalizedSymbol) return null;
+		if (!quote) return null;
+		const quoteSymbol = quote.symbol.trim().toUpperCase();
+		const quoteMapped = mapUserSymbolToSina(quoteSymbol)?.displaySymbol.toUpperCase() ?? quoteSymbol;
+		return quoteMapped === normalizedMappedSymbol ? quote : null;
+	}, [normalizedMappedSymbol, normalizedSymbol, quote]);
+
+	useEffect(() => {
+		if (!normalizedSymbol) return;
+		const timer = window.setTimeout(async () => {
+			try {
+				const quoteRes = await fetch(
+					`/api/market/quote?symbol=${encodeURIComponent(normalizedSymbol)}&locale=${encodeURIComponent(locale)}`,
+					{ credentials: "include" },
+				);
+				const json = await parseJson<{ success: boolean; data?: QuoteResp }>(quoteRes);
+				if (json.success && json.data) {
+					setQuote(json.data);
+					if (!priceStr) setPriceStr(String(json.data.price));
+				}
+			} catch {
+				// ignore quote failures
+			}
+		}, 300);
+		return () => window.clearTimeout(timer);
+	}, [locale, normalizedSymbol, priceStr]);
 
 	const validateInputs = (): { price: number; quantity: number } | null => {
 		const px = Number(priceStr);
@@ -249,8 +345,9 @@ export function TradePageClient() {
 			toast.error(t("validation.quantityInt"));
 			return null;
 		}
-		if (qty % 100 !== 0) {
-			toast.error(t("validation.quantityStep"));
+		const lotSize = activeQuote?.lot_size ?? 100;
+		if (qty % lotSize !== 0) {
+			toast.error(`${t("validation.quantityStep")}（${lotSize}）`);
 			return null;
 		}
 
@@ -258,8 +355,8 @@ export function TradePageClient() {
 	};
 
 	const refreshAllAfterSuccess = useCallback(async () => {
-		await Promise.all([loadAccount(), loadMarketData()]);
-	}, [loadAccount, loadMarketData]);
+		await Promise.all([loadAccount(), loadMarketData(), loadTrainingData()]);
+	}, [loadAccount, loadMarketData, loadTrainingData]);
 
 	const submitOrder = async (side: "buy" | "sell") => {
 		const vals = validateInputs();
@@ -316,6 +413,31 @@ export function TradePageClient() {
 
 	const handleClosePositions = () => {
 		toast.message(t("toast.closePlaceholder"));
+	};
+
+	const runChallenge = async (challenge: ChallengeResp) => {
+		setTrainingLoading(true);
+		try {
+			const res = await fetch("/api/training/run", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({
+					challengeCode: challenge.code,
+				}),
+			});
+			const json = await parseJson<{ success: boolean; error?: string }>(res);
+			if (!json.success) {
+				toast.error(json.error ?? "挑战提交失败");
+				return;
+			}
+			toast.success(`已完成挑战：${challenge.name}`);
+			await loadTrainingData();
+		} catch {
+			toast.error("挑战提交失败");
+		} finally {
+			setTrainingLoading(false);
+		}
 	};
 
 	const orderStatusVariant = (s: string) => {
@@ -399,8 +521,19 @@ export function TradePageClient() {
 									<div className="flex flex-col justify-end space-y-2">
 										<div className="flex items-center justify-between gap-2">
 											<Label>{t("form.lastPrice")}</Label>
-											<span className="font-mono text-muted-foreground text-sm">--</span>
+											<span className="font-mono text-muted-foreground text-sm">
+											{activeQuote ? fmtMoney(activeQuote.price) : "--"}
+											</span>
 										</div>
+										<div className="text-muted-foreground text-xs">
+											{activeQuote?.name ? `${t("table.name")}：${activeQuote.name}` : `${t("table.name")}：—`}
+										</div>
+										{activeQuote && (
+											<p className="text-muted-foreground text-xs">
+												{activeQuote.instrument.toUpperCase()} · {activeQuote.source.toUpperCase()} ·
+												手数 {activeQuote.lot_size}
+											</p>
+										)}
 									</div>
 								</div>
 
@@ -444,6 +577,16 @@ export function TradePageClient() {
 										<div className="font-mono tabular-nums">
 											{selectedPosition?.available_qty != null ? selectedPosition.available_qty : "—"}
 										</div>
+									</div>
+									<div className="space-y-1">
+										<span className="text-muted-foreground">涨跌停范围</span>
+										<div className="font-mono tabular-nums">
+											{activeQuote ? `±${(activeQuote.limit_band_ratio * 100).toFixed(0)}%` : "—"}
+										</div>
+									</div>
+									<div className="space-y-1 sm:text-end">
+										<span className="text-muted-foreground">T+0训练模式</span>
+										<div className="font-mono tabular-nums text-cyan-200">已启用</div>
 									</div>
 								</div>
 
@@ -541,6 +684,8 @@ export function TradePageClient() {
 								<TabsTrigger value="positions">{t("tabs.positions")}</TabsTrigger>
 								<TabsTrigger value="orders">{t("tabs.orders")}</TabsTrigger>
 								<TabsTrigger value="trades">{t("tabs.trades")}</TabsTrigger>
+								<TabsTrigger value="challenges">挑战大厅</TabsTrigger>
+								<TabsTrigger value="leaderboard">排行榜</TabsTrigger>
 							</TabsList>
 
 							<TabsContent value="positions" className="space-y-2">
@@ -611,6 +756,7 @@ export function TradePageClient() {
 											<TableRow>
 												<TableHead>{t("table.time")}</TableHead>
 												<TableHead>{t("table.symbol")}</TableHead>
+												<TableHead>{t("table.name")}</TableHead>
 												<TableHead>{t("table.direction")}</TableHead>
 												<TableHead className="text-end">{t("table.price")}</TableHead>
 												<TableHead className="text-end">{t("table.quantity")}</TableHead>
@@ -622,7 +768,7 @@ export function TradePageClient() {
 											{(orders ?? []).length === 0 ? (
 												<TableRow>
 													<TableCell
-														colSpan={7}
+														colSpan={8}
 														className="text-muted-foreground text-center py-8"
 													>
 														{t("empty")}
@@ -635,6 +781,7 @@ export function TradePageClient() {
 															{hkTime(o.created_at)}
 														</TableCell>
 														<TableCell>{o.symbol}</TableCell>
+														<TableCell className="text-muted-foreground">{o.name ?? "—"}</TableCell>
 														<TableCell>{t(`direction.${o.side}` as never)}</TableCell>
 														<TableCell className="text-end">{fmtMoney(o.price)}</TableCell>
 														<TableCell className="text-end">{o.quantity}</TableCell>
@@ -659,6 +806,7 @@ export function TradePageClient() {
 											<TableRow>
 												<TableHead>{t("table.time")}</TableHead>
 												<TableHead>{t("table.symbol")}</TableHead>
+												<TableHead>{t("table.name")}</TableHead>
 												<TableHead>{t("table.direction")}</TableHead>
 												<TableHead className="text-end">{t("table.price")}</TableHead>
 												<TableHead className="text-end">{t("table.quantity")}</TableHead>
@@ -669,7 +817,7 @@ export function TradePageClient() {
 											{(tradesList ?? []).length === 0 ? (
 												<TableRow>
 													<TableCell
-														colSpan={6}
+														colSpan={7}
 														className="text-muted-foreground text-center py-8"
 													>
 														{t("empty")}
@@ -682,12 +830,84 @@ export function TradePageClient() {
 															{hkTime(tr.trade_time)}
 														</TableCell>
 														<TableCell>{tr.symbol}</TableCell>
+														<TableCell className="text-muted-foreground">{tr.name ?? "—"}</TableCell>
 														<TableCell>{t(`direction.${tr.side}` as never)}</TableCell>
 														<TableCell className="text-end">{fmtMoney(tr.price)}</TableCell>
 														<TableCell className="text-end">{tr.quantity}</TableCell>
 														<TableCell className="text-end">
 															{fmtMoney(tr.commission + tr.stamp_tax)}
 														</TableCell>
+													</TableRow>
+												))
+											)}
+										</TableBody>
+									</Table>
+								</div>
+							</TabsContent>
+
+							<TabsContent value="challenges" className="space-y-3">
+								<div className="grid gap-3 md:grid-cols-2">
+									{(challenges ?? []).map((c) => (
+										<Card key={c.code} className="bg-card/40">
+											<CardHeader className="pb-2">
+												<CardTitle className="flex items-center justify-between text-base">
+													<span>{c.name}</span>
+													<Gamepad2 className="size-4 text-cyan-300" />
+												</CardTitle>
+												<CardDescription>{c.objective}</CardDescription>
+											</CardHeader>
+											<CardContent className="space-y-2 text-sm">
+												<div className="text-muted-foreground">
+													时长：{c.durationMin} 分钟 · 称号：{c.rewardTitle}
+												</div>
+												<div className="text-muted-foreground">
+													已挑战 {c.progress.played} 次 · 最佳天赋分{" "}
+													{c.progress.bestTalent.toFixed(2)}
+												</div>
+												<Button
+													size="sm"
+													disabled={trainingLoading}
+													onClick={() => void runChallenge(c)}
+												>
+													{trainingLoading ? <Loader2 className="size-4 animate-spin" /> : null}
+													开始挑战
+												</Button>
+											</CardContent>
+										</Card>
+									))}
+								</div>
+							</TabsContent>
+
+							<TabsContent value="leaderboard" className="space-y-2">
+								<div className="rounded-xl border border-border/60 bg-card/40 backdrop-blur-sm overflow-hidden">
+									<Table>
+										<TableHeader>
+											<TableRow>
+												<TableHead>#</TableHead>
+												<TableHead>用户</TableHead>
+												<TableHead>挑战</TableHead>
+												<TableHead className="text-end">天赋分</TableHead>
+												<TableHead className="text-end">时间</TableHead>
+											</TableRow>
+										</TableHeader>
+										<TableBody>
+											{(leaderboard ?? []).length === 0 ? (
+												<TableRow>
+													<TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+														暂无排行榜数据
+													</TableCell>
+												</TableRow>
+											) : (
+												leaderboard.map((r) => (
+													<TableRow key={`${r.rank}-${r.createdAt}`}>
+														<TableCell className="font-medium">
+															{r.rank <= 3 ? <Crown className="size-4 inline text-amber-400" /> : null}{" "}
+															{r.rank}
+														</TableCell>
+														<TableCell>{r.userTag}</TableCell>
+														<TableCell>{r.challengeName}</TableCell>
+														<TableCell className="text-end">{r.talentScore.toFixed(2)}</TableCell>
+														<TableCell className="text-end text-xs">{hkTime(r.createdAt)}</TableCell>
 													</TableRow>
 												))
 											)}
