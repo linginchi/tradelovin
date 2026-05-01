@@ -27,15 +27,15 @@ export function DevTestQuickLoginCard({
 	const locale = useLocale();
 	const t = useTranslations("OtpLogin");
 	const [busy, setBusy] = useState(false);
-	const [runtimeEnabled, setRuntimeEnabled] = useState(true);
+	const [runtimeEnabled, setRuntimeEnabled] = useState<boolean | null>(null);
 	const [account, setAccount] = useState<DevTestAccount>("kk");
 	const [password, setPassword] = useState("");
 
 	const raw = String(process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS ?? "").trim().toLowerCase();
 	const explicitlyEnabled = raw === "1" || raw === "true";
 	const explicitlyDisabled = raw === "0" || raw === "false";
-	const enabled =
-		process.env.NODE_ENV !== "production" ? explicitlyEnabled || !explicitlyDisabled : explicitlyEnabled;
+	// 构建期变量仅用于“显式关闭”；是否展示最终由运行时接口判定，避免 CI/本地构建变量漂移导致入口误隐藏。
+	const enabled = !explicitlyDisabled;
 
 	useEffect(() => {
 		void (async () => {
@@ -49,7 +49,7 @@ export function DevTestQuickLoginCard({
 		})();
 	}, []);
 
-	if (!enabled || !runtimeEnabled) return null;
+	if (!enabled || runtimeEnabled !== true) return null;
 
 	const onQuickLogin = async () => {
 		if (!password.trim()) {
