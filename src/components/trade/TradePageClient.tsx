@@ -36,6 +36,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
 import { mapUserSymbolToSina } from "@/lib/trade/symbol-mapping";
+import { buildSimTradingDeniedRedirectHref } from "@/lib/trade/sim-trading-denied-redirect";
 import { cn } from "@/lib/utils";
 
 type AccountResp = {
@@ -256,9 +257,7 @@ export function TradePageClient() {
 					return;
 				}
 				if (json.code === "TRIAL_EXPIRED" || json.code === "MEMBERSHIP_FORBIDDEN") {
-					router.replace(
-						`/membership?from=trade&reason=${encodeURIComponent(json.code ?? "MEMBERSHIP_FORBIDDEN")}`,
-					);
+					router.replace(buildSimTradingDeniedRedirectHref(json.code));
 					return;
 				}
 				router.replace("/register");

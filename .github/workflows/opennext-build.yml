@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Trade session redirect regression guard
+        run: npm run verify:trade-session-redirect
+
       # NEXT_PUBLIC_* 在 next build 时写入浏览器包；仅向 Worker 设 secret 不会更新已打包的 JS，必须在构建步骤提供。
       # 注意：fork PR 默认拿不到 secrets（GitHub 安全策略），该场景若失败属于预期。
       # wrangler deploy 会覆盖 Worker 上由本次发布声明的 vars；若部署命令不传这些开关，此前用 CLI 设置的 ALLOW_* / ENABLE_* 会被清空，线上会表现为「退回老流程 / 一键失效」。
