@@ -65,17 +65,6 @@ export async function POST(request: Request) {
       .eq("user_id", auth.userId);
   }
 
-  // 用户已决定付费，终止试用期（避免继续消耗试用权益）
-  if (membership.plan === "T0_trial") {
-    await auth.supabase
-      .from("user_memberships")
-      .update({
-        trial_end: new Date().toISOString(),
-        status: "expired",
-      })
-      .eq("user_id", auth.userId);
-  }
-
   const origin = getOriginFromRequest(request);
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
