@@ -112,6 +112,11 @@ type LeaderboardRow = {
 	createdAt: string;
 };
 
+type CurrentMembership = {
+	plan: "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
+	trialDaysLeft?: number;
+};
+
 function fmtMoney(n: number) {
 	const v = Math.round((Number.isFinite(n) ? n : 0) * 100) / 100;
 	return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -159,6 +164,7 @@ export function TradePageClient() {
 	const [quote, setQuote] = useState<QuoteResp | null>(null);
 	const [challenges, setChallenges] = useState<ChallengeResp[]>([]);
 	const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+	const [membershipHint, setMembershipHint] = useState<CurrentMembership | null>(null);
 
 	const loadAccount = useCallback(async () => {
 		const res = await fetch("/api/trade/account", { credentials: "include" });
@@ -273,6 +279,22 @@ export function TradePageClient() {
 		}, 0);
 		return () => window.clearTimeout(timer);
 	}, [sessionReady, loadInitial]);
+
+	useEffect(() => {
+		if (!sessionReady) return;
+		const timer = window.setTimeout(async () => {
+			try {
+				const res = await fetch("/api/membership/current", { credentials: "include" });
+				const json = await parseJson<{ success?: boolean; data?: CurrentMembership }>(res);
+				if (res.ok && json.success && json.data) {
+					setMembershipHint(json.data);
+				}
+			} catch {
+				// ignore
+			}
+		}, 50);
+		return () => window.clearTimeout(timer);
+	}, [sessionReady]);
 
 	useEffect(() => {
 		if (!sessionReady) return;
@@ -488,6 +510,22 @@ export function TradePageClient() {
 						<h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
 						<p className="text-muted-foreground text-sm">{t("subtitle")}</p>
 					</header>
+					{membershipHint?.plan === "T0_trial" ? (
+						<div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-100">
+							试用期还剩 {membershipHint.trialDaysLeft ?? 0} 天，升级会员可持续使用模拟交易和 TQ 评分。
+							<Link href="/membership" className="ml-2 underline underline-offset-2">
+								立即升级
+							</Link>
+						</div>
+					) : null}
+					{membershipHint?.plan === "T0_paid" ? (
+						<div className="rounded-xl border border-rose-400/40 bg-rose-400/10 p-3 text-sm text-rose-100">
+							您的 T0 试用已结束，请升级会员继续交易训练。
+							<Link href="/membership" className="ml-2 underline underline-offset-2">
+								去升级
+							</Link>
+						</div>
+					) : null}
 				</div>
 
 				<div className="relative z-10 grid gap-6 lg:grid-cols-12 lg:gap-8">

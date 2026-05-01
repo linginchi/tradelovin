@@ -76,12 +76,15 @@ export async function PUT(request: Request) {
 	if (!validateFeatureWeights(body.featureWeights) || !validateDimensionWeights(body.dimensionWeights)) {
 		return NextResponse.json({ success: false, error: "权重格式不正确" }, { status: 400 });
 	}
-	await srv.from("tq_config").upsert(
+	const { error: upsertErr } = await srv.from("tq_config").upsert(
 		[
 			{ key: "feature_weights", value: body.featureWeights },
 			{ key: "dimension_weights", value: body.dimensionWeights },
 		],
 		{ onConflict: "key" },
 	);
+	if (upsertErr) {
+		return NextResponse.json({ success: false, error: "保存失败，请稍后重试", code: "TQ_CONFIG_UPSERT_FAILED" }, { status: 500 });
+	}
 	return NextResponse.json({ success: true });
 }

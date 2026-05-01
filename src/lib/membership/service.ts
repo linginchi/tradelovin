@@ -20,7 +20,7 @@ type MembershipEntitlementRow = {
 	advanced_order_bundle: boolean;
 };
 
-function isMissingMembershipSchema(error: unknown): boolean {
+export function isMissingMembershipSchemaError(error: unknown): boolean {
 	if (!error || typeof error !== "object") return false;
 	const msg = String((error as { message?: string }).message ?? "");
 	return msg.includes("public.membership_accounts") && msg.includes("schema cache");
@@ -103,9 +103,12 @@ export async function getMembershipSnapshot(
 		]);
 
 	if (accountErr) {
-		// 线上应急兼容：当数据库尚未应用会员表迁移时，先回退为可用快照，
-		// 避免学习页与交易/TQ能力完全不可见。后续仍应执行DB迁移。
-		if (isMissingMembershipSchema(accountErr)) {
+		if (isMissingMembershipSchemaError(accountErr)) {
+			console.error("[membership] schema mismatch detected, fallback to compatibility snapshot", {
+				userId,
+				code: "DB_SCHEMA_MISMATCH",
+				message: (accountErr as { message?: string })?.message ?? String(accountErr),
+			});
 			const now = new Date();
 			const trialStartAt = now.toISOString();
 			const trialEndAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();

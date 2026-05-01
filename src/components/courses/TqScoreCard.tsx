@@ -4,16 +4,29 @@ import SkillRadarPanel from "@/components/scores/SkillRadarPanel";
 
 type Locale = "zh" | "zh-TW" | "en";
 type TqEnv = "sim" | "live";
+type TqPeriod = "all" | "monthly" | "weekly" | "daily";
 
 type TqScore = {
 	totalScore: number;
 	calcTime?: string;
+	meta?: {
+		tradeCount?: number;
+		minTradesForScore?: number;
+		eligible?: boolean;
+	};
 	dimensions: {
 		profitability: number;
 		riskControl: number;
 		consistency: number;
 		activeness: number;
 	};
+};
+
+type TqTrendPoint = { period: TqPeriod; totalScore: number };
+type RadarGroupPayload = {
+	id: string;
+	label: string;
+	axes: Array<{ id: string; label: string; score: number }>;
 };
 
 type TqFeatureItem = {
@@ -58,8 +71,14 @@ function readCopy(localeRaw: string) {
 			title: "TradeQuotient",
 			envSim: "Simulation",
 			envLive: "Live",
+			periodAll: "All-time",
+			periodMonthly: "30D",
+			periodWeekly: "7D",
+			periodDaily: "1D",
 			noData: "No score available yet. Complete trades to generate your TQ profile.",
+			coldStartHint: "Not enough trades yet",
 			mainRadar: "TQ Core Radar",
+			trendTitle: "Period trend",
 			lastUpdate: "Last update",
 			dimensions: {
 				profitability: "Profitability",
@@ -80,8 +99,14 @@ function readCopy(localeRaw: string) {
 			title: "TradeQuotient",
 			envSim: "模擬",
 			envLive: "實盤",
+			periodAll: "全歷史",
+			periodMonthly: "近30天",
+			periodWeekly: "近7天",
+			periodDaily: "近1天",
 			noData: "暫無評分，完成交易後會自動生成 TQ 畫像。",
+			coldStartHint: "交易數據不足，暫未生成有效評分",
 			mainRadar: "TQ 核心雷達",
+			trendTitle: "週期趨勢",
 			lastUpdate: "最近更新",
 			dimensions: {
 				profitability: "盈利能力",
@@ -101,8 +126,14 @@ function readCopy(localeRaw: string) {
 		title: "TradeQuotient",
 		envSim: "模拟",
 		envLive: "实盘",
+		periodAll: "全历史",
+		periodMonthly: "近30天",
+		periodWeekly: "近7天",
+		periodDaily: "近1天",
 		noData: "暂无评分，完成交易后会自动生成 TQ 画像。",
+		coldStartHint: "交易数据不足，暂未生成有效评分",
 		mainRadar: "TQ 核心雷达",
+		trendTitle: "周期趋势",
 		lastUpdate: "最近更新",
 		dimensions: {
 			profitability: "盈利能力",
@@ -170,42 +201,74 @@ export default function TqScoreCard({
 	locale,
 	tqEnv,
 	onEnvChange,
+	tqPeriod,
+	onPeriodChange,
 	loading,
 	tq,
 	tqFeatures,
+	radarGroups,
+	trendPoints,
 	updateHint,
 }: {
 	locale: string;
 	tqEnv: TqEnv;
 	onEnvChange: (v: TqEnv) => void;
+	tqPeriod: TqPeriod;
+	onPeriodChange: (v: TqPeriod) => void;
 	loading: boolean;
 	tq: TqScore | null;
 	tqFeatures: TqFeatureItem[];
+	radarGroups?: RadarGroupPayload[];
+	trendPoints: TqTrendPoint[];
 	updateHint?: string;
 }) {
 	const copy = readCopy(locale);
 	const featureMap = new Map<string, number>();
 	for (const item of tqFeatures) featureMap.set(item.featureName, item.normScore);
 
-	const mainAxes = tq
-		? [
-				{ key: copy.dimensions.riskControl, value: tq.dimensions.riskControl },
-				{ key: copy.dimensions.profitability, value: tq.dimensions.profitability },
-				{ key: copy.dimensions.consistency, value: tq.dimensions.consistency },
-				{ key: copy.dimensions.activeness, value: tq.dimensions.activeness },
-			]
-		: [];
+	const coreGroup = radarGroups?.find((group) => group.id === "core");
+	const mainAxes = coreGroup?.axes?.length
+		? coreGroup.axes.map((axis) => ({ key: axis.label, value: axis.score }))
+		: tq
+			? [
+					{ key: copy.dimensions.riskControl, value: tq.dimensions.riskControl },
+					{ key: copy.dimensions.profitability, value: tq.dimensions.profitability },
+					{ key: copy.dimensions.consistency, value: tq.dimensions.consistency },
+					{ key: copy.dimensions.activeness, value: tq.dimensions.activeness },
+				]
+			: [];
 
-	const subRadarGroups = FEATURE_GROUPS.map((group) => ({
-		id: group.id,
-		label: copy.groupTitles[group.id],
-		axes: group.features.map((name) => ({
-			key: readFeatureLabel(name, locale),
-			value: Number(featureMap.get(name) ?? 0),
-		})),
-	})).filter((group) => group.axes.some((axis) => axis.value > 0));
+	const subRadarGroups = radarGroups?.length
+		? radarGroups
+				.filter((group) => group.id !== "core")
+				.map((group) => ({
+					id: group.id,
+					label: group.label,
+					axes: group.axes.map((axis) => ({ key: axis.label, value: Number(axis.score ?? 0) })),
+				}))
+				.filter((group) => group.axes.some((axis) => axis.value > 0))
+		: FEATURE_GROUPS.map((group) => ({
+				id: group.id,
+				label: copy.groupTitles[group.id],
+				axes: group.features.map((name) => ({
+					key: readFeatureLabel(name, locale),
+					value: Number(featureMap.get(name) ?? 0),
+				})),
+			})).filter((group) => group.axes.some((axis) => axis.value > 0));
 
 	const latestCalcTime = tq?.calcTime ?? tqFeatures[0]?.calcTime;
+	const periodOptions: Array<{ id: TqPeriod; label: string }> = [
+		{ id: "all", label: copy.periodAll },
+		{ id: "monthly", label: copy.periodMonthly },
+		{ id: "weekly", label: copy.periodWeekly },
+		{ id: "daily", label: copy.periodDaily },
+	];
+	const trendLabels: Record<TqPeriod, string> = {
+		all: copy.periodAll,
+		monthly: copy.periodMonthly,
+		weekly: copy.periodWeekly,
+		daily: copy.periodDaily,
+	};
 
 	return (
 		<section className="border-border/80 bg-card/45 rounded-2xl border p-4 shadow-[0_0_0_1px_oklch(0.55_0.14_195/0.08)]">
@@ -227,10 +290,38 @@ export default function TqScoreCard({
 					<option value="live">{copy.envLive}</option>
 				</select>
 			</div>
+			<div className="mt-3 flex flex-wrap gap-2">
+				{periodOptions.map((item) => (
+					<button
+						key={item.id}
+						type="button"
+						onClick={() => onPeriodChange(item.id)}
+						className={`rounded-full border px-2.5 py-1 text-xs ${tqPeriod === item.id ? "border-cyan-400/70 bg-cyan-500/15 text-cyan-200" : "border-border/70 text-muted-foreground"}`}
+					>
+						{item.label}
+					</button>
+				))}
+			</div>
 
 			{tq ? (
 				<div className="mt-4 space-y-4">
+					{tq.meta && !tq.meta.eligible ? (
+						<p className="text-amber-200/90 text-xs">
+							{copy.coldStartHint}（{Math.max(0, Number(tq.meta.tradeCount ?? 0))}/{Math.max(0, Number(tq.meta.minTradesForScore ?? 0))}）
+						</p>
+					) : null}
 					<SkillRadarPanel axes={mainAxes} label={copy.mainRadar} tone="teal" />
+					<div className="rounded-xl border border-border/60 bg-background/40 p-3">
+						<p className="mb-2 text-sm font-medium">{copy.trendTitle}</p>
+						<div className="grid grid-cols-2 gap-2 text-xs md:grid-cols-4">
+							{trendPoints.map((point) => (
+								<div key={point.period} className="rounded-md border border-border/60 bg-card/40 px-2 py-1.5">
+									<p className="text-muted-foreground">{trendLabels[point.period]}</p>
+									<p className="mt-0.5 font-semibold tabular-nums">{fmt2(point.totalScore)}</p>
+								</div>
+							))}
+						</div>
+					</div>
 					<div className="grid gap-3 md:grid-cols-2">
 						{subRadarGroups.map((group, idx) => (
 							<div key={group.id} className="rounded-xl border border-border/60 bg-background/40 p-3">

@@ -7,6 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { registerUserAndSession } from "@/lib/auth/auto-register";
 import { tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { normalizeRegisterBody } from "@/lib/auth/register-payload";
+import { attachRefereeByCode } from "@/lib/referral/service";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -89,6 +90,16 @@ export async function POST(request: NextRequest) {
 			);
 		}
 		return NextResponse.json({ success: false, error: reg.error ?? "注册失败", code: reg.code }, { status });
+	}
+
+	const refCode =
+		raw && typeof raw === "object" && "refCode" in raw ? String((raw as { refCode?: string }).refCode ?? "") : "";
+	if (refCode && reg.userId) {
+		try {
+			await attachRefereeByCode(srv, { code: refCode, refereeId: reg.userId });
+		} catch {
+			// 推荐关系失败不影响注册主流程
+		}
 	}
 
 	return reg.response;

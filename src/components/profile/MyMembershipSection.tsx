@@ -3,9 +3,12 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 type MembershipData = {
 	tier: "T1" | "T2" | "T3";
+	plan?: "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
+	status?: string;
 	trialEndAt: string;
 	trialDaysLeft: number;
 	currentPeriodEnd: string | null;
@@ -26,6 +29,7 @@ export default function MyMembershipSection() {
 	const [membership, setMembership] = useState<MembershipData | null>(null);
 	const [redeemingPlanId, setRedeemingPlanId] = useState("");
 	const [error, setError] = useState("");
+	const [advice, setAdvice] = useState<Array<{ title: string; text: string; courseHint?: string | null }>>([]);
 
 	useEffect(() => {
 		let alive = true;
@@ -46,6 +50,14 @@ export default function MyMembershipSection() {
 					return;
 				}
 				setMembership(json.data);
+				const adviceRes = await fetch("/api/tq/advice", { credentials: "include" });
+				const adviceJson = (await adviceRes.json()) as {
+					success?: boolean;
+					data?: { advice?: Array<{ title: string; text: string; courseHint?: string | null }> };
+				};
+				if (adviceRes.ok && adviceJson.success) {
+					setAdvice(adviceJson.data?.advice ?? []);
+				}
 			} catch {
 				if (!alive) return;
 				setError(t("membershipLoadFailed"));
@@ -112,7 +124,7 @@ export default function MyMembershipSection() {
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<p className="font-semibold">{t("membershipTierLabel")}</p>
 						<span className="bg-cyan-500/15 text-cyan-200 rounded-full px-2 py-0.5 text-xs font-semibold">
-							{membership.tier}
+							{membership.plan ?? membership.tier}
 						</span>
 					</div>
 					<p className="text-muted-foreground">
@@ -128,6 +140,26 @@ export default function MyMembershipSection() {
 							{t("pointsBalance")}：<span className="font-semibold tabular-nums">{membership.pointsBalance}</span>
 						</p>
 						<div className="mt-2 flex flex-wrap gap-2">
+							<Link href="/membership" className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs">
+								升级会员
+							</Link>
+							<Link href="/points" className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs">
+								积分中心
+							</Link>
+							<Link href="/referral" className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs">
+								邀请好友
+							</Link>
+							{(membership.plan === "T2" || membership.plan === "T3") && (
+								<button
+									type="button"
+									onClick={() => window.open("/api/tq/report?format=pdf", "_blank", "noopener,noreferrer")}
+									className="border-border hover:bg-muted rounded-md border px-2 py-1 text-xs"
+								>
+									下载 TQ 深度报告
+								</button>
+							)}
+						</div>
+						<div className="mt-2 flex flex-wrap gap-2">
 							{membership.redeemPlans.map((plan) => (
 								<button
 									key={plan.planId}
@@ -140,6 +172,20 @@ export default function MyMembershipSection() {
 								</button>
 							))}
 						</div>
+						{advice.length > 0 ? (
+							<div className="mt-3 rounded-lg border border-border/60 p-3">
+								<p className="mb-2 text-xs font-semibold">平台建议</p>
+								<ul className="space-y-2 text-xs text-muted-foreground">
+									{advice.slice(0, 3).map((item) => (
+										<li key={item.title}>
+											<p className="text-foreground">{item.title}</p>
+											<p>{item.text}</p>
+											{item.courseHint ? <p>推荐课程：{item.courseHint}</p> : null}
+										</li>
+									))}
+								</ul>
+							</div>
+						) : null}
 					</div>
 				</div>
 			) : null}

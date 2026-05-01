@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { upsertBaseMembership } from "@/lib/membership/manage";
 import { getMembershipSnapshot } from "@/lib/membership/service";
 import type { MembershipCapability, MembershipSnapshot } from "@/lib/membership/types";
+import { canUseSimTrading, canUseTqReport, ensureCurrentMembership } from "@/lib/membership/v2";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export type MembershipGuardOk = { membership: MembershipSnapshot };
@@ -51,6 +52,38 @@ export async function requireMembershipCapability(
 	userId: string,
 	capability: MembershipCapability,
 ): Promise<MembershipGuardOk | NextResponse> {
+	const v2Membership = await ensureCurrentMembership(supabase, userId);
+	if (v2Membership) {
+		const allowed =
+			capability === "sim_trading"
+				? canUseSimTrading(v2Membership)
+				: capability === "tq_report"
+					? canUseTqReport(v2Membership)
+					: capability === "l2_market"
+						? v2Membership.plan === "T3" && v2Membership.status === "active"
+						: v2Membership.plan === "T3" && v2Membership.status === "active";
+		if (!allowed) {
+			if (capability === "sim_trading" && (v2Membership.plan === "T0_trial" || v2Membership.plan === "T0_paid")) {
+				return NextResponse.json(
+					{
+						success: false,
+						error: "试用已结束，请升级会员继续使用模拟交易和TQ评分",
+						code: "TRIAL_EXPIRED",
+					},
+					{ status: 402 },
+				);
+			}
+			return NextResponse.json(
+				{
+					success: false,
+					error: "当前会员级别无此权限",
+					code: "MEMBERSHIP_FORBIDDEN",
+				},
+				{ status: 403 },
+			);
+		}
+	}
+
 	let snapshot = await getMembershipSnapshot(supabase, userId);
 	if (!snapshot) {
 		const srv = getServiceSupabase();
@@ -58,8 +91,13 @@ export async function requireMembershipCapability(
 			try {
 				await upsertBaseMembership(srv, userId);
 				snapshot = await getMembershipSnapshot(supabase, userId);
-			} catch {
-				// 初始化失败时保持原有拒绝行为
+			} catch (error) {
+				console.error("[membership] upsert base failed in guard", {
+					userId,
+					capability,
+					code: "MEMBERSHIP_BOOTSTRAP_FAILED",
+					message: error instanceof Error ? error.message : String(error),
+				});
 			}
 		}
 	}

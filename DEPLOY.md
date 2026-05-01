@@ -165,10 +165,10 @@ npm run deploy:cloudflare
 | 运行期（Worker Var/Secret） | `RESEND_FROM_EMAIL` | 发件人地址 | Cloudflare Worker Variables/Secrets |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP` | 开启后台固定码登录（仅开发/测试建议） | Cloudflare Worker Variables / 本地 `.env` |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION` | 生产环境二次确认固定码（默认不启用） | Cloudflare Worker Variables |
-| 构建期（Next 打包） | `NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS` | 前台显示开发/测试快捷登录入口（kk/william/mark） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `1`） |
-| 构建期（Next 打包） | `NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN` | `/cjkzt/login` 显示「一键登录（测试）」按钮（仍需 Worker 打开固定管理员 OTP） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `1`） |
-| 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS` | 启用 `/api/auth/dev-test-login`（固定测试账号入口） | Worker Variables（不设时 workflow 部署默认 `1`，正式环境请改） |
-| 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION` | 生产环境二次确认 dev 测试账号入口（默认不启用） | Worker Variables（不设时 workflow 部署默认 `1`，正式环境请改） |
+| 构建期（Next 打包） | `NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS` | 前台显示开发/测试快捷登录入口（kk/william/mark） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `0`） |
+| 构建期（Next 打包） | `NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN` | `/cjkzt/login` 显示「一键登录（测试）」按钮（仍需 Worker 打开固定管理员 OTP） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `0`） |
+| 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS` | 启用 `/api/auth/dev-test-login`（固定测试账号入口） | Worker Variables（不设时 workflow 部署默认 `0`） |
+| 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION` | 生产环境二次确认 dev 测试账号入口（默认不启用） | Worker Variables（不设时 workflow 部署默认 `0`） |
 
 ### 6.2 GitHub Actions：推送到 `main` 自动部署 Workers（推荐路径）
 
@@ -180,17 +180,33 @@ npm run deploy:cloudflare
   - Actions Secret：`TQ_CRON_API_KEY`（与 Worker 运行环境变量 `TQ_CRON_API_KEY` 保持一致）。
   - Actions Variable：`TQ_CRON_BASE_URL`（例如 `https://tradelovin.com`）。
   - 接口在服务端会二次判断：仅交易日且香港时间 16:00 后执行；非交易日或 16:00 前会返回 `skipped=true`。
-- **重要**：不带 `--var` 的 `wrangler deploy` 会按本次发布覆盖 Worker 上对应 **vars**；此前仅用本地命令行注入的 `ALLOW_*` / `ENABLE_*` 可能在一次 CI 发布后被清空，表现为**后台固定码 / 前台测试登录「像退回老版本」**。当前工作流在部署步骤会**始终传入**下列变量（未在仓库 Variables 中设置时默认 `1`，偏 staging / `workers.dev`；正式自定义域名上线请在 **Settings → Variables** 中显式设为 `0` 或 `false` 收紧）：
+- **重要**：不带 `--var` 的 `wrangler deploy` 会按本次发布覆盖 Worker 上对应 **vars**；此前仅用本地命令行注入的 `ALLOW_*` / `ENABLE_*` 可能在一次 CI 发布后被清空，表现为**后台固定码 / 前台测试登录「像退回老版本」**。当前工作流在部署步骤会**始终传入**下列变量（未在仓库 Variables 中设置时默认 `0`，安全默认关闭）：
   - `ALLOW_FIXED_ADMIN_OTP`
   - `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION`
   - `ENABLE_DEV_TEST_ACCOUNTS`
   - `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION`
-- **构建期**（未在 Variables 中设置时 workflow 默认 `1`）：`NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS`、`NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN`。
+- **构建期**（未在 Variables 中设置时 workflow 默认 `0`）：`NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS`、`NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN`。
+- **生产门禁**：workflow 新增 `Production safety gate`。若上述 debug 登录相关开关在 `main` 部署时不是 `0/false`，会直接失败；确需临时放开时，可显式设置 `ALLOW_PROD_DEBUG_AUTH=1` 后再部署，并在完成后立即回收。
 - **Pull Request**：只跑构建校验，不部署；合并进 `main` 后由推送触发部署。
 
 > 说明：`quick-register` 已改为默认关闭，需显式设置 `ENABLE_QUICK_REGISTER=1` 才启用。
 > 说明：后台固定码登录（`mark@hkfac.com + 123456`）仅在 `ALLOW_FIXED_ADMIN_OTP=1|true` 时可用；生产环境还需 `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION=1|true`。
-> 说明：前台快捷登录测试账号固定为 `kk / william / mark`（密码 `123456`），仅在 `NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS=1` 且 `ENABLE_DEV_TEST_ACCOUNTS=1` 时可用。
+> 说明：前台快捷登录测试账号固定为 `kk / william / mark`（密码 `123456`），仅在 `NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS=1` 且 `ENABLE_DEV_TEST_ACCOUNTS=1` 时可用；生产环境还需 `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION=1`。
+
+### 6.3 线上数据库治理 SOP（membership / tq）
+
+1. **冻结发布**：出现 `schema cache` / 缺表报错时，先暂停发布与环境变量变更。  
+2. **应用迁移**：在生产项目执行 `supabase db push`，确保 `supabase/migrations` 全量落地。  
+3. **刷新 schema cache**：在 Supabase Dashboard 等待或触发 PostgREST 刷新。  
+4. **结构验收**：确认 `membership_accounts`、`membership_entitlements`、`tq_features`、`tq_scores`、`tq_config` 与相关索引存在。  
+5. **关键 API 冒烟**：最少验证 `/api/membership/me`、`/api/trade/account`、`/api/tq/score`、`/api/tq/import-live`。  
+6. **恢复放量**：全部通过再恢复正常发布；任一失败回到第 2 步，不依赖 fallback 放行。
+
+可用仓库脚本（需要真实 cookie / cron key）：
+
+```bash
+BASE_URL="https://tradelovin.com" USER_COOKIE="<user-cookie>" TQ_CRON_API_KEY="<cron-key>" npm run smoke:api
+```
 
 ---
 

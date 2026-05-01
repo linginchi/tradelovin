@@ -41,6 +41,9 @@ type TqResp = {
 	};
 };
 
+type TqEnv = "sim" | "live";
+type TqCertificate = { pdfUrl: string; issuedAt: string; tier: "T1" | "T2" | "T3" };
+
 function stepToTKey(step: string): CareerStepTKey | null {
 	const map: Record<string, CareerStepTKey> = {
 		resume_screening: "step_resume_screening",
@@ -66,6 +69,8 @@ export function CareerIntentForm() {
 	const [progress, setProgress] = useState<ProgressRow[]>([]);
 	const [hasApplication, setHasApplication] = useState(false);
 	const [tqScore, setTqScore] = useState<TqResp | null>(null);
+	const [tqEnv, setTqEnv] = useState<TqEnv>("sim");
+	const [tqCert, setTqCert] = useState<TqCertificate | null>(null);
 
 	const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormValues>({
 		defaultValues: {
@@ -101,7 +106,7 @@ export function CareerIntentForm() {
 				setHasApplication(true);
 				setProgress(js.progress ?? []);
 			}
-			const tqRes = await fetch("/api/tq/score?env=sim&period=all", { credentials: "include" });
+			const tqRes = await fetch(`/api/tq/score?env=${tqEnv}&period=all`, { credentials: "include" });
 			const tqJson = (await tqRes.json()) as {
 				success?: boolean;
 				data?: { totalScore: number; dimensions: TqResp["dimensions"] };
@@ -112,13 +117,18 @@ export function CareerIntentForm() {
 					dimensions: tqJson.data.dimensions,
 				});
 			}
+			const certRes = await fetch(`/api/tq/certificates?env=${tqEnv}&period=all`, { credentials: "include" });
+			const certJson = (await certRes.json()) as { success?: boolean; data?: TqCertificate | null };
+			if (alive && certRes.ok && certJson.success) {
+				setTqCert(certJson.data ?? null);
+			}
 			if (alive) setReady(true);
 		}
 		void run();
 		return () => {
 			alive = false;
 		};
-	}, [router]);
+	}, [router, tqEnv]);
 
 	const onSubmit = async (values: FormValues) => {
 		const res = await fetch("/api/job/apply", {
@@ -160,13 +170,33 @@ export function CareerIntentForm() {
 		<>
 			<div className="mx-auto w-full max-w-lg space-y-8">
 				<section className="border-border/80 bg-card/40 rounded-xl border p-6 backdrop-blur-md">
-					<p className="text-muted-foreground text-xs uppercase tracking-wide">TradeQuotient</p>
+					<div className="flex items-start justify-between gap-3">
+						<p className="text-muted-foreground text-xs uppercase tracking-wide">TradeQuotient</p>
+						<select
+							value={tqEnv}
+							onChange={(e) => setTqEnv(e.target.value === "live" ? "live" : "sim")}
+							className="bg-background border-border rounded-md border px-2 py-1 text-xs"
+						>
+							<option value="sim">模拟</option>
+							<option value="live">实盘</option>
+						</select>
+					</div>
 					<p className="mt-1 text-2xl font-semibold">{tqScore ? tqScore.totalScore.toFixed(2) : "暂无评分"}</p>
 					<p className="text-muted-foreground mt-1 text-xs">
 						{tqScore
 							? `盈利 ${tqScore.dimensions.profitability.toFixed(1)} · 风控 ${tqScore.dimensions.riskControl.toFixed(1)} · 一致性 ${tqScore.dimensions.consistency.toFixed(1)} · 活跃 ${tqScore.dimensions.activeness.toFixed(1)}`
 							: "该分数将用于求职推荐与晋级筛选。"}
 					</p>
+					{tqCert ? (
+						<a
+							href={tqCert.pdfUrl}
+							target="_blank"
+							rel="noreferrer"
+							className="mt-2 inline-flex rounded-md border border-border/60 px-2.5 py-1 text-xs text-cyan-300"
+						>
+							下载最新 TQ 证书（{tqCert.tier}）
+						</a>
+					) : null}
 				</section>
 				{hasApplication && progress.length > 0 ? (
 					<section className="border-border/80 bg-card/40 rounded-xl border p-6 backdrop-blur-md">

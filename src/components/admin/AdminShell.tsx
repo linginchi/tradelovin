@@ -8,17 +8,20 @@ import {
 	BookOpen,
 	Briefcase,
 	ClipboardList,
+	Crown,
 	LayoutDashboard,
 	LineChart,
 	LogOut,
 	Mail,
 	Menu,
+	Percent,
 	Shield,
 	Sparkles,
 	UserCircle,
 	UserPlus,
 	UserRoundPlus,
 	Users,
+	WalletCards,
 } from "lucide-react";
 
 import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
@@ -66,6 +69,10 @@ export function AdminShell({ role, email, children }: Props) {
 		{ href: `${ADMIN_BASE_PATH}/tq`, label: "TQ 评分", icon: LineChart },
 		{ href: `${ADMIN_BASE_PATH}/instructors`, label: t("navInstructors"), icon: UserCircle },
 		{ href: `${ADMIN_BASE_PATH}/fees`, label: t("navFees"), icon: Mail },
+		{ href: `${ADMIN_BASE_PATH}/membership`, label: "会员管理", icon: Crown },
+		{ href: `${ADMIN_BASE_PATH}/points`, label: "积分管理", icon: WalletCards },
+		{ href: `${ADMIN_BASE_PATH}/referrals`, label: "推荐统计", icon: Percent },
+		{ href: `${ADMIN_BASE_PATH}/billing`, label: "支付记录", icon: Mail },
 	);
 
 	if (role === "super_admin") {

@@ -4,26 +4,18 @@ import { getAdminSession } from "@/lib/auth/admin-session";
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { ensureTqCalculated } from "@/lib/tq/engine";
-import { type TqEnvironment, type TqPeriod } from "@/lib/tq/constants";
+import { readTqEnv, readTqPeriod } from "@/lib/tq/request";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
 export const runtime = "nodejs";
-
-function readEnv(v: string | null): TqEnvironment {
-	return v === "live" ? "live" : "sim";
-}
-
-function readPeriod(v: string | null): TqPeriod {
-	return v === "daily" || v === "weekly" || v === "monthly" ? v : "all";
-}
 
 export async function GET(request: Request) {
 	const auth = await requireTradeUser();
 	if (auth instanceof NextResponse) return auth;
 
 	const url = new URL(request.url);
-	const env = readEnv(url.searchParams.get("env"));
-	const period = readPeriod(url.searchParams.get("period"));
+	const env = readTqEnv(url.searchParams.get("env"));
+	const period = readTqPeriod(url.searchParams.get("period"));
 	const requestedUserId = url.searchParams.get("userId");
 	let targetUserId = auth.userId;
 

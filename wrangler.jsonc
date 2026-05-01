@@ -11,6 +11,8 @@
 	},
 	"vars": {
 		"TQ_CRON_TIMEZONE": "Asia/Hong_Kong",
-		"TQ_CRON_TARGET_HOUR": "16"
+		"TQ_CRON_TARGET_HOUR": "16",
+		"ENABLE_DEV_TEST_ACCOUNTS": "1",
+		"ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION": "1"
 	}
 }

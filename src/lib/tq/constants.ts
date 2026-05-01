@@ -27,6 +27,18 @@ export type TqFeatureName =
 	| "TradeCount"
 	| "ActiveRatio";
 
+export const TQ_PERIOD_WINDOW_DAYS: Record<TqPeriod, number | null> = {
+	all: null,
+	monthly: 30,
+	weekly: 7,
+	daily: 1,
+};
+
+export const TQ_MIN_TRADES_FOR_SCORE: Record<TqEnvironment, number> = {
+	sim: 10,
+	live: 20,
+};
+
 export const TQ_FEATURES: TqFeatureName[] = [
 	"AllTimePnl",
 	"AvgDailyPnl",

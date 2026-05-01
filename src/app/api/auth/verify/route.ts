@@ -5,6 +5,7 @@ import { verifyOtp } from "@/lib/auth/admin-otp";
 import { registerUserAndSession, signInExistingUserWithFreshPassword } from "@/lib/auth/auto-register";
 import { getTradeUserIdByEmail, tradeUserExistsForEmail } from "@/lib/auth/profile-resolve";
 import { normalizeRegisterBody, type RegisterPayload } from "@/lib/auth/register-payload";
+import { attachRefereeByCode } from "@/lib/referral/service";
 import { checkRateLimit, clientIpFromHeaders } from "@/lib/security/rate-limit";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -147,6 +148,18 @@ export async function POST(request: NextRequest) {
 				);
 			}
 			return NextResponse.json({ success: false, error: "注册失败，请稍后再试", code: reg.code }, { status });
+		}
+
+		const refCode =
+			raw && typeof raw === "object" && "refCode" in raw
+				? String((raw as { refCode?: string }).refCode ?? "")
+				: "";
+		if (refCode && reg.userId) {
+			try {
+				await attachRefereeByCode(srv, { code: refCode, refereeId: reg.userId });
+			} catch {
+				// 推荐关系失败不影响注册主流程
+			}
 		}
 
 		return reg.response;

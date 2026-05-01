@@ -1,7 +1,9 @@
-import { redirect } from "next/navigation";
+import { AdminGrowthPanel } from "@/components/admin/AdminGrowthPanel";
 
-import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
-
-export default function CjkztBillingRedirectPage() {
-	redirect(`${ADMIN_BASE_PATH}/fees`);
+export default function CjkztBillingPage() {
+	return (
+		<main className="space-y-6">
+			<AdminGrowthPanel />
+		</main>
+	);
 }

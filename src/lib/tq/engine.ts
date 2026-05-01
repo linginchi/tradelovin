@@ -5,7 +5,9 @@ import {
 	DEFAULT_FEATURE_WEIGHTS,
 	FEATURE_DIRECTION,
 	TQ_DIMENSIONS,
+	TQ_MIN_TRADES_FOR_SCORE,
 	TQ_FEATURES,
+	TQ_PERIOD_WINDOW_DAYS,
 	type TqDimension,
 	type TqEnvironment,
 	type TqFeatureName,
@@ -73,6 +75,28 @@ function quantile(sorted: number[], q: number): number {
 	const left = sorted[base] ?? sorted[0] ?? 0;
 	const right = sorted[base + 1] ?? left;
 	return left + rest * (right - left);
+}
+
+function periodWindowStart(period: TqPeriod, endDate: Date): Date | null {
+	const windowDays = TQ_PERIOD_WINDOW_DAYS[period];
+	if (!windowDays) return null;
+	const start = new Date(endDate);
+	start.setUTCDate(start.getUTCDate() - (windowDays - 1));
+	start.setUTCHours(0, 0, 0, 0);
+	return start;
+}
+
+function filterRowsByPeriod(rows: TradeRow[], period: TqPeriod): TradeRow[] {
+	if (period === "all") return rows;
+	if (!rows.length) return rows;
+	const endDate = new Date(rows[rows.length - 1]?.trade_time ?? Date.now());
+	if (Number.isNaN(endDate.getTime())) return rows;
+	const start = periodWindowStart(period, endDate);
+	if (!start) return rows;
+	return rows.filter((row) => {
+		const t = new Date(row.trade_time);
+		return !Number.isNaN(t.getTime()) && t >= start && t <= endDate;
+	});
 }
 
 function longestWinningStreak(dayPnlEntries: Array<[string, number]>): number {
@@ -237,7 +261,10 @@ function weightedAverage(scores: Record<TqFeatureName, number>, weights: Record<
 }
 
 async function loadConfig(srv: SupabaseClient): Promise<ConfigShape> {
-	const { data } = await srv.from("tq_config").select("key,value");
+	const { data, error } = await srv.from("tq_config").select("key,value");
+	if (error) {
+		throw new Error(`读取TQ配置失败: ${error.message}`);
+	}
 	const featureWeights =
 		(data ?? []).find((x) => x.key === "feature_weights")?.value ?? DEFAULT_FEATURE_WEIGHTS;
 	const dimensionWeights =
@@ -269,18 +296,28 @@ async function writeUserResult(srv: SupabaseClient, result: TqUserResult): Promi
 		calc_time: calcTime,
 	}));
 
-	await srv
+	const { error: featureErr } = await srv
 		.from("tq_features")
 		.upsert(featureRows, { onConflict: "user_id,period,environment,feature_name" });
-	await srv.from("tq_scores").upsert(scoreRows, { onConflict: "user_id,period,environment,dimension" });
+	if (featureErr) {
+		throw new Error(`写入TQ特征失败: ${featureErr.message}`);
+	}
+
+	const { error: scoreErr } = await srv
+		.from("tq_scores")
+		.upsert(scoreRows, { onConflict: "user_id,period,environment,dimension" });
+	if (scoreErr) {
+		throw new Error(`写入TQ分数失败: ${scoreErr.message}`);
+	}
 }
 
 export async function recalculateTqAllUsers(
 	srv: SupabaseClient,
-	params: { environment?: TqEnvironment; period?: TqPeriod } = {},
+	params: { environment?: TqEnvironment; period?: TqPeriod; userIds?: string[] } = {},
 ): Promise<{ users: TqUserResult[]; baselineUserIds: string[] }> {
 	const environment = params.environment ?? "sim";
 	const period = params.period ?? "all";
+	const minTradesForScore = TQ_MIN_TRADES_FOR_SCORE[environment];
 
 	const { data: rawTrades, error } = await srv
 		.from("sim_trades")
@@ -300,11 +337,17 @@ export async function recalculateTqAllUsers(
 		grouped.set(row.user_id, list);
 	}
 
-	const userBase = [...grouped.entries()].map(([userId, rows]) => {
-		const featureResult = computeUserFeatures(rows);
+	const targetUserSet = new Set((params.userIds ?? []).filter(Boolean));
+	const groupedEntries = targetUserSet.size
+		? [...grouped.entries()].filter(([userId]) => targetUserSet.has(userId))
+		: [...grouped.entries()];
+
+	const userBase = groupedEntries.map(([userId, rows]) => {
+		const filteredRows = filterRowsByPeriod(rows, period);
+		const featureResult = computeUserFeatures(filteredRows);
 		return {
 			userId,
-			rows,
+			rows: filteredRows,
 			features: featureResult.features,
 			tradeCount: featureResult.tradeCount,
 			tradeDays: featureResult.tradeDays,
@@ -324,7 +367,7 @@ export async function recalculateTqAllUsers(
 		? [...explicitBaselineIds].filter((id) => grouped.has(id))
 		: autoBaseline.length
 			? autoBaseline
-			: userBase.filter((u) => u.tradeCount >= 10).map((u) => u.userId);
+			: userBase.filter((u) => u.tradeCount >= minTradesForScore).map((u) => u.userId);
 
 	const baselineSet = new Set(baselineIds);
 	const baselineDistributions = Object.fromEntries(
@@ -338,7 +381,7 @@ export async function recalculateTqAllUsers(
 	const userResults: TqUserResult[] = [];
 
 	for (const u of userBase) {
-		const coldStart = u.tradeCount < 10;
+		const coldStart = u.tradeCount < minTradesForScore;
 		const normalized = zeroFeatures();
 		if (!coldStart) {
 			for (const feature of TQ_FEATURES) {
@@ -372,7 +415,7 @@ export async function recalculateTqAllUsers(
 	}
 
 	for (const result of userResults) {
-		if (result.tradeCount < 10) {
+		if (result.tradeCount < minTradesForScore) {
 			result.totalScore = 0;
 			result.normalized = zeroFeatures();
 			result.dimensions = {
@@ -393,16 +436,33 @@ export async function ensureTqCalculated(
 ): Promise<void> {
 	const environment = params.environment ?? "sim";
 	const period = params.period ?? "all";
+	const staleHours = Number(process.env.TQ_SCORE_STALE_HOURS ?? 24);
+	const staleMs = Number.isFinite(staleHours) && staleHours > 0 ? staleHours * 3600_000 : 24 * 3600_000;
 	const { data, error } = await srv
+		.from("tq_scores")
+		.select("user_id,calc_time")
+		.eq("user_id", params.userId)
+		.eq("environment", environment)
+		.eq("period", period)
+		.order("calc_time", { ascending: false })
+		.limit(1);
+	if (error) throw new Error(`读取TQ失败: ${error.message}`);
+	const row = (data ?? [])[0];
+	const calcTimeMs = row?.calc_time ? new Date(String(row.calc_time)).getTime() : 0;
+	const isFresh = calcTimeMs > 0 && Date.now() - calcTimeMs <= staleMs;
+	if (isFresh) return;
+	await recalculateTqAllUsers(srv, { environment, period, userIds: [params.userId] });
+	const { data: verifyRows, error: verifyErr } = await srv
 		.from("tq_scores")
 		.select("user_id")
 		.eq("user_id", params.userId)
 		.eq("environment", environment)
 		.eq("period", period)
 		.limit(1);
-	if (error) throw new Error(`读取TQ失败: ${error.message}`);
-	if ((data ?? []).length > 0) return;
-	await recalculateTqAllUsers(srv, { environment, period });
+	if (verifyErr) throw new Error(`校验TQ写入失败: ${verifyErr.message}`);
+	if ((verifyRows ?? []).length === 0) {
+		throw new Error("TQ重算后未找到用户分数记录");
+	}
 }
 
 export async function getTqConfig(srv: SupabaseClient): Promise<ConfigShape> {

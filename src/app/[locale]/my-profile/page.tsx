@@ -92,6 +92,15 @@ export default async function MyProfilePage({ params }: Props) {
 						>
 							{t("myCoursesLink")}
 						</Link>
+						<Link href="/membership" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+							会员中心
+						</Link>
+						<Link href="/points" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+							积分中心
+						</Link>
+						<Link href="/referral" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+							邀请好友
+						</Link>
 					</div>
 				</header>
 

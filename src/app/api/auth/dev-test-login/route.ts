@@ -22,9 +22,38 @@ const DEV_TEST_ACCOUNT_EMAIL: Record<"kk" | "william" | "mark", string> = {
 	mark: "mark@hkfac.com",
 };
 
+function parseFlag(raw: string | undefined): { defined: boolean; enabled: boolean } {
+	const val = String(raw ?? "").trim().toLowerCase();
+	if (!val) return { defined: false, enabled: false };
+	if (val === "1" || val === "true") return { defined: true, enabled: true };
+	if (val === "0" || val === "false") return { defined: true, enabled: false };
+	return { defined: false, enabled: false };
+}
+
 function isDevTestLoginEnabled(): boolean {
-	// 热修：恢复生产可用，避免线上无法使用测试快捷登录。
-	return true;
+	const runtimeToggle = parseFlag(process.env.ENABLE_DEV_TEST_ACCOUNTS);
+	const runtimeProdToggle = parseFlag(process.env.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION);
+	const publicToggle = parseFlag(process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS);
+
+	if (process.env.NODE_ENV !== "production") {
+		if (runtimeToggle.defined) return runtimeToggle.enabled;
+		return publicToggle.defined ? publicToggle.enabled : true;
+	}
+
+	// 生产环境优先使用运行时开关；若未配置则回退到 NEXT_PUBLIC 开关，避免 UI/接口状态不一致。
+	if (runtimeToggle.defined) {
+		if (!runtimeToggle.enabled) return false;
+		if (runtimeProdToggle.defined) return runtimeProdToggle.enabled;
+		return publicToggle.enabled;
+	}
+	return publicToggle.enabled;
+}
+
+export async function GET() {
+	return NextResponse.json({
+		success: true,
+		enabled: isDevTestLoginEnabled(),
+	});
 }
 
 function buildRegisterPayload(account: "kk" | "william" | "mark", email: string): RegisterPayload {

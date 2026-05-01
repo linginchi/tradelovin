@@ -5,6 +5,7 @@ import { Loader2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useForm, type UseFormRegister } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { toast, Toaster } from "sonner";
 import { z } from "zod";
 
@@ -41,6 +42,7 @@ type FormValues = Omit<RegistrationFormValues, never>;
 export function RegisterQuickForm() {
 	const router = useRouter();
 	const locale = useLocale();
+	const searchParams = useSearchParams();
 	const tWizard = useTranslations("RegisterGate1");
 	const t = useTranslations("Registration");
 	const tExp = useTranslations("Registration.experience");
@@ -119,7 +121,10 @@ export function RegisterQuickForm() {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			credentials: "include",
-			body: JSON.stringify(normalized.payload),
+			body: JSON.stringify({
+				...normalized.payload,
+				refCode: searchParams.get("ref") ?? undefined,
+			}),
 		});
 		const js = (await res.json()) as {
 			success?: boolean;

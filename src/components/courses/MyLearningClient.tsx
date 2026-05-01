@@ -45,6 +45,11 @@ type ApiScoreItem = {
 type TqScore = {
 	totalScore: number;
 	calcTime?: string;
+	meta?: {
+		tradeCount?: number;
+		minTradesForScore?: number;
+		eligible?: boolean;
+	};
 	dimensions: {
 		profitability: number;
 		riskControl: number;
@@ -53,11 +58,28 @@ type TqScore = {
 	};
 };
 
+type TqPeriod = "all" | "monthly" | "weekly" | "daily";
+
 type TqFeatureItem = {
 	featureName: string;
 	rawValue: number;
 	normScore: number;
 	calcTime?: string;
+};
+
+type RadarGroupPayload = {
+	id: string;
+	label: string;
+	axes: Array<{ id: string; label: string; score: number }>;
+};
+
+type TqCertificate = {
+	id: number;
+	tier: "T1" | "T2" | "T3";
+	issuedAt: string;
+	pdfUrl: string;
+	imageUrl: string;
+	templateVersion: string;
 };
 
 function formatSchedule(start: string | null, end: string | null, locale: string): string {
@@ -99,8 +121,13 @@ export default function MyLearningClient() {
 	const [rows, setRows] = useState<RegRow[] | null>(null);
 	const [scoreMap, setScoreMap] = useState<Map<string, ApiScoreItem>>(() => new Map());
 	const [tqEnv, setTqEnv] = useState<"sim" | "live">("sim");
+	const [tqPeriod, setTqPeriod] = useState<TqPeriod>("all");
 	const [tq, setTq] = useState<TqScore | null>(null);
 	const [tqFeatures, setTqFeatures] = useState<TqFeatureItem[]>([]);
+	const [tqRadarGroups, setTqRadarGroups] = useState<RadarGroupPayload[]>([]);
+	const [tqTrend, setTqTrend] = useState<Array<{ period: TqPeriod; totalScore: number }>>([]);
+	const [tqCertificate, setTqCertificate] = useState<TqCertificate | null>(null);
+	const [certBusy, setCertBusy] = useState(false);
 	const [tqLoading, setTqLoading] = useState(false);
 	const [err, setErr] = useState<string | null>(null);
 
@@ -154,15 +181,24 @@ export default function MyLearningClient() {
 		async function loadTq() {
 			setTqLoading(true);
 			try {
-				const [scoreRes, featureRes] = await Promise.all([
-					fetch(`/api/tq/score?env=${tqEnv}&period=all`, { credentials: "include" }),
-					fetch(`/api/tq/features?env=${tqEnv}&period=all`, { credentials: "include" }),
+				const [scoreRes, featureRes, radarRes, certRes] = await Promise.all([
+					fetch(`/api/tq/score?env=${tqEnv}&period=${tqPeriod}`, { credentials: "include" }),
+					fetch(`/api/tq/features?env=${tqEnv}&period=${tqPeriod}`, { credentials: "include" }),
+					fetch(`/api/tq/radar?env=${tqEnv}&period=${tqPeriod}`, { credentials: "include" }),
+					fetch(`/api/tq/certificates?env=${tqEnv}&period=${tqPeriod}`, { credentials: "include" }),
 				]);
+				const trendPeriods: TqPeriod[] = ["all", "monthly", "weekly", "daily"];
+				const trendResponses = await Promise.all(
+					trendPeriods.map((period) =>
+						fetch(`/api/tq/score?env=${tqEnv}&period=${period}`, { credentials: "include" }),
+					),
+				);
 				const scoreJson = (await scoreRes.json()) as {
 					success?: boolean;
 					data?: {
 						totalScore: number;
 						calcTime?: string;
+						meta?: TqScore["meta"];
 						dimensions: {
 							profitability: number;
 							riskControl: number;
@@ -175,18 +211,48 @@ export default function MyLearningClient() {
 					success?: boolean;
 					data?: TqFeatureItem[];
 				};
+				const radarJson = (await radarRes.json()) as {
+					success?: boolean;
+					data?: { radar?: { groups?: RadarGroupPayload[] } };
+				};
+				const certJson = (await certRes.json()) as { success?: boolean; data?: TqCertificate | null };
 				if (!alive) return;
 				if (!scoreRes.ok || !scoreJson.success || !scoreJson.data) {
 					setTq(null);
 					setTqFeatures([]);
+					setTqRadarGroups([]);
+					setTqTrend([]);
 					return;
 				}
+				const trendJsons = await Promise.all(
+					trendResponses.map(
+						async (res) =>
+							(await res.json()) as {
+								success?: boolean;
+								data?: { totalScore?: number };
+							},
+					),
+				);
 				setTq({
 					totalScore: scoreJson.data.totalScore ?? 0,
 					calcTime: scoreJson.data.calcTime,
+					meta: scoreJson.data.meta,
 					dimensions: scoreJson.data.dimensions,
 				});
 				setTqFeatures(featureRes.ok && featureJson.success ? (featureJson.data ?? []) : []);
+				setTqRadarGroups(
+					radarRes.ok && radarJson.success ? (radarJson.data?.radar?.groups ?? []) : [],
+				);
+				setTqCertificate(certRes.ok && certJson.success ? (certJson.data ?? null) : null);
+				setTqTrend(
+					trendPeriods.map((period, idx) => ({
+						period,
+						totalScore:
+							trendResponses[idx]?.ok && trendJsons[idx]?.success
+								? Number(trendJsons[idx]?.data?.totalScore ?? 0)
+								: 0,
+					})),
+				);
 			} finally {
 				if (alive) setTqLoading(false);
 			}
@@ -195,7 +261,27 @@ export default function MyLearningClient() {
 		return () => {
 			alive = false;
 		};
-	}, [tqEnv]);
+	}, [tqEnv, tqPeriod]);
+
+	async function issueCertificate() {
+		try {
+			setCertBusy(true);
+			const res = await fetch("/api/tq/certificates", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ env: tqEnv, period: tqPeriod }),
+			});
+			const json = (await res.json()) as { success?: boolean; error?: string; data?: TqCertificate };
+			if (!res.ok || !json.success || !json.data) {
+				setErr(json.error ?? "证书生成失败");
+				return;
+			}
+			setTqCertificate(json.data);
+		} finally {
+			setCertBusy(false);
+		}
+	}
 
 	if (rows === null && !err) {
 		return (
@@ -306,11 +392,50 @@ export default function MyLearningClient() {
 					locale={locale}
 					tqEnv={tqEnv}
 					onEnvChange={setTqEnv}
+					tqPeriod={tqPeriod}
+					onPeriodChange={setTqPeriod}
 					loading={tqLoading}
 					tq={tq}
 					tqFeatures={tqFeatures}
+					radarGroups={tqRadarGroups}
+					trendPoints={tqTrend}
 					updateHint={t("tqUpdateCadence")}
 				/>
+				<div className="border-border/60 bg-card/35 rounded-xl border p-3 text-sm">
+					<div className="flex flex-wrap items-center gap-2">
+						<button
+							type="button"
+							onClick={() => void issueCertificate()}
+							disabled={certBusy}
+							className="rounded-md border border-cyan-400/40 bg-cyan-500/10 px-3 py-1.5 text-cyan-200 disabled:opacity-60"
+						>
+							{certBusy ? "生成中..." : "生成 TQ 评价证书"}
+						</button>
+						{tqCertificate ? (
+							<>
+								<a
+									href={tqCertificate.pdfUrl}
+									target="_blank"
+									rel="noreferrer"
+									className="rounded-md border border-border/70 px-3 py-1.5 text-cyan-300"
+								>
+									下载 PDF
+								</a>
+								<a
+									href={tqCertificate.imageUrl}
+									target="_blank"
+									rel="noreferrer"
+									className="rounded-md border border-border/70 px-3 py-1.5 text-cyan-300"
+								>
+									下载图片
+								</a>
+								<span className="text-muted-foreground text-xs">
+									{tqCertificate.tier} · {new Date(tqCertificate.issuedAt).toLocaleString("zh-CN", { hour12: false })}
+								</span>
+							</>
+						) : null}
+					</div>
+				</div>
 			</section>
 
 			<section className="space-y-3">

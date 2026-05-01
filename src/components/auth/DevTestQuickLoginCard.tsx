@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast, Toaster } from "sonner";
 
@@ -27,13 +27,29 @@ export function DevTestQuickLoginCard({
 	const locale = useLocale();
 	const t = useTranslations("OtpLogin");
 	const [busy, setBusy] = useState(false);
+	const [runtimeEnabled, setRuntimeEnabled] = useState(true);
 	const [account, setAccount] = useState<DevTestAccount>("kk");
 	const [password, setPassword] = useState("");
 
-	// 热修：恢复线上可见，避免登录页缺少快捷登录入口。
-	const enabled = true;
+	const raw = String(process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS ?? "").trim().toLowerCase();
+	const explicitlyEnabled = raw === "1" || raw === "true";
+	const explicitlyDisabled = raw === "0" || raw === "false";
+	const enabled =
+		process.env.NODE_ENV !== "production" ? explicitlyEnabled || !explicitlyDisabled : explicitlyEnabled;
 
-	if (!enabled) return null;
+	useEffect(() => {
+		void (async () => {
+			try {
+				const res = await fetch("/api/auth/dev-test-login", { method: "GET" });
+				const js = (await res.json()) as { enabled?: boolean };
+				setRuntimeEnabled(Boolean(js.enabled));
+			} catch {
+				setRuntimeEnabled(false);
+			}
+		})();
+	}, []);
+
+	if (!enabled || !runtimeEnabled) return null;
 
 	const onQuickLogin = async () => {
 		if (!password.trim()) {
@@ -47,9 +63,12 @@ export function DevTestQuickLoginCard({
 			credentials: "include",
 			body: JSON.stringify({ account, password }),
 		});
-		const js = (await res.json()) as { success?: boolean; error?: string; errorEn?: string };
+		const js = (await res.json()) as { success?: boolean; error?: string; errorEn?: string; code?: string };
 		setBusy(false);
 		if (!res.ok || !js.success) {
+			if (js.code === "DEV_TEST_LOGIN_DISABLED") {
+				setRuntimeEnabled(false);
+			}
 			const errMsg =
 				locale === "en"
 					? (js.errorEn ?? js.error ?? t("verifyFailed"))
