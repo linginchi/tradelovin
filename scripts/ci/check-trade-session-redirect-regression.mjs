@@ -23,20 +23,24 @@ function main() {
 		process.exit(1);
 	}
 
-	const badLine = text.split(/\n/).find((line) => mentionsRouterNavigate(line) && line.includes("my-learning"));
+	const badLine = text
+		.split(/\n/)
+		.find(
+			(line) =>
+				mentionsRouterNavigate(line) &&
+				(line.includes("my-learning") || line.includes("/membership?from=trade")),
+		);
 	if (badLine) {
 		console.error(
 			`Regression guard FAILED: TradePageClient must not router.replace/push to my-learning (${badLine.trim()}).`,
 		);
-		console.error(
-			"Use buildSimTradingDeniedRedirectHref() from src/lib/trade/sim-trading-denied-redirect.ts for sim trading denials.",
-		);
+		console.error("Trade guard should keep user on /trade and show banner, not force-route to another page.");
 		process.exit(1);
 	}
 
-	if (!text.includes("buildSimTradingDeniedRedirectHref")) {
+	if (!text.includes("setSimTradingDeniedReason(")) {
 		console.error(
-			"Regression guard FAILED: TradePageClient should import buildSimTradingDeniedRedirectHref for TRIAL_EXPIRED / MEMBERSHIP_FORBIDDEN handling.",
+			"Regression guard FAILED: TradePageClient should set in-page denial state for TRIAL_EXPIRED / MEMBERSHIP_FORBIDDEN handling.",
 		);
 		process.exit(1);
 	}

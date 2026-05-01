@@ -36,7 +36,6 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
 import { mapUserSymbolToSina } from "@/lib/trade/symbol-mapping";
-import { buildSimTradingDeniedRedirectHref } from "@/lib/trade/sim-trading-denied-redirect";
 import { cn } from "@/lib/utils";
 
 type AccountResp = {
@@ -118,6 +117,8 @@ type CurrentMembership = {
 	trialDaysLeft?: number;
 };
 
+type SimTradingDeniedReason = "TRIAL_EXPIRED" | "MEMBERSHIP_FORBIDDEN";
+
 function fmtMoney(n: number) {
 	const v = Math.round((Number.isFinite(n) ? n : 0) * 100) / 100;
 	return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -166,6 +167,7 @@ export function TradePageClient() {
 	const [challenges, setChallenges] = useState<ChallengeResp[]>([]);
 	const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
 	const [membershipHint, setMembershipHint] = useState<CurrentMembership | null>(null);
+	const [simTradingDeniedReason, setSimTradingDeniedReason] = useState<SimTradingDeniedReason | null>(null);
 
 	const loadAccount = useCallback(async () => {
 		const res = await fetch("/api/trade/account", { credentials: "include" });
@@ -257,7 +259,9 @@ export function TradePageClient() {
 					return;
 				}
 				if (json.code === "TRIAL_EXPIRED" || json.code === "MEMBERSHIP_FORBIDDEN") {
-					router.replace(buildSimTradingDeniedRedirectHref(json.code));
+					setSimTradingDeniedReason(json.code);
+					setBootLoading(false);
+					setSessionReady(true);
 					return;
 				}
 				router.replace("/register");
@@ -274,12 +278,12 @@ export function TradePageClient() {
 	}, [router, t]);
 
 	useEffect(() => {
-		if (!sessionReady) return;
+		if (!sessionReady || simTradingDeniedReason) return;
 		const timer = window.setTimeout(() => {
 			void loadInitial();
 		}, 0);
 		return () => window.clearTimeout(timer);
-	}, [sessionReady, loadInitial]);
+	}, [sessionReady, simTradingDeniedReason, loadInitial]);
 
 	useEffect(() => {
 		if (!sessionReady) return;
@@ -298,12 +302,12 @@ export function TradePageClient() {
 	}, [sessionReady]);
 
 	useEffect(() => {
-		if (!sessionReady) return;
+		if (!sessionReady || simTradingDeniedReason) return;
 		const timer = window.setInterval(() => {
 			void loadMarketData().catch(() => {});
 		}, 5000);
 		return () => window.clearInterval(timer);
-	}, [sessionReady, loadMarketData]);
+	}, [sessionReady, simTradingDeniedReason, loadMarketData]);
 
 	const positionsMarketValue = useMemo(() => {
 		if (!account) return 0;
@@ -382,6 +386,10 @@ export function TradePageClient() {
 	}, [loadAccount, loadMarketData, loadTrainingData]);
 
 	const submitOrder = async (side: "buy" | "sell") => {
+		if (simTradingDeniedReason) {
+			toast.error("当前账户不满足模拟交易权限，请先完成会员升级");
+			return;
+		}
 		const vals = validateInputs();
 		if (!vals) return;
 
@@ -511,6 +519,14 @@ export function TradePageClient() {
 						<h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
 						<p className="text-muted-foreground text-sm">{t("subtitle")}</p>
 					</header>
+					{simTradingDeniedReason ? (
+						<div className="rounded-xl border border-rose-400/40 bg-rose-400/10 p-3 text-sm text-rose-100">
+							当前账户暂不可下单。每位用户均有 14 天试用期；若你认为仍在试用期内，请联系管理员核验会员状态。
+							<Link href="/membership" className="ml-2 underline underline-offset-2">
+								查看会员状态
+							</Link>
+						</div>
+					) : null}
 					{membershipHint?.plan === "T0_trial" ? (
 						<div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-100">
 							试用期还剩 {membershipHint.trialDaysLeft ?? 0} 天，升级会员可持续使用模拟交易和 TQ 评分。
