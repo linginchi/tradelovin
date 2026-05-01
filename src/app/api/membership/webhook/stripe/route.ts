@@ -48,12 +48,15 @@ async function savePayment(
 ): Promise<void> {
   const srv = getServiceSupabase();
   if (!srv) return;
+  const firstLine = invoice.lines.data[0] as Stripe.InvoiceLineItem & {
+    price?: Stripe.Price | null;
+  };
   await srv.from("payments").upsert(
     {
       user_id: userId,
       amount: invoice.amount_paid ? invoice.amount_paid / 100 : invoice.amount_due / 100,
       currency: (invoice.currency ?? "cny").toUpperCase(),
-      plan: invoice.lines.data[0]?.price?.nickname ?? null,
+      plan: firstLine?.price?.nickname ?? null,
       payment_method: "stripe",
       transaction_id: invoice.id,
       status,
