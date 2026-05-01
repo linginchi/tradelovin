@@ -202,8 +202,12 @@ export async function GET(request: Request) {
     featureMap,
     advice,
   });
+  const pdfBuffer = pdfBytes.buffer.slice(
+    pdfBytes.byteOffset,
+    pdfBytes.byteOffset + pdfBytes.byteLength,
+  ) as ArrayBuffer;
 
-  return new NextResponse(pdfBytes, {
+  return new NextResponse(pdfBuffer, {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",

@@ -3,7 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 
 type Membership = {
@@ -181,12 +181,12 @@ export function MembershipCenterClient() {
           <Button variant="outline" disabled={submitting} onClick={() => void cancelSubscription()}>
             取消订阅
           </Button>
-          <Button asChild variant="secondary">
-            <Link href="/points">积分中心</Link>
-          </Button>
-          <Button asChild variant="secondary">
-            <Link href="/referral">邀请好友</Link>
-          </Button>
+          <Link href="/points" className={buttonVariants({ variant: "secondary" })}>
+            积分中心
+          </Link>
+          <Link href="/referral" className={buttonVariants({ variant: "secondary" })}>
+            邀请好友
+          </Link>
         </div>
       </section>
 

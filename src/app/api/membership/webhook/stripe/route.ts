@@ -41,6 +41,14 @@ async function finalizeWebhook(eventId: string): Promise<void> {
     .eq("event_id", eventId);
 }
 
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  const subscription = (invoice as Stripe.Invoice & {
+    subscription?: string | Stripe.Subscription | null;
+  }).subscription;
+  if (!subscription) return null;
+  return typeof subscription === "string" ? subscription : subscription.id;
+}
+
 async function savePayment(
   userId: string | null,
   invoice: Stripe.Invoice,
@@ -63,7 +71,7 @@ async function savePayment(
       provider: "stripe",
       metadata: {
         customer: invoice.customer,
-        subscription: invoice.subscription,
+        subscription: getInvoiceSubscriptionId(invoice),
       },
     },
     { onConflict: "transaction_id" },
@@ -97,12 +105,16 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
 
   const customerId =
     typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
+  const period = subscription as Stripe.Subscription & {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
   await applyPaidMembershipFromStripe(getServiceSupabase()!, {
     userId,
     plan: resolved.plan,
     cycle: resolved.cycle,
-    periodStart: subscription.current_period_start,
-    periodEnd: subscription.current_period_end,
+    periodStart: period.current_period_start ?? Math.floor(Date.now() / 1000),
+    periodEnd: period.current_period_end ?? Math.floor(Date.now() / 1000),
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: customerId,
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
@@ -169,8 +181,7 @@ export async function POST(request: Request) {
       }
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId =
-          typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
         if (subscriptionId) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           const userId = await resolveUserIdFromSubscription(sub);
@@ -189,8 +200,7 @@ export async function POST(request: Request) {
       }
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice;
-        const subscriptionId =
-          typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+        const subscriptionId = getInvoiceSubscriptionId(invoice);
         if (subscriptionId) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           const userId = await resolveUserIdFromSubscription(sub);

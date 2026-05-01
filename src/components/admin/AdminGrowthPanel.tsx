@@ -65,20 +65,18 @@ export function AdminGrowthPanel() {
         fetch("/api/admin/payments/list", { credentials: "include" }),
         fetch("/api/admin/referrals/stats", { credentials: "include" }),
       ]);
-      const [mJson, pJson, payJson, rJson] = await Promise.all([
-        mRes.json(),
-        pRes.json(),
-        payRes.json(),
-        rRes.json(),
-      ]);
+      const mJson = (await mRes.json()) as { data?: MembershipRow[] };
+      const pJson = (await pRes.json()) as { data?: PointRow[] };
+      const payJson = (await payRes.json()) as { data?: PaymentRow[] };
+      const rJson = (await rRes.json()) as { data?: ReferralSummary | null };
       if (!mRes.ok || !pRes.ok || !payRes.ok || !rRes.ok) {
         setError("后台数据加载失败");
         return;
       }
-      setMemberships((mJson.data ?? []) as MembershipRow[]);
-      setPoints((pJson.data ?? []) as PointRow[]);
-      setPayments((payJson.data ?? []) as PaymentRow[]);
-      setReferrals((rJson.data ?? null) as ReferralSummary | null);
+      setMemberships(mJson.data ?? []);
+      setPoints(pJson.data ?? []);
+      setPayments(payJson.data ?? []);
+      setReferrals(rJson.data ?? null);
     } catch {
       setError("后台数据加载失败");
     } finally {
