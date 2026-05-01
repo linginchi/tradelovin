@@ -256,7 +256,9 @@ export function TradePageClient() {
 					return;
 				}
 				if (json.code === "TRIAL_EXPIRED" || json.code === "MEMBERSHIP_FORBIDDEN") {
-					router.replace("/my-learning");
+					router.replace(
+						`/membership?from=trade&reason=${encodeURIComponent(json.code ?? "MEMBERSHIP_FORBIDDEN")}`,
+					);
 					return;
 				}
 				router.replace("/register");
