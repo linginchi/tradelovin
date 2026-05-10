@@ -15,6 +15,12 @@
 		"deploy": "npm run clean:open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 		"deploy:cloudflare": "npm run build:cloudflare && npx wrangler deploy --config wrangler.jsonc",
 		"smoke:api": "node scripts/deploy/api-smoke.mjs",
+		"smoke:trade-v2": "npm run verify:trade-execution-messages && node scripts/deploy/trade-v2-e2e-smoke.mjs",
+		"sync:generated": "npm run sync:trade-execution-messages",
+		"sync:trade-execution-messages": "node scripts/shared/sync-trade-execution-messages.mjs",
+		"verify:generated": "npm run verify:trade-execution-messages",
+		"verify:trade-execution-messages": "node scripts/shared/sync-trade-execution-messages.mjs --check",
+		"verify:trade-v2-consistency": "npm run verify:trade-execution-messages && node scripts/ci/trade-v2-consistency-check.mjs",
 		"verify:trade-session-redirect": "node scripts/ci/check-trade-session-redirect-regression.mjs",
 		"upload": "npm run clean:open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
 		"cf-typegen": "wrangler types --config wrangler.jsonc --env-interface CloudflareEnv cloudflare-env.d.ts"

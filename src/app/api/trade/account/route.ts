@@ -4,6 +4,11 @@ import { requireMembershipCapability } from "@/lib/membership/guard";
 import { getMarketQuote } from "@/lib/market/market-domain";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
+import type {
+	ApiErrorResponse,
+	LegacyTradeAccount,
+	LegacyTradeAccountApiResponse,
+} from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
@@ -21,7 +26,10 @@ export async function GET() {
 
 	const { data: account, error: accErr } = await getOrCreateSimAccount(supabase, userId);
 	if (accErr || !account) {
-		return NextResponse.json({ success: false, error: accErr?.message ?? "读取账户失败" }, { status: 500 });
+		return NextResponse.json<ApiErrorResponse>(
+			{ success: false, error: accErr?.message ?? "读取账户失败" },
+			{ status: 500 },
+		);
 	}
 
 	const { data: positions } = await supabase
@@ -50,14 +58,15 @@ export async function GET() {
 	const frozenBalance = Number(account.frozen_balance);
 	const totalAssets = currentBalance + frozenBalance + positionsMarketValue;
 
-	return NextResponse.json({
+	const data: LegacyTradeAccount = {
+		id: account.id,
+		account_name: account.account_name,
+		current_balance: currentBalance,
+		frozen_balance: frozenBalance,
+		total_assets: Math.round(totalAssets * 100) / 100,
+	};
+	return NextResponse.json<LegacyTradeAccountApiResponse>({
 		success: true,
-		data: {
-			id: account.id,
-			account_name: account.account_name,
-			current_balance: currentBalance,
-			frozen_balance: frozenBalance,
-			total_assets: Math.round(totalAssets * 100) / 100,
-		},
+		data,
 	});
 }

@@ -208,6 +208,29 @@ npm run deploy:cloudflare
 BASE_URL="https://tradelovin.com" USER_COOKIE="<user-cookie>" TQ_CRON_API_KEY="<cron-key>" npm run smoke:api
 ```
 
+### 6.4 交易执行文案单源同步（脚本/页面/API 一致）
+
+交易执行文案以 `src/lib/trade/execution-messages.ts` 为源，脚本侧通过生成文件保持一致：
+
+- 生成：`npm run sync:trade-execution-messages`
+- 校验：`npm run verify:trade-execution-messages`
+
+为防止漂移，以下命令已内置前置校验：
+
+- `npm run smoke:trade-v2`
+- `npm run verify:trade-v2-consistency`
+
+若出现 drift 提示，先执行同步命令并提交 `scripts/shared/trade-execution-messages.mjs` 更新，再继续部署前验证流程。
+
+### 6.5 生成文件统一入口（便于 CI/本地一致）
+
+为避免后续新增生成文件时命令分散，仓库提供聚合入口：
+
+- 同步全部生成文件：`npm run sync:generated`
+- 校验全部生成文件：`npm run verify:generated`
+
+建议在发布前验证链路中优先使用 `verify:generated`，再执行更重的 smoke/consistency。
+
 ---
 
 ## 7. 类型文件

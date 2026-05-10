@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { CHALLENGES } from "@/lib/training/challenges";
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { requireTradeUser } from "@/lib/trade/require-user";
+import type { LegacyTradeChallengesApiResponse, LegacyTradeChallengesItem } from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
@@ -31,9 +32,9 @@ export async function GET() {
 		});
 	}
 
-	const data = CHALLENGES.map((c) => ({
+	const data: LegacyTradeChallengesItem[] = CHALLENGES.map((c) => ({
 		...c,
 		progress: byCode.get(c.code) ?? { played: 0, bestTalent: 0 },
 	}));
-	return NextResponse.json({ success: true, data });
+	return NextResponse.json<LegacyTradeChallengesApiResponse>({ success: true, data });
 }

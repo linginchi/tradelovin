@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify generated files sync
+        run: npm run verify:generated
+
       - name: Trade session redirect regression guard
         run: npm run verify:trade-session-redirect
 

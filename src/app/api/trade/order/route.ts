@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { awardPoints, TQ_POINTS_RULES } from "@/lib/membership/points";
+import { TRADE_ORDER_MESSAGE_ADVANCED_PLANNED } from "@/lib/trade/execution-messages";
 import { placeLimitOrderService } from "@/lib/trade/place-limit-order";
 import { getInstrumentRule } from "@/lib/trade/instrument-rules";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import type { ApiErrorResponse, LegacyTradeOrderSubmitApiResponse } from "@/lib/trade-v2/api-types";
+import { LEGACY_TRADE_ADVANCED_ORDER_PLANNED_CODE } from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
@@ -31,7 +34,7 @@ export async function POST(request: Request) {
 	try {
 		body = (await request.json()) as Body;
 	} catch {
-		return NextResponse.json({ success: false, error: "请求体不是合法 JSON" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "请求体不是合法 JSON" }, { status: 400 });
 	}
 
 	const symbolRaw = typeof body.symbol === "string" ? body.symbol.trim() : "";
@@ -41,33 +44,37 @@ export async function POST(request: Request) {
 	const orderTypeRaw = typeof body.orderType === "string" ? body.orderType.trim().toLowerCase() : "limit";
 
 	if (!symbolRaw) {
-		return NextResponse.json({ success: false, error: "symbol 不能为空" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "symbol 不能为空" }, { status: 400 });
 	}
 	if (sideRaw !== "buy" && sideRaw !== "sell") {
-		return NextResponse.json({ success: false, error: "side 须为 buy 或 sell" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "side 须为 buy 或 sell" }, { status: 400 });
 	}
 	if (!Number.isFinite(price) || price <= 0) {
-		return NextResponse.json({ success: false, error: "price 须大于 0" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "price 须大于 0" }, { status: 400 });
 	}
 	if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
-		return NextResponse.json({ success: false, error: "quantity 须为正整数" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "quantity 须为正整数" }, { status: 400 });
 	}
 	if (!["limit", "stop_loss", "market_limited"].includes(orderTypeRaw)) {
-		return NextResponse.json({ success: false, error: "orderType 不支持" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "orderType 不支持" }, { status: 400 });
 	}
 	if (orderTypeRaw !== "limit") {
 		const advanced = await requireMembershipCapability(auth.supabase, auth.userId, "advanced_order_bundle");
 		if (advanced instanceof NextResponse) {
 			return advanced;
 		}
-		return NextResponse.json(
-			{ success: false, error: "高级下单指令正在规划中", code: "ADVANCED_ORDER_PLANNED" },
+		return NextResponse.json<LegacyTradeOrderSubmitApiResponse>(
+			{
+				success: false,
+				error: TRADE_ORDER_MESSAGE_ADVANCED_PLANNED,
+				code: LEGACY_TRADE_ADVANCED_ORDER_PLANNED_CODE,
+			},
 			{ status: 501 },
 		);
 	}
 	const rule = getInstrumentRule(symbolRaw);
 	if (quantity % rule.lotSize !== 0) {
-		return NextResponse.json(
+		return NextResponse.json<ApiErrorResponse>(
 			{ success: false, error: `quantity 须为 ${rule.lotSize} 的整数倍` },
 			{ status: 400 },
 		);
@@ -75,7 +82,7 @@ export async function POST(request: Request) {
 
 	const srv = getServiceSupabase();
 	if (!srv) {
-		return NextResponse.json(
+		return NextResponse.json<ApiErrorResponse>(
 			{ success: false, error: "交易服务不可用（缺少 SUPABASE_SERVICE_ROLE_KEY）" },
 			{ status: 503 },
 		);
@@ -96,5 +103,8 @@ export async function POST(request: Request) {
 			metadata: { trigger: "place_order", symbol: symbolRaw },
 		});
 	}
-	return NextResponse.json(result.body, { status: result.status });
+	return NextResponse.json<LegacyTradeOrderSubmitApiResponse>(
+		result.body as LegacyTradeOrderSubmitApiResponse,
+		{ status: result.status },
+	);
 }

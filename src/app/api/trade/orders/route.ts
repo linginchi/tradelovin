@@ -6,10 +6,22 @@ import { localizeNameBySymbol } from "@/lib/trade/get-current-price";
 import { getChinaTodayRangeIso } from "@/lib/trade/cn-calendar";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
+import type {
+	ApiErrorResponse,
+	LegacyTradeOrder,
+	LegacyTradeOrderStatus,
+	LegacyTradeOrdersApiResponse,
+} from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
 const ORDER_STATUSES = new Set(["pending", "partial", "filled", "cancelled", "rejected"]);
+
+function toLegacyOrderStatus(value: unknown): LegacyTradeOrderStatus {
+	const status = String(value ?? "");
+	if (ORDER_STATUSES.has(status)) return status as LegacyTradeOrderStatus;
+	return "pending";
+}
 
 function readLocale(v: string | null): "zh" | "zh-TW" | "en" {
 	if (v === "en" || v === "zh-TW") return v;
@@ -30,7 +42,10 @@ export async function GET(request: NextRequest) {
 
 	const { data: account, error: accErr } = await getOrCreateSimAccount(supabase, userId);
 	if (accErr || !account) {
-		return NextResponse.json({ success: false, error: accErr?.message ?? "读取账户失败" }, { status: 500 });
+		return NextResponse.json<ApiErrorResponse>(
+			{ success: false, error: accErr?.message ?? "读取账户失败" },
+			{ status: 500 },
+		);
 	}
 
 	const { start, end } = getChinaTodayRangeIso();
@@ -52,7 +67,7 @@ export async function GET(request: NextRequest) {
 	const { data: rows, error: qErr } = await q;
 
 	if (qErr) {
-		return NextResponse.json({ success: false, error: qErr.message }, { status: 500 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: qErr.message }, { status: 500 });
 	}
 
 	const rowsSafe = (rows ?? []) as Array<Record<string, unknown>>;
@@ -76,17 +91,17 @@ export async function GET(request: NextRequest) {
 		}),
 	);
 
-	const data = (rows ?? []).map((r: Record<string, unknown>) => ({
-		id: r.id,
-		symbol: r.symbol,
+	const data: LegacyTradeOrder[] = (rows ?? []).map((r: Record<string, unknown>) => ({
+		id: String(r.id ?? ""),
+		symbol: String(r.symbol ?? ""),
 		name: nameFromApi.get(String(r.symbol ?? "")) ?? nameFromDb.get(String(r.symbol ?? "")) ?? null,
-		side: r.side,
+		side: String(r.side ?? ""),
 		price: Number(r.price),
-		quantity: r.quantity,
-		filled_qty: r.filled_qty,
-		status: r.status,
-		created_at: r.created_at,
+		quantity: Number(r.quantity ?? 0),
+		filled_qty: Number(r.filled_qty ?? 0),
+		status: toLegacyOrderStatus(r.status),
+		created_at: String(r.created_at ?? ""),
 	}));
 
-	return NextResponse.json({ success: true, data });
+	return NextResponse.json<LegacyTradeOrdersApiResponse>({ success: true, data });
 }

@@ -36,81 +36,42 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
 import { mapUserSymbolToSina } from "@/lib/trade/symbol-mapping";
+import {
+	buildExecutionResultView,
+} from "@/lib/trade-v2/execution-copy";
+import {
+	LEGACY_TRADE_ACCESS_DENIED_CODES,
+	LEGACY_TRADE_ORDER_PENDING_STATUS,
+} from "@/lib/trade-v2/api-types";
+import type {
+	ApiResponse,
+	LegacyTradeAccessGuardResponse,
+	LegacyTradeAccount,
+	LegacyTradeAccountApiResponse,
+	LegacyTradeChallengesApiResponse,
+	LegacyTradeChallengesItem,
+	LegacyTradeDealsApiResponse,
+	LegacyTradeDeal,
+	LegacyTradeLeaderboardApiResponse,
+	LegacyTradeLeaderboardItem,
+	LegacyTradeOrder,
+	LegacyTradeOrdersApiResponse,
+	LegacyTradeOrderSubmitApiResponse,
+	LegacyTradePosition,
+	LegacyTradePositionsApiResponse,
+	LegacyTradeRunApiResponse,
+	TradeV2QuoteApiResponse,
+	TradeV2QuoteData,
+} from "@/lib/trade-v2/api-types";
 import { cn } from "@/lib/utils";
 
-type AccountResp = {
-	id: string;
-	account_name: string;
-	current_balance: number;
-	frozen_balance: number;
-	total_assets: number;
-};
-
-type PosRow = {
-	symbol: string;
-	name: string | null;
-	quantity: number;
-	available_qty: number;
-	frozen_qty: number;
-	cost_price: number;
-	market_value: number;
-	current_price: number;
-};
-
-type OrderRow = {
-	id: string;
-	symbol: string;
-	name?: string | null;
-	side: string;
-	price: number;
-	quantity: number;
-	filled_qty: number;
-	status: string;
-	created_at: string;
-};
-
-type TradeRow = {
-	id: string;
-	order_id: string | null;
-	symbol: string;
-	name?: string | null;
-	side: string;
-	price: number;
-	quantity: number;
-	commission: number;
-	stamp_tax: number;
-	trade_time: string;
-};
-
-type QuoteResp = {
-	symbol: string;
-	price: number;
-	name?: string;
-	source: "tushare" | "sina";
-	instrument: "stock" | "etf" | "cbond";
-	lot_size: number;
-	limit_band_ratio: number;
-};
-
-type ChallengeResp = {
-	code: string;
-	name: string;
-	durationMin: number;
-	objective: string;
-	rewardTitle: string;
-	progress: {
-		played: number;
-		bestTalent: number;
-	};
-};
-
-type LeaderboardRow = {
-	rank: number;
-	userTag: string;
-	talentScore: number;
-	challengeName: string;
-	createdAt: string;
-};
+type AccountResp = LegacyTradeAccount;
+type PosRow = LegacyTradePosition;
+type OrderRow = LegacyTradeOrder;
+type TradeRow = LegacyTradeDeal;
+type QuoteResp = TradeV2QuoteData;
+type ChallengeResp = LegacyTradeChallengesItem;
+type LeaderboardRow = LegacyTradeLeaderboardItem;
 
 type CurrentMembership = {
 	plan: "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
@@ -118,6 +79,21 @@ type CurrentMembership = {
 };
 
 type SimTradingDeniedReason = "TRIAL_EXPIRED" | "MEMBERSHIP_FORBIDDEN";
+
+function isLegacyTradeDeniedCode(code: unknown): code is SimTradingDeniedReason {
+	return typeof code === "string" && LEGACY_TRADE_ACCESS_DENIED_CODES.includes(code as SimTradingDeniedReason);
+}
+
+function hasPendingOrderMessage(
+	resp: LegacyTradeOrderSubmitApiResponse,
+): resp is Extract<LegacyTradeOrderSubmitApiResponse, { success: false; data: { status: "pending" } }> {
+	return (
+		resp.success === false &&
+		"message" in resp &&
+		typeof resp.message === "string" &&
+		resp.data?.status === LEGACY_TRADE_ORDER_PENDING_STATUS
+	);
+}
 
 function fmtMoney(n: number) {
 	const v = Math.round((Number.isFinite(n) ? n : 0) * 100) / 100;
@@ -171,7 +147,7 @@ export function TradePageClient() {
 
 	const loadAccount = useCallback(async () => {
 		const res = await fetch("/api/trade/account", { credentials: "include" });
-		const json = await parseJson<{ success: boolean; data?: AccountResp; error?: string }>(res);
+		const json = await parseJson<LegacyTradeAccountApiResponse>(res);
 		if (!json.success || !json.data) {
 			throw new Error(json.error ?? t("toast.loadAccountFailed"));
 		}
@@ -188,9 +164,9 @@ export function TradePageClient() {
 			]);
 
 			const [pJson, oJson, trJson] = await Promise.all([
-				parseJson<{ success: boolean; data?: PosRow[]; error?: string }>(pRes),
-				parseJson<{ success: boolean; data?: OrderRow[]; error?: string }>(oRes),
-				parseJson<{ success: boolean; data?: TradeRow[]; error?: string }>(trRes),
+				parseJson<LegacyTradePositionsApiResponse>(pRes),
+				parseJson<LegacyTradeOrdersApiResponse>(oRes),
+				parseJson<LegacyTradeDealsApiResponse>(trRes),
 			]);
 
 			if (!pJson.success || pJson.data === undefined) {
@@ -220,8 +196,8 @@ export function TradePageClient() {
 			]);
 
 			const [challengeJson, boardJson] = await Promise.all([
-				parseJson<{ success: boolean; data?: ChallengeResp[] }>(challengeRes),
-				parseJson<{ success: boolean; data?: LeaderboardRow[] }>(boardRes),
+				parseJson<LegacyTradeChallengesApiResponse>(challengeRes),
+				parseJson<LegacyTradeLeaderboardApiResponse>(boardRes),
 			]);
 			if (challengeJson.success && challengeJson.data) setChallenges(challengeJson.data);
 			if (boardJson.success && boardJson.data) setLeaderboard(boardJson.data);
@@ -252,13 +228,13 @@ export function TradePageClient() {
 		async function guard() {
 			try {
 				const res = await fetch("/api/trade/account", { credentials: "include" });
-				const json = await parseJson<{ success: boolean; code?: string }>(res);
+				const json = await parseJson<LegacyTradeAccessGuardResponse>(res);
 				if (cancelled) return;
 				if (res.ok && json.success) {
 					setSessionReady(true);
 					return;
 				}
-				if (json.code === "TRIAL_EXPIRED" || json.code === "MEMBERSHIP_FORBIDDEN") {
+				if (!json.success && isLegacyTradeDeniedCode(json.code)) {
 					setSimTradingDeniedReason(json.code);
 					setBootLoading(false);
 					setSessionReady(true);
@@ -290,7 +266,7 @@ export function TradePageClient() {
 		const timer = window.setTimeout(async () => {
 			try {
 				const res = await fetch("/api/membership/current", { credentials: "include" });
-				const json = await parseJson<{ success?: boolean; data?: CurrentMembership }>(res);
+				const json = await parseJson<ApiResponse<CurrentMembership>>(res);
 				if (res.ok && json.success && json.data) {
 					setMembershipHint(json.data);
 				}
@@ -344,7 +320,7 @@ export function TradePageClient() {
 					`/api/market/quote?symbol=${encodeURIComponent(normalizedSymbol)}&locale=${encodeURIComponent(locale)}`,
 					{ credentials: "include" },
 				);
-				const json = await parseJson<{ success: boolean; data?: QuoteResp }>(quoteRes);
+				const json = await parseJson<TradeV2QuoteApiResponse>(quoteRes);
 				if (json.success && json.data) {
 					setQuote(json.data);
 					if (!priceStr) setPriceStr(String(json.data.price));
@@ -406,31 +382,45 @@ export function TradePageClient() {
 					quantity: vals.quantity,
 				}),
 			});
-			let json = { success: false } as Record<string, unknown>;
+			let json: LegacyTradeOrderSubmitApiResponse;
 			try {
-				json = (await parseJson<Record<string, unknown>>(res)) as Record<string, unknown>;
+				json = await parseJson<LegacyTradeOrderSubmitApiResponse>(res);
 			} catch {
 				toast.error(t("toast.networkJson"));
 				return;
 			}
 
-			if (!res.ok && typeof json.error === "string") {
+			if (!res.ok && !json.success && "error" in json && typeof json.error === "string") {
 				toast.error(json.error);
 				return;
 			}
 
 			if (json.success === true) {
-				toast.success(t("toast.orderOk"));
+				const resultView = buildExecutionResultView({
+					side,
+					status: json.data.status,
+					serverMessage: json.data.message,
+				});
+				if (resultView.tone === "success") {
+					toast.success(resultView.toastText);
+				} else {
+					toast.warning(resultView.toastText);
+				}
 				await refreshAllAfterSuccess();
 				return;
 			}
 
-			if (typeof json.message === "string" && json.message) {
-				toast.warning(json.message);
+			if (hasPendingOrderMessage(json) && json.message) {
+				const resultView = buildExecutionResultView({
+					side,
+					status: json.data.status,
+					serverMessage: json.message,
+				});
+				toast.warning(resultView.toastText);
 				await refreshAllAfterSuccess();
 				return;
 			}
-			if (typeof json.error === "string" && json.error) {
+			if ("error" in json && typeof json.error === "string" && json.error) {
 				toast.error(json.error);
 				return;
 			}
@@ -457,7 +447,7 @@ export function TradePageClient() {
 					challengeCode: challenge.code,
 				}),
 			});
-			const json = await parseJson<{ success: boolean; error?: string }>(res);
+			const json = await parseJson<LegacyTradeRunApiResponse>(res);
 			if (!json.success) {
 				toast.error(json.error ?? "挑战提交失败");
 				return;
@@ -468,23 +458,6 @@ export function TradePageClient() {
 			toast.error("挑战提交失败");
 		} finally {
 			setTrainingLoading(false);
-		}
-	};
-
-	const orderStatusVariant = (s: string) => {
-		switch (s) {
-			case "filled":
-				return "success" as const;
-			case "pending":
-				return "muted" as const;
-			case "partial":
-				return "outline" as const;
-			case "cancelled":
-				return "muted" as const;
-			case "rejected":
-				return "warning" as const;
-			default:
-				return "secondary" as const;
 		}
 	};
 
@@ -830,8 +803,10 @@ export function TradePageClient() {
 													</TableCell>
 												</TableRow>
 											) : (
-												orders.map((o) => (
-													<TableRow key={o.id}>
+												orders.map((o) => {
+													const resultView = buildExecutionResultView({ status: o.status });
+													return (
+														<TableRow key={o.id}>
 														<TableCell className="whitespace-nowrap text-xs">
 															{hkTime(o.created_at)}
 														</TableCell>
@@ -842,12 +817,13 @@ export function TradePageClient() {
 														<TableCell className="text-end">{o.quantity}</TableCell>
 														<TableCell className="text-end">{o.filled_qty}</TableCell>
 														<TableCell>
-															<Badge variant={orderStatusVariant(o.status)}>
-																{t(`orderStatus.${o.status}` as never)}
+															<Badge variant={resultView.badgeVariant}>
+																{resultView.statusText}
 															</Badge>
 														</TableCell>
-													</TableRow>
-												))
+														</TableRow>
+													);
+												})
 											)}
 										</TableBody>
 									</Table>

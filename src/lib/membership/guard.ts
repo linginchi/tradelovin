@@ -4,6 +4,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { upsertBaseMembership } from "@/lib/membership/manage";
 import { getMembershipSnapshot } from "@/lib/membership/service";
 import type { MembershipCapability, MembershipSnapshot } from "@/lib/membership/types";
+import {
+	LEGACY_TRADE_ACCESS_DENIED_CODES,
+} from "@/lib/trade-v2/api-types";
 import { canUseSimTrading, canUseTqReport, ensureCurrentMembership } from "@/lib/membership/v2";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -68,7 +71,7 @@ export async function requireMembershipCapability(
 					{
 						success: false,
 						error: "试用已结束，请升级会员继续使用模拟交易和TQ评分",
-						code: "TRIAL_EXPIRED",
+						code: LEGACY_TRADE_ACCESS_DENIED_CODES[0],
 					},
 					{ status: 402 },
 				);
@@ -77,7 +80,7 @@ export async function requireMembershipCapability(
 				{
 					success: false,
 					error: "当前会员级别无此权限",
-					code: "MEMBERSHIP_FORBIDDEN",
+					code: LEGACY_TRADE_ACCESS_DENIED_CODES[1],
 				},
 				{ status: 403 },
 			);

@@ -5,6 +5,7 @@ import { requireMembershipCapability } from "@/lib/membership/guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { ensureTqCalculated } from "@/lib/tq/engine";
 import { requireTradeUser } from "@/lib/trade/require-user";
+import type { ApiErrorResponse, LegacyTradeRunApiResponse } from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
@@ -23,15 +24,15 @@ export async function POST(request: Request) {
 	try {
 		body = (await request.json()) as Body;
 	} catch {
-		return NextResponse.json({ success: false, error: "请求体不是合法 JSON" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "请求体不是合法 JSON" }, { status: 400 });
 	}
 	const challengeCode = String(body.challengeCode ?? "");
 	const challenge = CHALLENGES.find((c) => c.code === challengeCode);
-	if (!challenge) return NextResponse.json({ success: false, error: "挑战不存在" }, { status: 400 });
+	if (!challenge) return NextResponse.json<ApiErrorResponse>({ success: false, error: "挑战不存在" }, { status: 400 });
 
 	const srv = getServiceSupabase();
 	if (!srv) {
-		return NextResponse.json({ success: false, error: "服务不可用" }, { status: 503 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "服务不可用" }, { status: 503 });
 	}
 	await ensureTqCalculated(srv, { userId, environment: "sim", period: "all" });
 	const { data: tqRows, error: tqErr } = await srv
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
 		.eq("environment", "sim")
 		.eq("period", "all");
 	if (tqErr) {
-		return NextResponse.json({ success: false, error: tqErr.message }, { status: 500 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: tqErr.message }, { status: 500 });
 	}
 	let profitability = 0;
 	let totalScore = 0;
@@ -63,6 +64,6 @@ export async function POST(request: Request) {
 			totalScore,
 		},
 	});
-	if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-	return NextResponse.json({ success: true, data: { totalScore, profitability } });
+	if (error) return NextResponse.json<ApiErrorResponse>({ success: false, error: error.message }, { status: 500 });
+	return NextResponse.json<LegacyTradeRunApiResponse>({ success: true, data: { totalScore, profitability } });
 }

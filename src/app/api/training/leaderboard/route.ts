@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import type { LegacyTradeLeaderboardApiResponse, LegacyTradeLeaderboardItem } from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
@@ -20,7 +21,7 @@ export async function GET() {
 		.order("talent_score", { ascending: false })
 		.limit(20);
 
-	const data = (rows ?? []).map((row, idx) => {
+	const data: LegacyTradeLeaderboardItem[] = (rows ?? []).map((row, idx) => {
 		const r = row as {
 			user_id: string;
 			talent_score: number;
@@ -36,5 +37,5 @@ export async function GET() {
 		};
 	});
 
-	return NextResponse.json({ success: true, data });
+	return NextResponse.json<LegacyTradeLeaderboardApiResponse>({ success: true, data });
 }

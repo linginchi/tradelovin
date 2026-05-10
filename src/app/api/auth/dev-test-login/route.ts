@@ -40,11 +40,11 @@ function isDevTestLoginEnabled(): boolean {
 		return publicToggle.defined ? publicToggle.enabled : true;
 	}
 
-	// 生产环境优先使用运行时开关；若未配置则回退到 NEXT_PUBLIC 开关，避免 UI/接口状态不一致。
+	// 生产环境仅以运行时开关为准，避免构建期 NEXT_PUBLIC 漂移造成入口“时有时无”。
 	if (runtimeToggle.defined) {
 		if (!runtimeToggle.enabled) return false;
 		if (runtimeProdToggle.defined) return runtimeProdToggle.enabled;
-		return publicToggle.enabled;
+		return true;
 	}
 	return publicToggle.enabled;
 }

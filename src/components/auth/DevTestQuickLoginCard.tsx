@@ -31,12 +31,6 @@ export function DevTestQuickLoginCard({
 	const [account, setAccount] = useState<DevTestAccount>("kk");
 	const [password, setPassword] = useState("");
 
-	const raw = String(process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS ?? "").trim().toLowerCase();
-	const explicitlyEnabled = raw === "1" || raw === "true";
-	const explicitlyDisabled = raw === "0" || raw === "false";
-	// 构建期变量仅用于“显式关闭”；是否展示最终由运行时接口判定，避免 CI/本地构建变量漂移导致入口误隐藏。
-	const enabled = !explicitlyDisabled;
-
 	useEffect(() => {
 		void (async () => {
 			try {
@@ -49,7 +43,8 @@ export function DevTestQuickLoginCard({
 		})();
 	}, []);
 
-	if (!enabled || runtimeEnabled !== true) return null;
+	// 始终以运行时接口开关为准，避免构建期变量漂移导致入口误隐藏。
+	if (runtimeEnabled !== true) return null;
 
 	const onQuickLogin = async () => {
 		if (!password.trim()) {

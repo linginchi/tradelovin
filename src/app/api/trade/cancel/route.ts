@@ -4,6 +4,7 @@ import { requireMembershipCapability } from "@/lib/membership/guard";
 import { cancelLimitOrderService } from "@/lib/trade/cancel-limit-order";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import type { ApiErrorResponse, TradeV2CancelApiResponse } from "@/lib/trade-v2/api-types";
 
 export const runtime = "nodejs";
 
@@ -32,14 +33,16 @@ export async function POST(request: Request) {
 	}
 
 	if (!orderId) {
-		return NextResponse.json({ success: false, error: "orderId 不能为空" }, { status: 400 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "orderId 不能为空" }, { status: 400 });
 	}
 
 	const srv = getServiceSupabase();
 	if (!srv) {
-		return NextResponse.json({ success: false, error: "交易服务不可用" }, { status: 503 });
+		return NextResponse.json<ApiErrorResponse>({ success: false, error: "交易服务不可用" }, { status: 503 });
 	}
 
 	const result = await cancelLimitOrderService(srv, auth.userId, orderId);
-	return NextResponse.json(result.body, { status: result.status });
+	return NextResponse.json<TradeV2CancelApiResponse>(result.body as TradeV2CancelApiResponse, {
+		status: result.status,
+	});
 }

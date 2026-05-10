@@ -15,6 +15,16 @@ import { getCurrentPrice } from "@/lib/trade/get-current-price";
 import { matchLimitAgainstQuote } from "@/lib/trade/match-engine";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 import { validateBuyOrder, validateSellOrder } from "@/lib/trade/validate-order-input";
+import {
+	TRADE_ORDER_MESSAGE_FILLED,
+	TRADE_ORDER_MESSAGE_PARTIAL,
+	TRADE_ORDER_MESSAGE_PENDING,
+} from "@/lib/trade/execution-messages";
+import {
+	LEGACY_TRADE_ORDER_FILLED_STATUS,
+	LEGACY_TRADE_ORDER_PARTIAL_STATUS,
+	LEGACY_TRADE_ORDER_PENDING_STATUS,
+} from "@/lib/trade-v2/api-types";
 
 export type PlaceBody = {
 	symbolRaw: string;
@@ -235,8 +245,8 @@ export async function placeLimitOrderService(
 				status: 200,
 				body: {
 					success: false,
-					message: "当前价格无法成交，已挂单",
-					data: { orderId, status: "pending", filledQty: 0 },
+					message: TRADE_ORDER_MESSAGE_PENDING,
+					data: { orderId, status: LEGACY_TRADE_ORDER_PENDING_STATUS, filledQty: 0 },
 				},
 			};
 		}
@@ -256,10 +266,10 @@ export async function placeLimitOrderService(
 						success: true,
 						data: {
 							orderId,
-							status: "partial",
+							status: LEGACY_TRADE_ORDER_PARTIAL_STATUS,
 							filledQty,
 							remainingQty: qty - filledQty,
-							message: "委托已部分成交，剩余挂单中",
+							message: TRADE_ORDER_MESSAGE_PARTIAL,
 						},
 					},
 				};
@@ -274,9 +284,9 @@ export async function placeLimitOrderService(
 				success: true,
 				data: {
 					orderId,
-					status: "filled",
+					status: LEGACY_TRADE_ORDER_FILLED_STATUS,
 					filledQty: qty,
-					message: "委托已成交",
+					message: TRADE_ORDER_MESSAGE_FILLED,
 				},
 			},
 		};
@@ -343,8 +353,8 @@ export async function placeLimitOrderService(
 			status: 200,
 			body: {
 				success: false,
-				message: "当前价格无法成交，已挂单",
-				data: { orderId, status: "pending", filledQty: 0 },
+				message: TRADE_ORDER_MESSAGE_PENDING,
+				data: { orderId, status: LEGACY_TRADE_ORDER_PENDING_STATUS, filledQty: 0 },
 			},
 		};
 	}
@@ -376,10 +386,10 @@ export async function placeLimitOrderService(
 					success: true,
 					data: {
 						orderId,
-						status: "partial",
+						status: LEGACY_TRADE_ORDER_PARTIAL_STATUS,
 						filledQty,
 						remainingQty: qty - filledQty,
-						message: "委托已部分成交，剩余挂单中",
+						message: TRADE_ORDER_MESSAGE_PARTIAL,
 					},
 				},
 			};
@@ -394,9 +404,9 @@ export async function placeLimitOrderService(
 			success: true,
 			data: {
 				orderId,
-				status: "filled",
+				status: LEGACY_TRADE_ORDER_FILLED_STATUS,
 				filledQty: qty,
-				message: "委托已成交",
+				message: TRADE_ORDER_MESSAGE_FILLED,
 			},
 		},
 	};
