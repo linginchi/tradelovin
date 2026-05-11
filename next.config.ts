@@ -22,6 +22,13 @@ const assetPrefix = resolveAssetPrefix();
 const nextConfig: NextConfig = {
 	...(assetPrefix ? { assetPrefix } : {}),
 
+	async rewrites() {
+		return [
+			{ source: "/supabase-proxy", destination: "/api/supabase-proxy" },
+			{ source: "/supabase-proxy/:path*", destination: "/api/supabase-proxy/:path*" },
+		];
+	},
+
 	// 保持构建输出目录标准
 	distDir: ".next",
 	reactStrictMode: true,
