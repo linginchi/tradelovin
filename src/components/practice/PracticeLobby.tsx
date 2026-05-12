@@ -42,18 +42,22 @@ function getDefaultStats(): StatsResponse {
 	};
 }
 
+function getInitialStats(): StatsResponse {
+	if (typeof window === "undefined") return getDefaultStats();
+	const base = getDefaultStats();
+	const value = Number(globalThis.localStorage?.getItem(LOCAL_SCORE_KEY) ?? "0");
+	return { ...base, totalScore: Number.isFinite(value) ? value : 0 };
+}
+
 export function PracticeLobby({ onClose }: Props) {
 	const [activeLevelId, setActiveLevelId] = useState<string | null>(null);
-	const [stats, setStats] = useState<StatsResponse>(getDefaultStats());
+	const [stats, setStats] = useState<StatsResponse>(getInitialStats);
 	const [leaderboardOpen, setLeaderboardOpen] = useState(false);
 	const [newStage, setNewStage] = useState<StageInfo | null>(null);
 	const [newStageOpen, setNewStageOpen] = useState(false);
 	const levelList = useMemo(() => Object.values(LEVELS), []);
 
 	useEffect(() => {
-		const value = Number(globalThis.localStorage?.getItem(LOCAL_SCORE_KEY) ?? "0");
-		setStats((prev) => ({ ...prev, totalScore: Number.isFinite(value) ? value : 0 }));
-
 		const loadStats = async () => {
 			try {
 				const res = await fetch("/api/practice/stats", { credentials: "include" });
@@ -100,7 +104,7 @@ export function PracticeLobby({ onClose }: Props) {
 			levelId: string;
 			stepId: string;
 			userInput: Record<string, unknown>;
-			correct: boolean;
+			correct: boolean | null;
 			scoreDelta: number;
 			timestamp: string;
 		}>;

@@ -15,7 +15,7 @@ type PracticeLog = {
 	levelId: string;
 	stepId: string;
 	userInput: Record<string, unknown>;
-	correct: boolean;
+	correct: boolean | null;
 	scoreDelta: number;
 	timestamp: string;
 };
@@ -54,45 +54,6 @@ function getProgressPercent(currentStepIndex: number, stepsLen: number, complete
 	return Math.round((currentStepIndex / stepsLen) * 100);
 }
 
-function toRecord(value: unknown): Record<string, unknown> {
-	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
-}
-
-function matchesExpected(expected: PracticeExpected, userInput: unknown): boolean {
-	const input = toRecord(userInput);
-	switch (expected.type) {
-		case "search":
-			return String(input.value ?? "").trim() === expected.value;
-		case "select":
-			return String(input.symbol ?? "") === expected.symbol && String(input.name ?? "") === expected.name;
-		case "select_position":
-			return String(input.symbol ?? "") === expected.symbol;
-		case "quantity":
-			return Number(input.value) === expected.value;
-		case "position_mode":
-			return String(input.value ?? "") === expected.value;
-		case "resource_side":
-			return String(input.value ?? "") === expected.value;
-		case "click_buy":
-		case "click_sell":
-		case "click_cancel":
-		case "click_apply_resource":
-		case "confirm":
-		case "confirm_cancel":
-			return String(input.action ?? "") === expected.type;
-		case "view_orders":
-			return String(input.view ?? "") === "orders";
-		case "select_order":
-			return String(input.status ?? "") === expected.status;
-		case "order_status":
-			return expected.status.includes(String(input.status ?? ""));
-		case "price":
-			return Number(input.value) === expected.value;
-		default:
-			return false;
-	}
-}
-
 function readStoredLogs(): PracticeLog[] {
 	try {
 		const raw = globalThis.localStorage?.getItem(LOG_STORAGE_KEY);
@@ -128,6 +89,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 	const [submittingOrder, setSubmittingOrder] = useState(false);
 	const [verifying, setVerifying] = useState(false);
 	const [completing, setCompleting] = useState(false);
+	const [aborting, setAborting] = useState(false);
 
 	const steps = level?.steps ?? [];
 	const currentStep = steps[currentStepIndex] ?? null;
@@ -136,6 +98,20 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 	const persistLog = (entry: PracticeLog) => {
 		const merged = [...readStoredLogs(), entry];
 		globalThis.localStorage?.setItem(LOG_STORAGE_KEY, JSON.stringify(merged));
+	};
+
+	const flushLogsToServer = async (payloadLogs: PracticeLog[]) => {
+		if (payloadLogs.length === 0) return;
+		try {
+			await fetch("/api/practice/log", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ logs: payloadLogs }),
+			});
+		} catch {
+			// 网络异常下保留本地日志，后续可继续补偿
+		}
 	};
 
 	const verifyStep = async (userInput: Record<string, unknown>) => {
@@ -210,6 +186,15 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 		if (nextIndex >= steps.length) {
 			setCompleting(true);
 			let newTotalScore: number | undefined;
+			const completeLog: PracticeLog = {
+				levelId,
+				stepId: "complete",
+				userInput: { action: "complete" },
+				correct: true,
+				scoreDelta: 0,
+				timestamp: new Date().toISOString(),
+			};
+			const completeLogs = [...nextLogs, completeLog];
 			try {
 				const completeRes = await fetch("/api/practice/complete", {
 					method: "POST",
@@ -218,7 +203,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 					body: JSON.stringify({
 						levelId,
 						finalScore: nextTotal,
-						logs: nextLogs,
+						logs: completeLogs,
 					}),
 				});
 				const completeJson = (await completeRes.json()) as {
@@ -237,7 +222,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						? (completeJson.currentStage as CompletePayload["currentStage"])
 						: null;
 				setCompleted(true);
-				console.log("[practice logs]", nextLogs);
+				console.log("[practice logs]", completeLogs);
 				onCompleted?.({
 					levelId,
 					finalScore: nextTotal,
@@ -246,7 +231,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						correct: true,
 						scoreDelta: nextStepScores[step.id] ?? 0,
 					})),
-					logs: nextLogs,
+					logs: completeLogs,
 					newTotalScore,
 					newStage,
 					currentStage,
@@ -259,7 +244,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 				setCompleting(false);
 			}
 			setCompleted(true);
-			console.log("[practice logs]", nextLogs);
+			console.log("[practice logs]", completeLogs);
 			onCompleted?.({
 				levelId,
 				finalScore: nextTotal,
@@ -268,7 +253,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 					correct: true,
 					scoreDelta: nextStepScores[step.id] ?? 0,
 				})),
-				logs: nextLogs,
+				logs: completeLogs,
 				newTotalScore,
 				newStage: null,
 				currentStage: null,
@@ -284,6 +269,28 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 		if (!currentStep) return;
 		if (currentStep.expected.type !== expectedType) return;
 		await verifyStep(userInput);
+	};
+
+	const handleAbortPractice = async () => {
+		if (!practiceMode || completed) {
+			onBack();
+			return;
+		}
+		if (!window.confirm("确认退出本次练习？当前进度将结束并记录为退出。")) return;
+		setAborting(true);
+		const abortLog: PracticeLog = {
+			levelId,
+			stepId: "abort",
+			userInput: { action: "abort" },
+			correct: null,
+			scoreDelta: 0,
+			timestamp: new Date().toISOString(),
+		};
+		const payloadLogs = [...logs, abortLog];
+		await flushLogsToServer(payloadLogs);
+		persistLog(abortLog);
+		setAborting(false);
+		onBack();
 	};
 
 	const statusText = useMemo(() => {
@@ -311,7 +318,12 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 					<p className="text-lg font-semibold">{level.title}</p>
 					<p className="text-xs text-muted-foreground">练习模式：仅演示，不会产生真实交易数据</p>
 				</div>
-				<Badge variant={practiceMode ? "default" : "secondary"}>{practiceMode ? "练习进行中" : "未开始"}</Badge>
+				<div className="flex items-center gap-2">
+					<Badge variant={practiceMode ? "default" : "secondary"}>{practiceMode ? "练习进行中" : "未开始"}</Badge>
+					<Button size="sm" variant="outline" disabled={aborting} onClick={() => void handleAbortPractice()}>
+						{aborting ? "退出中..." : "退出练习"}
+					</Button>
+				</div>
 			</div>
 
 			<div className="h-2 w-full overflow-hidden rounded-full bg-muted">

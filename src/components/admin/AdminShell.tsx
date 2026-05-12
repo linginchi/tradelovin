@@ -17,6 +17,7 @@ import {
 	Percent,
 	Shield,
 	Sparkles,
+	Target,
 	UserCircle,
 	UserPlus,
 	UserRoundPlus,
@@ -78,6 +79,7 @@ export function AdminShell({ role, email, children }: Props) {
 	if (role === "super_admin") {
 		items.push({ href: `${ADMIN_BASE_PATH}/add-user`, label: t("navAddUser"), icon: UserRoundPlus });
 		items.push({ href: `${ADMIN_BASE_PATH}/admins`, label: t("navAdmins"), icon: Shield });
+		items.push({ href: `${ADMIN_BASE_PATH}/practice-logs`, label: "练习日志", icon: Target });
 	}
 
 	async function logout() {
