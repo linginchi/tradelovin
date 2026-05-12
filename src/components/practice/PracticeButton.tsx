@@ -1,0 +1,71 @@
+"use client";
+
+import { Gamepad2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+
+import { PracticeLobby } from "@/components/practice/PracticeLobby";
+import { Button } from "@/components/ui/button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+
+type MembershipResponse = {
+	success?: boolean;
+	data?: {
+		plan?: string;
+	};
+};
+
+function canShowPracticeByPlan(plan: string | null): boolean {
+	if (!plan) return true;
+	return ["T0_trial", "T0_paid", "T1", "T2", "T3"].includes(plan);
+}
+
+export function PracticeButton() {
+	const [open, setOpen] = useState(false);
+	const [plan, setPlan] = useState<string | null>(null);
+
+	useEffect(() => {
+		const loadMembership = async () => {
+			try {
+				const res = await fetch("/api/membership/current", { credentials: "include" });
+				const json = (await res.json()) as MembershipResponse;
+				setPlan(json?.data?.plan ?? null);
+			} catch {
+				setPlan(null);
+			}
+		};
+		void loadMembership();
+	}, []);
+
+	const canShow = useMemo(() => canShowPracticeByPlan(plan), [plan]);
+	if (!canShow) return null;
+
+	return (
+		<>
+			<Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+				<Gamepad2 className="mr-1 h-4 w-4" />
+				🎮 操作练习
+			</Button>
+			<Dialog open={open} onOpenChange={setOpen}>
+				<DialogContent className="h-[92vh] w-[96vw] max-w-5xl overflow-y-auto p-0 sm:h-[88vh] sm:max-w-6xl">
+					<div className="min-h-full bg-gradient-to-b from-slate-900/95 via-slate-900/90 to-slate-950/95 p-4 text-slate-100 sm:p-6">
+						<DialogHeader>
+							<DialogTitle>操作练习模式</DialogTitle>
+							<DialogDescription className="text-slate-300">
+								模拟引导流程，不扣减真实额度，不产生真实交易持仓
+							</DialogDescription>
+						</DialogHeader>
+						<div className="mt-4">
+							<PracticeLobby onClose={() => setOpen(false)} />
+						</div>
+					</div>
+				</DialogContent>
+			</Dialog>
+		</>
+	);
+}

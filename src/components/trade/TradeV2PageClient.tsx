@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PracticeButton } from "@/components/practice/PracticeButton";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import {
 	isCanonicalCnSymbol,
@@ -750,6 +751,7 @@ export function TradeV2PageClient() {
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
+					<PracticeButton />
 					<Link href={watchlistHref}>
 						<Button variant="outline" size="sm">
 							监控
