@@ -47,8 +47,12 @@ export function PracticeButton() {
 
 	return (
 		<>
-			<Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-				<Gamepad2 className="mr-1 h-4 w-4" />
+			<Button
+				size="sm"
+				className="whitespace-nowrap rounded-xl bg-gradient-to-r from-orange-500 via-amber-500 to-red-500 px-4 py-2 font-bold text-white shadow-lg shadow-orange-500/30 transition-all hover:scale-[1.02] hover:shadow-xl hover:shadow-red-500/35"
+				onClick={() => setOpen(true)}
+			>
+				<Gamepad2 className="mr-1.5 h-4 w-4" />
 				🎮 操作练习
 			</Button>
 			<Dialog open={open} onOpenChange={setOpen}>
