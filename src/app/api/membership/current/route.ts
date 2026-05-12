@@ -55,6 +55,8 @@ export async function GET() {
       currentPeriodStart: membership.currentPeriodStart,
       currentPeriodEnd: membership.currentPeriodEnd,
       cancelAtPeriodEnd: membership.cancelAtPeriodEnd,
+      stripeSubscriptionId: membership.stripeSubscriptionId,
+      stripeCustomerId: membership.stripeCustomerId,
       billingCycle: membership.billingCycle,
       createdAt: membership.createdAt,
       updatedAt: membership.updatedAt,

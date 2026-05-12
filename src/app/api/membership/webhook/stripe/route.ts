@@ -2,12 +2,8 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 import { getStripeClient, resolvePlanByPriceId } from "@/lib/billing/stripe";
-import {
-  applyMembershipCancelAtPeriodEnd,
-  applyPaidMembershipFromStripe,
-  downgradeToT0Paid,
-} from "@/lib/membership/subscription";
-import { settleReferralOnFirstPayment } from "@/lib/referral/service";
+import { activateMembership, cycleToPeriod } from "@/lib/membership/activate";
+import { recordPaymentTransaction } from "@/lib/membership/payments";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -41,41 +37,16 @@ async function finalizeWebhook(eventId: string): Promise<void> {
     .eq("event_id", eventId);
 }
 
+function amountFromCents(cents: number | null | undefined): number {
+  return Number(cents ?? 0) / 100;
+}
+
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
   const subscription = (invoice as Stripe.Invoice & {
     subscription?: string | Stripe.Subscription | null;
   }).subscription;
   if (!subscription) return null;
   return typeof subscription === "string" ? subscription : subscription.id;
-}
-
-async function savePayment(
-  userId: string | null,
-  invoice: Stripe.Invoice,
-  status: "paid" | "failed" | "pending",
-): Promise<void> {
-  const srv = getServiceSupabase();
-  if (!srv) return;
-  const firstLine = invoice.lines.data[0] as Stripe.InvoiceLineItem & {
-    price?: Stripe.Price | null;
-  };
-  await srv.from("payments").upsert(
-    {
-      user_id: userId,
-      amount: invoice.amount_paid ? invoice.amount_paid / 100 : invoice.amount_due / 100,
-      currency: (invoice.currency ?? "cny").toUpperCase(),
-      plan: firstLine?.price?.nickname ?? null,
-      payment_method: "stripe",
-      transaction_id: invoice.id,
-      status,
-      provider: "stripe",
-      metadata: {
-        customer: invoice.customer,
-        subscription: getInvoiceSubscriptionId(invoice),
-      },
-    },
-    { onConflict: "transaction_id" },
-  );
 }
 
 async function resolveUserIdFromSubscription(
@@ -95,6 +66,9 @@ async function resolveUserIdFromSubscription(
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
+  const srv = getServiceSupabase();
+  if (!srv) return;
+
   const userId = await resolveUserIdFromSubscription(subscription);
   if (!userId) return;
 
@@ -105,21 +79,33 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Pro
 
   const customerId =
     typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
-  const period = subscription as Stripe.Subscription & {
+  const periodFields = subscription as Stripe.Subscription & {
     current_period_start?: number;
     current_period_end?: number;
   };
-  await applyPaidMembershipFromStripe(getServiceSupabase()!, {
+
+  await activateMembership(srv, {
     userId,
     plan: resolved.plan,
-    cycle: resolved.cycle,
-    periodStart: period.current_period_start ?? Math.floor(Date.now() / 1000),
-    periodEnd: period.current_period_end ?? Math.floor(Date.now() / 1000),
+    period: cycleToPeriod(resolved.cycle),
     stripeSubscriptionId: subscription.id,
     stripeCustomerId: customerId,
     cancelAtPeriodEnd: Boolean(subscription.cancel_at_period_end),
-    status: subscription.status === "active" ? "active" : "paused",
   });
+
+  await srv
+    .from("user_memberships")
+    .update({
+      current_period_start: new Date(
+        (periodFields.current_period_start ?? Math.floor(Date.now() / 1000)) * 1000,
+      ).toISOString(),
+      current_period_end: new Date(
+        (periodFields.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000,
+      ).toISOString(),
+      status: subscription.status === "active" ? "active" : "paused",
+      cancel_at_period_end: Boolean(subscription.cancel_at_period_end),
+    })
+    .eq("user_id", userId);
 }
 
 export async function POST(request: Request) {
@@ -163,19 +149,42 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.subscription && session.metadata?.userId) {
-          const srv = getServiceSupabase();
-          await srv
-            ?.from("user_memberships")
-            .update({
-              stripe_subscription_id:
-                typeof session.subscription === "string"
-                  ? session.subscription
-                  : session.subscription.id,
-              stripe_customer_id:
-                typeof session.customer === "string" ? session.customer : session.customer?.id ?? null,
-            })
-            .eq("user_id", session.metadata.userId);
+        const userId = session.client_reference_id ?? session.metadata?.userId ?? null;
+        const subscriptionId =
+          typeof session.subscription === "string"
+            ? session.subscription
+            : session.subscription?.id ?? null;
+        const customerId =
+          typeof session.customer === "string" ? session.customer : session.customer?.id ?? null;
+        if (subscriptionId && userId) {
+          const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          const priceId = sub.items.data[0]?.price?.id ?? "";
+          const resolved = resolvePlanByPriceId(priceId);
+          if (resolved) {
+            await activateMembership(getServiceSupabase()!, {
+              userId,
+              plan: resolved.plan,
+              period: cycleToPeriod(resolved.cycle),
+              stripeSubscriptionId: subscriptionId,
+              stripeCustomerId: customerId,
+              cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+            });
+          }
+        }
+        if (userId) {
+          await recordPaymentTransaction(getServiceSupabase()!, {
+            userId,
+            orderId: session.id,
+            gateway: "stripe",
+            amount: amountFromCents(session.amount_total),
+            currency: (session.currency ?? "hkd").toUpperCase(),
+            status: "completed",
+            metadata: {
+              checkoutSessionId: session.id,
+              subscriptionId,
+              customerId,
+            },
+          });
         }
         break;
       }
@@ -186,15 +195,15 @@ export async function POST(request: Request) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           const userId = await resolveUserIdFromSubscription(sub);
           await handleSubscriptionUpdated(sub);
-          await savePayment(userId, invoice, "paid");
-          if (userId) {
-            await settleReferralOnFirstPayment(getServiceSupabase()!, {
-              refereeId: userId,
-              paymentId: invoice.id,
-            });
-          }
-        } else {
-          await savePayment(null, invoice, "paid");
+          await recordPaymentTransaction(getServiceSupabase()!, {
+            userId,
+            orderId: invoice.id,
+            gateway: "stripe",
+            amount: amountFromCents(invoice.amount_paid ?? invoice.amount_due),
+            currency: (invoice.currency ?? "hkd").toUpperCase(),
+            status: "paid",
+            metadata: { subscriptionId },
+          });
         }
         break;
       }
@@ -204,12 +213,21 @@ export async function POST(request: Request) {
         if (subscriptionId) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           const userId = await resolveUserIdFromSubscription(sub);
-          await savePayment(userId, invoice, "failed");
+          await recordPaymentTransaction(getServiceSupabase()!, {
+            userId,
+            orderId: invoice.id,
+            gateway: "stripe",
+            amount: amountFromCents(invoice.amount_due),
+            currency: (invoice.currency ?? "hkd").toUpperCase(),
+            status: "failed",
+            metadata: { subscriptionId },
+          });
           if (userId) {
-            await applyMembershipCancelAtPeriodEnd(getServiceSupabase()!, userId);
+            await getServiceSupabase()
+              ?.from("user_memberships")
+              .update({ cancel_at_period_end: true })
+              .eq("user_id", userId);
           }
-        } else {
-          await savePayment(null, invoice, "failed");
         }
         break;
       }
@@ -222,7 +240,14 @@ export async function POST(request: Request) {
         const sub = event.data.object as Stripe.Subscription;
         const userId = await resolveUserIdFromSubscription(sub);
         if (userId) {
-          await downgradeToT0Paid(getServiceSupabase()!, userId);
+          await getServiceSupabase()
+            ?.from("user_memberships")
+            .update({
+              status: "expired",
+              cancel_at_period_end: false,
+              stripe_subscription_id: null,
+            })
+            .eq("user_id", userId);
         }
         break;
       }

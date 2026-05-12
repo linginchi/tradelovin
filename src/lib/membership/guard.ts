@@ -110,3 +110,37 @@ export async function requireMembershipCapability(
 	}
 	return { membership: snapshot };
 }
+
+export async function checkMembership(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<true | NextResponse> {
+  const membership = await ensureCurrentMembership(supabase, userId);
+  if (!membership) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "会员信息不存在，请先完成会员开通",
+      },
+      { status: 403 },
+    );
+  }
+  const nowMs = Date.now();
+  const endMs = new Date(membership.currentPeriodEnd).getTime();
+  const trialMs = membership.trialEnd ? new Date(membership.trialEnd).getTime() : 0;
+  const valid =
+    (membership.plan === "T0_trial" && trialMs >= nowMs) ||
+    ((membership.plan === "T1" || membership.plan === "T2" || membership.plan === "T3") &&
+      membership.status === "active" &&
+      endMs >= nowMs);
+  if (!valid) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "会员已过期，请升级后继续使用",
+      },
+      { status: 403 },
+    );
+  }
+  return true;
+}

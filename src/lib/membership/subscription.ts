@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { BillingCycle, PaidPlan } from "@/lib/billing/stripe";
+import { activateMembership } from "@/lib/membership/activate";
 import { getCurrentMembership, syncLegacyMembershipAccount } from "@/lib/membership/v2";
 
 export async function applyPaidMembershipFromStripe(
@@ -17,24 +18,24 @@ export async function applyPaidMembershipFromStripe(
     status?: "active" | "paused" | "cancelled" | "expired" | "trialing";
   },
 ): Promise<void> {
-  const periodStartIso = new Date(input.periodStart * 1000).toISOString();
-  const periodEndIso = new Date(input.periodEnd * 1000).toISOString();
+  await activateMembership(supabase, {
+    userId: input.userId,
+    plan: input.plan,
+    period: input.cycle === "year" ? "yearly" : "monthly",
+    stripeSubscriptionId: input.stripeSubscriptionId,
+    stripeCustomerId: input.stripeCustomerId,
+    cancelAtPeriodEnd: input.cancelAtPeriodEnd,
+  });
 
-  await supabase.from("user_memberships").upsert(
-    {
-      user_id: input.userId,
-      plan: input.plan,
+  await supabase
+    .from("user_memberships")
+    .update({
       status: input.status ?? "active",
-      trial_end: null,
-      current_period_start: periodStartIso,
-      current_period_end: periodEndIso,
-      cancel_at_period_end: Boolean(input.cancelAtPeriodEnd),
-      stripe_subscription_id: input.stripeSubscriptionId,
-      stripe_customer_id: input.stripeCustomerId,
+      current_period_start: new Date(input.periodStart * 1000).toISOString(),
+      current_period_end: new Date(input.periodEnd * 1000).toISOString(),
       billing_cycle: input.cycle,
-    },
-    { onConflict: "user_id" },
-  );
+    })
+    .eq("user_id", input.userId);
 
   const current = await getCurrentMembership(supabase, input.userId);
   if (current) {
