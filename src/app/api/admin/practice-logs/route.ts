@@ -16,12 +16,6 @@ type LogRow = {
 	created_at: string;
 };
 
-type FilterableQuery = {
-	eq: (...args: unknown[]) => FilterableQuery;
-	gte: (...args: unknown[]) => FilterableQuery;
-	lte: (...args: unknown[]) => FilterableQuery;
-};
-
 function toBoolFilter(value: string | null): boolean | null {
 	if (value === "true") return true;
 	if (value === "false") return false;
@@ -56,17 +50,6 @@ export async function GET(request: Request) {
 	const start = (url.searchParams.get("start") ?? "").trim();
 	const end = (url.searchParams.get("end") ?? "").trim();
 	const format = (url.searchParams.get("format") ?? "").trim().toLowerCase();
-
-	const applyBaseFilters = (q: FilterableQuery) => {
-		let query = q;
-		if (userId) query = query.eq("user_id", userId);
-		if (levelId) query = query.eq("level_id", levelId);
-		if (stepId) query = query.eq("step_id", stepId);
-		if (correctFilter !== null) query = query.eq("correct", correctFilter);
-		if (start) query = query.gte("created_at", `${start}T00:00:00.000Z`);
-		if (end) query = query.lte("created_at", `${end}T23:59:59.999Z`);
-		return query;
-	};
 
 	const attachNicknames = async (rows: LogRow[]) => {
 		const userIds = [...new Set(rows.map((row) => row.user_id))];
@@ -109,13 +92,18 @@ export async function GET(request: Request) {
 	}
 
 	if (format === "csv" || search) {
-		const { data, error } = await applyBaseFilters(
-			service
-				.from("practice_logs")
-				.select("id,user_id,level_id,step_id,user_input,correct,score_delta,created_at")
-				.order("created_at", { ascending: false })
-				.limit(5000),
-		);
+		let csvQuery = service
+			.from("practice_logs")
+			.select("id,user_id,level_id,step_id,user_input,correct,score_delta,created_at")
+			.order("created_at", { ascending: false })
+			.limit(5000);
+		if (userId) csvQuery = csvQuery.eq("user_id", userId);
+		if (levelId) csvQuery = csvQuery.eq("level_id", levelId);
+		if (stepId) csvQuery = csvQuery.eq("step_id", stepId);
+		if (correctFilter !== null) csvQuery = csvQuery.eq("correct", correctFilter);
+		if (start) csvQuery = csvQuery.gte("created_at", `${start}T00:00:00.000Z`);
+		if (end) csvQuery = csvQuery.lte("created_at", `${end}T23:59:59.999Z`);
+		const { data, error } = await csvQuery;
 		if (error) {
 			return NextResponse.json({ success: false, error: error.message }, { status: 500 });
 		}
@@ -159,13 +147,18 @@ export async function GET(request: Request) {
 
 	const from = (page - 1) * pageSize;
 	const to = from + pageSize - 1;
-	const { data, error, count } = await applyBaseFilters(
-		service
-			.from("practice_logs")
-			.select("id,user_id,level_id,step_id,user_input,correct,score_delta,created_at", { count: "exact" })
-			.order("created_at", { ascending: false })
-			.range(from, to),
-	);
+	let listQuery = service
+		.from("practice_logs")
+		.select("id,user_id,level_id,step_id,user_input,correct,score_delta,created_at", { count: "exact" })
+		.order("created_at", { ascending: false })
+		.range(from, to);
+	if (userId) listQuery = listQuery.eq("user_id", userId);
+	if (levelId) listQuery = listQuery.eq("level_id", levelId);
+	if (stepId) listQuery = listQuery.eq("step_id", stepId);
+	if (correctFilter !== null) listQuery = listQuery.eq("correct", correctFilter);
+	if (start) listQuery = listQuery.gte("created_at", `${start}T00:00:00.000Z`);
+	if (end) listQuery = listQuery.lte("created_at", `${end}T23:59:59.999Z`);
+	const { data, error, count } = await listQuery;
 	if (error) {
 		return NextResponse.json({ success: false, error: error.message }, { status: 500 });
 	}
