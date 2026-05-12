@@ -36,6 +36,7 @@ function verifyByExpected(expected: PracticeExpected, userInput: unknown): boole
 		case "click_cancel":
 		case "click_apply_resource":
 		case "confirm":
+		case "confirm_apply_resource":
 		case "confirm_cancel":
 			return normalizeString(input.action) === expected.type;
 		case "select_position":

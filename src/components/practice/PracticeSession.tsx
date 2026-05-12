@@ -320,6 +320,8 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 				return "sell-button";
 			case "confirm":
 				return "confirm-button";
+			case "confirm_apply_resource":
+				return "confirm-apply-resource";
 			case "order_status":
 				return "order-status-button";
 			case "view_orders":
@@ -658,6 +660,14 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									}}
 								>
 									申请资源
+								</Button>
+								<Button
+									data-practice-target="confirm-apply-resource"
+									size="sm"
+									variant="outline"
+									onClick={() => void tryVerify("confirm_apply_resource", { action: "confirm_apply_resource" })}
+								>
+									确认申请成功
 								</Button>
 							</div>
 							<div className="flex gap-2">

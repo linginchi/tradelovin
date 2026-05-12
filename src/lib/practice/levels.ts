@@ -11,6 +11,7 @@ export type PracticeExpected =
 	| { type: "click_cancel" }
 	| { type: "click_apply_resource" }
 	| { type: "confirm" }
+	| { type: "confirm_apply_resource" }
 	| { type: "confirm_cancel" }
 	| { type: "position_mode"; value: "long" | "short" }
 	| { type: "order_status"; status: string[] }
@@ -115,7 +116,7 @@ export const PRACTICE_LEVELS: Record<string, PracticeLevel> = {
 			{ id: "side", instruction: "选择「做空资源」", expected: { type: "resource_side", value: "short" } },
 			{ id: "quantity", instruction: "输入申请数量「1000」", expected: { type: "quantity", value: 1000 } },
 			{ id: "apply", instruction: "点击「申请资源」按钮", expected: { type: "click_apply_resource" } },
-			{ id: "confirm", instruction: "点击「确认申请成功」", expected: { type: "confirm" } },
+			{ id: "confirm", instruction: "点击「确认申请成功」", expected: { type: "confirm_apply_resource" } },
 		],
 	},
 };
