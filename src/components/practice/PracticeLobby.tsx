@@ -53,22 +53,27 @@ export function PracticeLobby({ onClose }: Props) {
 			scoreDelta: number;
 			timestamp: string;
 		}>;
+		newTotalScore?: number;
 	}) => {
 		const previous = Number(globalThis.localStorage?.getItem(LOCAL_SCORE_KEY) ?? "0");
-		const next = previous + payload.finalScore;
+		const fromServer =
+			typeof payload.newTotalScore === "number" && Number.isFinite(payload.newTotalScore)
+				? payload.newTotalScore
+				: null;
+		const next = fromServer ?? previous + payload.finalScore;
 		globalThis.localStorage?.setItem(LOCAL_SCORE_KEY, String(next));
 		globalThis.localStorage?.setItem(STATS_MOCK_KEY, String(next));
 		setLocalTotalScore(next);
 
 		try {
-			await fetch("/api/practice/complete", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				credentials: "include",
-				body: JSON.stringify(payload),
-			});
+			const res = await fetch("/api/practice/stats", { credentials: "include" });
+			if (res.ok) {
+				const json = (await res.json()) as { totalScore?: unknown };
+				const remote = Number(json.totalScore);
+				if (Number.isFinite(remote)) setLocalTotalScore(remote);
+			}
 		} catch {
-			// P1 先本地演示，失败时保持本地积分不丢失
+			// 网络异常时保留本地分数
 		}
 		toast.success(`关卡完成，累计演示积分：${next}`);
 	};

@@ -29,6 +29,15 @@ export async function POST(request: Request) {
 	}
 
 	const result = verifyPracticeStep(levelId, stepId, body.userInput);
+	if (!result.expectedValue) {
+		return NextResponse.json(
+			{
+				success: false,
+				...result,
+			},
+			{ status: 404 },
+		);
+	}
 	return NextResponse.json({
 		success: true,
 		...result,

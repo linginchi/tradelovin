@@ -53,6 +53,10 @@ function verifyByExpected(expected: PracticeExpected, userInput: unknown): boole
 	}
 }
 
+export function verifyPracticeExpected(expected: PracticeExpected, userInput: unknown): boolean {
+	return verifyByExpected(expected, userInput);
+}
+
 export type PracticeVerifyResult = {
 	correct: boolean;
 	expectedValue: PracticeExpected | null;

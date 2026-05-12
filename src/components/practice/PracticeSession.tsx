@@ -1,12 +1,14 @@
 "use client";
 
-import { CheckCircle2, Target, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, Target, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LEVELS, type PracticeExpected, type PracticeLevel } from "@/lib/practice/levels";
+import { verifyPracticeStep } from "@/lib/practice/verify";
 
 type StepScoreMap = Record<string, number>;
 type PracticeLog = {
@@ -28,7 +30,7 @@ type CompletePayload = {
 type Props = {
 	levelId: string;
 	onBack: () => void;
-	onCompleted?: (payload: CompletePayload) => void;
+	onCompleted?: (payload: CompletePayload & { newTotalScore?: number }) => void;
 };
 
 const MOCK_STOCK = { symbol: "000001", name: "平安银行" };
@@ -112,6 +114,8 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 		{ id: "ord-001", symbol: "000001", side: "buy", status: "pending" as "pending" | "filled" | "cancelled" },
 	]);
 	const [submittingOrder, setSubmittingOrder] = useState(false);
+	const [verifying, setVerifying] = useState(false);
+	const [completing, setCompleting] = useState(false);
 
 	const steps = level?.steps ?? [];
 	const currentStep = steps[currentStepIndex] ?? null;
@@ -122,9 +126,31 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 		globalThis.localStorage?.setItem(LOG_STORAGE_KEY, JSON.stringify(merged));
 	};
 
-	const verifyStep = (userInput: Record<string, unknown>) => {
+	const verifyStep = async (userInput: Record<string, unknown>) => {
 		if (!currentStep) return;
-		const correct = matchesExpected(currentStep.expected, userInput);
+		if (verifying || completing) return;
+		setVerifying(true);
+
+		let correct = false;
+		let fallbackUsed = false;
+		try {
+			const res = await fetch("/api/practice/verify", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({
+					levelId,
+					stepId: currentStep.id,
+					userInput,
+				}),
+			});
+			const json = (await res.json()) as { correct?: unknown; message?: unknown };
+			correct = json.correct === true;
+		} catch {
+			fallbackUsed = true;
+			correct = verifyPracticeStep(levelId, currentStep.id, userInput).correct;
+		}
+
 		const previousDelta = stepScores[currentStep.id];
 		let scoreDelta = 0;
 		const nextStepScores: StepScoreMap = { ...stepScores };
@@ -139,14 +165,14 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 				scoreDelta = 1;
 			}
 			nextTotal += scoreDelta;
-			setFeedback({ ok: true, text: "步骤正确，+1 分" });
+			setFeedback({ ok: true, text: fallbackUsed ? "步骤正确，+1 分（离线校验）" : "步骤正确，+1 分" });
 		} else {
 			if (previousDelta === undefined) {
 				nextStepScores[currentStep.id] = -1;
 				scoreDelta = -1;
 			}
 			nextTotal += scoreDelta;
-			setFeedback({ ok: false, text: "输入或操作不正确，请按提示重试" });
+			setFeedback({ ok: false, text: fallbackUsed ? "输入不正确（离线校验），请重试" : "输入或操作不正确，请按提示重试" });
 		}
 
 		const logEntry: PracticeLog = {
@@ -164,9 +190,33 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 		setLogs(nextLogs);
 		persistLog(logEntry);
 
-		if (!correct) return;
+		if (!correct) {
+			setVerifying(false);
+			return;
+		}
 		const nextIndex = currentStepIndex + 1;
 		if (nextIndex >= steps.length) {
+			setCompleting(true);
+			let newTotalScore: number | undefined;
+			try {
+				const completeRes = await fetch("/api/practice/complete", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					credentials: "include",
+					body: JSON.stringify({
+						levelId,
+						finalScore: nextTotal,
+						logs: nextLogs,
+					}),
+				});
+				const completeJson = (await completeRes.json()) as { newTotalScore?: unknown };
+				const score = Number(completeJson.newTotalScore);
+				if (Number.isFinite(score)) newTotalScore = score;
+			} catch {
+				toast.warning("练习已完成，后端暂不可用，已保留本地记录");
+			} finally {
+				setCompleting(false);
+			}
 			setCompleted(true);
 			console.log("[practice logs]", nextLogs);
 			onCompleted?.({
@@ -178,16 +228,19 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 					scoreDelta: nextStepScores[step.id] ?? 0,
 				})),
 				logs: nextLogs,
+				newTotalScore,
 			});
+			setVerifying(false);
 			return;
 		}
 		setCurrentStepIndex(nextIndex);
+		setVerifying(false);
 	};
 
-	const tryVerify = (expectedType: PracticeExpected["type"], userInput: Record<string, unknown>) => {
+	const tryVerify = async (expectedType: PracticeExpected["type"], userInput: Record<string, unknown>) => {
 		if (!currentStep) return;
 		if (currentStep.expected.type !== expectedType) return;
-		verifyStep(userInput);
+		await verifyStep(userInput);
 	};
 
 	const statusText = useMemo(() => {
@@ -256,7 +309,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							variant={activeView === "orders" ? "default" : "outline"}
 							onClick={() => {
 								setActiveView("orders");
-								tryVerify("view_orders", { view: "orders" });
+								void tryVerify("view_orders", { view: "orders" });
 							}}
 						>
 							委托面板
@@ -287,7 +340,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									setSearchInput(e.target.value);
 								}}
 								onBlur={() => {
-									tryVerify("search", { value: searchInput });
+									void tryVerify("search", { value: searchInput });
 								}}
 							/>
 							{hasMockSearchResult ? (
@@ -296,7 +349,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
 									onClick={() => {
 										setSelectedSymbol(MOCK_STOCK.symbol);
-										tryVerify("select", { symbol: MOCK_STOCK.symbol, name: MOCK_STOCK.name });
+										void tryVerify("select", { symbol: MOCK_STOCK.symbol, name: MOCK_STOCK.name });
 									}}
 								>
 									{MOCK_STOCK.symbol} - {MOCK_STOCK.name}
@@ -315,7 +368,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									variant={positionMode === "long" ? "default" : "outline"}
 									onClick={() => {
 										setPositionMode("long");
-										tryVerify("position_mode", { value: "long" });
+										void tryVerify("position_mode", { value: "long" });
 									}}
 								>
 									做多
@@ -325,7 +378,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									variant={positionMode === "short" ? "default" : "outline"}
 									onClick={() => {
 										setPositionMode("short");
-										tryVerify("position_mode", { value: "short" });
+										void tryVerify("position_mode", { value: "short" });
 									}}
 								>
 									融券做空
@@ -338,7 +391,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									setQuantityInput(e.target.value);
 								}}
 								onBlur={() => {
-									tryVerify("quantity", { value: Number(quantityInput) });
+									void tryVerify("quantity", { value: Number(quantityInput) });
 								}}
 							/>
 							<div className="flex gap-2">
@@ -349,7 +402,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 										setTimeout(() => {
 											setSubmittingOrder(false);
 											setOrderStatus(Math.random() > 0.5 ? "pending" : "filled");
-											tryVerify("click_buy", { action: "click_buy" });
+											void tryVerify("click_buy", { action: "click_buy" });
 										}, 280);
 									}}
 								>
@@ -363,7 +416,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 										setTimeout(() => {
 											setSubmittingOrder(false);
 											setOrderStatus(Math.random() > 0.5 ? "pending" : "filled");
-											tryVerify("click_sell", { action: "click_sell" });
+											void tryVerify("click_sell", { action: "click_sell" });
 										}, 280);
 									}}
 								>
@@ -374,12 +427,12 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								<Button
 									variant="outline"
 									onClick={() => {
-										tryVerify("order_status", { status: orderStatus });
+										void tryVerify("order_status", { status: orderStatus });
 									}}
 								>
 									检查状态
 								</Button>
-								<Button variant="outline" onClick={() => tryVerify("confirm", { action: "confirm" })}>
+								<Button variant="outline" onClick={() => void tryVerify("confirm", { action: "confirm" })}>
 									确认委托/操作完成
 								</Button>
 							</div>
@@ -395,7 +448,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
 								onClick={() => {
 									setSelectedPositionSymbol("000001");
-									tryVerify("select_position", { symbol: "000001" });
+									void tryVerify("select_position", { symbol: "000001" });
 								}}
 							>
 								000001 平安银行（多头可用 1200）
@@ -406,7 +459,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								onClick={() => {
 									setSelectedPositionSymbol("000001");
 									setPositionMode("short");
-									tryVerify("select_position", { symbol: "000001" });
+									void tryVerify("select_position", { symbol: "000001" });
 								}}
 							>
 								000001 平安银行（空头可用 600）
@@ -427,7 +480,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 											variant="outline"
 											onClick={() => {
 												setSelectedOrderId(order.id);
-												tryVerify("select_order", { status: order.status });
+												void tryVerify("select_order", { status: order.status });
 											}}
 										>
 											选择委托
@@ -440,7 +493,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 													prev.map((row) => (row.id === order.id ? { ...row, status: "cancelled" } : row)),
 												);
 												setOrderStatus("pending");
-												tryVerify("click_cancel", { action: "click_cancel" });
+												void tryVerify("click_cancel", { action: "click_cancel" });
 											}}
 										>
 											撤单
@@ -454,7 +507,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									variant={resourceSide === "long" ? "default" : "outline"}
 									onClick={() => {
 										setResourceSide("long");
-										tryVerify("resource_side", { value: "long" });
+										void tryVerify("resource_side", { value: "long" });
 									}}
 								>
 									多头资源
@@ -464,7 +517,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									variant={resourceSide === "short" ? "default" : "outline"}
 									onClick={() => {
 										setResourceSide("short");
-										tryVerify("resource_side", { value: "short" });
+										void tryVerify("resource_side", { value: "short" });
 									}}
 								>
 									空头资源
@@ -473,20 +526,26 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									size="sm"
 									onClick={() => {
 										setOrderStatus("pending");
-										tryVerify("click_apply_resource", { action: "click_apply_resource" });
+										void tryVerify("click_apply_resource", { action: "click_apply_resource" });
 									}}
 								>
 									申请资源
 								</Button>
 							</div>
 							<div className="flex gap-2">
-								<Button variant="outline" size="sm" onClick={() => tryVerify("confirm_cancel", { action: "confirm_cancel" })}>
+								<Button variant="outline" size="sm" onClick={() => void tryVerify("confirm_cancel", { action: "confirm_cancel" })}>
 									确认撤单成功
 								</Button>
 							</div>
 							<p className="text-xs text-muted-foreground">当前选中委托：{selectedOrderId || "未选择"}</p>
 						</div>
 					</div>
+					{verifying || completing ? (
+						<div className="flex items-center gap-2 text-xs text-muted-foreground">
+							<Loader2 className="h-3.5 w-3.5 animate-spin" />
+							{completing ? "正在提交练习结果..." : "正在校验步骤..."}
+						</div>
+					) : null}
 				</>
 			)}
 
