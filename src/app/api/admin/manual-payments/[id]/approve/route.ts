@@ -48,7 +48,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     .update({
       status: "paid",
       paid_at: nowIso,
-      admin_notes: `approved by ${gated.session.email ?? gated.session.userId}`,
+      admin_notes: `approved by ${gated.session.email}`,
     })
     .eq("id", id);
 
@@ -58,7 +58,7 @@ export async function POST(_request: Request, { params }: RouteParams) {
     gateway: "manual",
     amount: Number(order.amount ?? 0),
     status: "paid",
-    metadata: { orderNo: order.order_no, approvedBy: gated.session.userId },
+    metadata: { orderNo: order.order_no, approvedBy: gated.session.email },
   });
 
   return NextResponse.json({ success: true });

@@ -27,6 +27,8 @@ type ManualOrder = {
   };
 };
 
+type PaidPlan = "T1" | "T2" | "T3";
+
 const PLAN_PRICE = {
   T1: { monthly: "HK$49 / ¥49", yearly: "HK$499 / ¥499" },
   T2: { monthly: "HK$99 / ¥99", yearly: "HK$999 / ¥999" },
@@ -70,7 +72,7 @@ export function MembershipCenterClient() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  async function subscribe(plan: "T1" | "T2" | "T3") {
+  async function subscribe(plan: PaidPlan) {
     setSubmitting(true);
     setError("");
     try {
@@ -135,7 +137,7 @@ export function MembershipCenterClient() {
     }
   }
 
-  async function createFpsOrder(plan: "T1" | "T2" | "T3") {
+  async function createFpsOrder(plan: PaidPlan) {
     setSubmitting(true);
     setError("");
     try {
@@ -195,7 +197,7 @@ export function MembershipCenterClient() {
   }
 
   const planRows = useMemo(
-    () => [
+    (): Array<{ plan: PaidPlan; price: string; rights: string }> => [
       { plan: "T1", price: PLAN_PRICE.T1[period], rights: "模拟交易、课程折扣、训练建议" },
       { plan: "T2", price: PLAN_PRICE.T2[period], rights: "深度 TQ 报告、证书、改善建议" },
       { plan: "T3", price: PLAN_PRICE.T3[period], rights: "T2 全部 + L2 行情 + 高级策略能力" },
