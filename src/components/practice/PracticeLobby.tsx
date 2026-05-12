@@ -13,6 +13,7 @@ type Props = {
 };
 
 const LOCAL_SCORE_KEY = "practice:score:v1";
+const STATS_MOCK_KEY = "practice:stats:mock:v1";
 
 export function PracticeLobby({ onClose }: Props) {
 	const [activeLevelId, setActiveLevelId] = useState<string | null>(null);
@@ -22,16 +23,41 @@ export function PracticeLobby({ onClose }: Props) {
 	useEffect(() => {
 		const value = Number(globalThis.localStorage?.getItem(LOCAL_SCORE_KEY) ?? "0");
 		setLocalTotalScore(Number.isFinite(value) ? value : 0);
+
+		const loadStats = async () => {
+			try {
+				const res = await fetch("/api/practice/stats", { credentials: "include" });
+				if (!res.ok) throw new Error("stats api unavailable");
+				const json = (await res.json()) as { totalScore?: unknown };
+				const remote = Number(json.totalScore);
+				if (Number.isFinite(remote)) {
+					setLocalTotalScore(remote);
+				}
+			} catch {
+				const mock = Number(globalThis.localStorage?.getItem(STATS_MOCK_KEY) ?? "0");
+				if (Number.isFinite(mock) && mock > 0) setLocalTotalScore(mock);
+			}
+		};
+		void loadStats();
 	}, []);
 
 	const handleComplete = async (payload: {
 		levelId: string;
 		finalScore: number;
 		stepResults: Array<{ stepId: string; correct: boolean; scoreDelta: number }>;
+		logs: Array<{
+			levelId: string;
+			stepId: string;
+			userInput: Record<string, unknown>;
+			correct: boolean;
+			scoreDelta: number;
+			timestamp: string;
+		}>;
 	}) => {
 		const previous = Number(globalThis.localStorage?.getItem(LOCAL_SCORE_KEY) ?? "0");
 		const next = previous + payload.finalScore;
 		globalThis.localStorage?.setItem(LOCAL_SCORE_KEY, String(next));
+		globalThis.localStorage?.setItem(STATS_MOCK_KEY, String(next));
 		setLocalTotalScore(next);
 
 		try {
@@ -59,7 +85,7 @@ export function PracticeLobby({ onClose }: Props) {
 					<p className="text-xs text-muted-foreground">按步骤完成模拟操作，不影响真实账户</p>
 				</div>
 				<div className="flex items-center gap-2">
-					<Badge variant="secondary">本地演示积分：{localTotalScore}</Badge>
+					<Badge variant="secondary">我的总积分：{localTotalScore}</Badge>
 					{onClose ? (
 						<Button variant="outline" size="sm" onClick={onClose}>
 							关闭
@@ -70,26 +96,19 @@ export function PracticeLobby({ onClose }: Props) {
 
 			<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
 				{levelList.map((level) => {
-					const isReady = level.id === "buy_stock";
 					return (
 						<div key={level.id} className="rounded-xl border bg-card p-4">
 							<div className="flex items-start justify-between gap-2">
 								<p className="text-base font-semibold">{level.title}</p>
-								<Badge variant={isReady ? "default" : "outline"}>{isReady ? "可练习" : "开发中"}</Badge>
+								<Badge variant="default">可练习</Badge>
 							</div>
 							<p className="mt-2 text-xs text-muted-foreground">步骤数：{level.steps.length}</p>
 							<Button
 								className="mt-4 w-full"
-								variant={isReady ? "default" : "outline"}
-								onClick={() => {
-									if (!isReady) {
-										toast.message("该关卡将在 P2 完整开放");
-										return;
-									}
-									setActiveLevelId(level.id);
-								}}
+								variant="default"
+								onClick={() => setActiveLevelId(level.id)}
 							>
-								{isReady ? "进入练习" : "敬请期待"}
+								进入练习
 							</Button>
 						</div>
 					);

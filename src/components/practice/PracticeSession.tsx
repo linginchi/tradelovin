@@ -6,14 +6,23 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { LEVELS, type PracticeLevel } from "@/lib/practice/levels";
+import { LEVELS, type PracticeExpected, type PracticeLevel } from "@/lib/practice/levels";
 
 type StepScoreMap = Record<string, number>;
+type PracticeLog = {
+	levelId: string;
+	stepId: string;
+	userInput: Record<string, unknown>;
+	correct: boolean;
+	scoreDelta: number;
+	timestamp: string;
+};
 
 type CompletePayload = {
 	levelId: string;
 	finalScore: number;
 	stepResults: Array<{ stepId: string; correct: boolean; scoreDelta: number }>;
+	logs: PracticeLog[];
 };
 
 type Props = {
@@ -23,11 +32,61 @@ type Props = {
 };
 
 const MOCK_STOCK = { symbol: "000001", name: "平安银行" };
+const LOG_STORAGE_KEY = "practice:logs:v1";
 
 function getProgressPercent(currentStepIndex: number, stepsLen: number, completed: boolean): number {
 	if (stepsLen <= 0) return 0;
 	if (completed) return 100;
 	return Math.round((currentStepIndex / stepsLen) * 100);
+}
+
+function toRecord(value: unknown): Record<string, unknown> {
+	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+}
+
+function matchesExpected(expected: PracticeExpected, userInput: unknown): boolean {
+	const input = toRecord(userInput);
+	switch (expected.type) {
+		case "search":
+			return String(input.value ?? "").trim() === expected.value;
+		case "select":
+			return String(input.symbol ?? "") === expected.symbol && String(input.name ?? "") === expected.name;
+		case "select_position":
+			return String(input.symbol ?? "") === expected.symbol;
+		case "quantity":
+			return Number(input.value) === expected.value;
+		case "position_mode":
+			return String(input.value ?? "") === expected.value;
+		case "resource_side":
+			return String(input.value ?? "") === expected.value;
+		case "click_buy":
+		case "click_sell":
+		case "click_cancel":
+		case "click_apply_resource":
+		case "confirm":
+		case "confirm_cancel":
+			return String(input.action ?? "") === expected.type;
+		case "view_orders":
+			return String(input.view ?? "") === "orders";
+		case "select_order":
+			return String(input.status ?? "") === expected.status;
+		case "order_status":
+			return expected.status.includes(String(input.status ?? ""));
+		case "price":
+			return Number(input.value) === expected.value;
+		default:
+			return false;
+	}
+}
+
+function readStoredLogs(): PracticeLog[] {
+	try {
+		const raw = globalThis.localStorage?.getItem(LOG_STORAGE_KEY);
+		const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+		return Array.isArray(parsed) ? (parsed as PracticeLog[]) : [];
+	} catch {
+		return [];
+	}
 }
 
 export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
@@ -38,87 +97,103 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 	const [completed, setCompleted] = useState(false);
 	const [practiceMode, setPracticeMode] = useState(false);
 	const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+	const [logs, setLogs] = useState<PracticeLog[]>([]);
 
 	const [searchInput, setSearchInput] = useState("");
 	const [selectedSymbol, setSelectedSymbol] = useState("");
+	const [selectedPositionSymbol, setSelectedPositionSymbol] = useState("");
+	const [selectedOrderId, setSelectedOrderId] = useState("");
 	const [quantityInput, setQuantityInput] = useState("");
+	const [activeView, setActiveView] = useState<"trade" | "orders" | "positions" | "resources">("trade");
+	const [positionMode, setPositionMode] = useState<"long" | "short">("long");
+	const [resourceSide, setResourceSide] = useState<"long" | "short">("long");
 	const [orderStatus, setOrderStatus] = useState<"pending" | "filled" | "idle">("idle");
+	const [mockOrderList, setMockOrderList] = useState([
+		{ id: "ord-001", symbol: "000001", side: "buy", status: "pending" as "pending" | "filled" | "cancelled" },
+	]);
 	const [submittingOrder, setSubmittingOrder] = useState(false);
 
 	const steps = level?.steps ?? [];
 	const currentStep = steps[currentStepIndex] ?? null;
 	const progressPercent = getProgressPercent(currentStepIndex, steps.length, completed);
 	const hasMockSearchResult = searchInput.includes("000001");
-
-	const ensurePenaltyOnce = (stepId: string) => {
-		if (stepScores[stepId] !== undefined) return;
-		setStepScores((prev) => ({ ...prev, [stepId]: -1 }));
-		setTotalScore((prev) => prev - 1);
+	const persistLog = (entry: PracticeLog) => {
+		const merged = [...readStoredLogs(), entry];
+		globalThis.localStorage?.setItem(LOG_STORAGE_KEY, JSON.stringify(merged));
 	};
 
-	const markStepSuccess = (stepId: string) => {
-		const prevDelta = stepScores[stepId];
-		if (prevDelta === undefined) {
-			setStepScores((prev) => ({ ...prev, [stepId]: 1 }));
-			setTotalScore((prev) => prev + 1);
-		} else if (prevDelta < 0) {
-			setStepScores((prev) => ({ ...prev, [stepId]: 0 }));
-			setTotalScore((prev) => prev + 1);
+	const verifyStep = (userInput: Record<string, unknown>) => {
+		if (!currentStep) return;
+		const correct = matchesExpected(currentStep.expected, userInput);
+		const previousDelta = stepScores[currentStep.id];
+		let scoreDelta = 0;
+		const nextStepScores: StepScoreMap = { ...stepScores };
+		let nextTotal = totalScore;
+
+		if (correct) {
+			if (previousDelta === undefined) {
+				nextStepScores[currentStep.id] = 1;
+				scoreDelta = 1;
+			} else if (previousDelta < 0) {
+				nextStepScores[currentStep.id] = 0;
+				scoreDelta = 1;
+			}
+			nextTotal += scoreDelta;
+			setFeedback({ ok: true, text: "步骤正确，+1 分" });
+		} else {
+			if (previousDelta === undefined) {
+				nextStepScores[currentStep.id] = -1;
+				scoreDelta = -1;
+			}
+			nextTotal += scoreDelta;
+			setFeedback({ ok: false, text: "输入或操作不正确，请按提示重试" });
 		}
 
+		const logEntry: PracticeLog = {
+			levelId,
+			stepId: currentStep.id,
+			userInput,
+			correct,
+			scoreDelta,
+			timestamp: new Date().toISOString(),
+		};
+		const nextLogs = [...logs, logEntry];
+
+		setStepScores(nextStepScores);
+		setTotalScore(nextTotal);
+		setLogs(nextLogs);
+		persistLog(logEntry);
+
+		if (!correct) return;
 		const nextIndex = currentStepIndex + 1;
 		if (nextIndex >= steps.length) {
 			setCompleted(true);
+			console.log("[practice logs]", nextLogs);
 			onCompleted?.({
 				levelId,
-				finalScore: totalScore + (prevDelta === undefined ? 1 : prevDelta < 0 ? 1 : 0),
+				finalScore: nextTotal,
 				stepResults: steps.map((step) => ({
 					stepId: step.id,
 					correct: true,
-					scoreDelta: step.id === stepId ? (prevDelta === undefined ? 1 : prevDelta < 0 ? 0 : prevDelta) : (stepScores[step.id] ?? 0),
+					scoreDelta: nextStepScores[step.id] ?? 0,
 				})),
+				logs: nextLogs,
 			});
 			return;
 		}
 		setCurrentStepIndex(nextIndex);
 	};
 
-	const verifyStep = (userInput: unknown) => {
+	const tryVerify = (expectedType: PracticeExpected["type"], userInput: Record<string, unknown>) => {
 		if (!currentStep) return;
-		let correct = false;
-		switch (currentStep.id) {
-			case "search":
-				correct = String(userInput ?? "").trim() === "000001";
-				break;
-			case "select":
-				correct = String(userInput ?? "") === "000001";
-				break;
-			case "quantity":
-				correct = Number(userInput) === 1000;
-				break;
-			case "buy":
-				correct = userInput === "click_buy";
-				break;
-			case "confirm":
-				correct = userInput === "confirm_sent" && (orderStatus === "pending" || orderStatus === "filled");
-				break;
-			default:
-				correct = false;
-		}
-
-		if (correct) {
-			setFeedback({ ok: true, text: "步骤正确，+1 分" });
-			markStepSuccess(currentStep.id);
-			return;
-		}
-
-		ensurePenaltyOnce(currentStep.id);
-		setFeedback({ ok: false, text: "输入或操作不正确，请按提示重试" });
+		if (currentStep.expected.type !== expectedType) return;
+		verifyStep(userInput);
 	};
 
 	const statusText = useMemo(() => {
 		if (orderStatus === "pending") return "已报";
 		if (orderStatus === "filled") return "成交";
+		if (orderStatus === "idle") return "未提交";
 		return "未提交";
 	}, [orderStatus]);
 
@@ -147,7 +222,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 				<div className="h-full bg-primary transition-all" style={{ width: `${progressPercent}%` }} />
 			</div>
 			<p className="text-xs text-muted-foreground">
-				进度：{completed ? steps.length : currentStepIndex}/{steps.length} | 总分：{totalScore}
+				进度：{completed ? steps.length : currentStepIndex}/{steps.length} | 总分：{totalScore} | 日志：{logs.length}
 			</p>
 
 			{!practiceMode && (
@@ -166,7 +241,43 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						<p className="mt-1 text-base font-medium">{currentStep.instruction}</p>
 					</div>
 
-					<div className="grid gap-3 sm:grid-cols-2">
+					<div className="flex flex-wrap gap-2">
+						<Button
+							size="sm"
+							variant={activeView === "trade" ? "default" : "outline"}
+							onClick={() => {
+								setActiveView("trade");
+							}}
+						>
+							交易面板
+						</Button>
+						<Button
+							size="sm"
+							variant={activeView === "orders" ? "default" : "outline"}
+							onClick={() => {
+								setActiveView("orders");
+								tryVerify("view_orders", { view: "orders" });
+							}}
+						>
+							委托面板
+						</Button>
+						<Button
+							size="sm"
+							variant={activeView === "positions" ? "default" : "outline"}
+							onClick={() => setActiveView("positions")}
+						>
+							持仓面板
+						</Button>
+						<Button
+							size="sm"
+							variant={activeView === "resources" ? "default" : "outline"}
+							onClick={() => setActiveView("resources")}
+						>
+							资源面板
+						</Button>
+					</div>
+
+					<div className="grid gap-3 lg:grid-cols-2">
 						<div className="space-y-2 rounded-lg border p-3">
 							<p className="text-sm font-medium">股票搜索</p>
 							<Input
@@ -176,7 +287,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									setSearchInput(e.target.value);
 								}}
 								onBlur={() => {
-									if (currentStep.id === "search") verifyStep(searchInput);
+									tryVerify("search", { value: searchInput });
 								}}
 							/>
 							{hasMockSearchResult ? (
@@ -185,7 +296,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
 									onClick={() => {
 										setSelectedSymbol(MOCK_STOCK.symbol);
-										if (currentStep.id === "select") verifyStep(MOCK_STOCK.symbol);
+										tryVerify("select", { symbol: MOCK_STOCK.symbol, name: MOCK_STOCK.name });
 									}}
 								>
 									{MOCK_STOCK.symbol} - {MOCK_STOCK.name}
@@ -196,16 +307,38 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						</div>
 
 						<div className="space-y-2 rounded-lg border p-3">
-							<p className="text-sm font-medium">买入参数</p>
+							<p className="text-sm font-medium">下单参数</p>
 							<p className="text-xs text-muted-foreground">已选股票：{selectedSymbol || "未选择"}</p>
+							<div className="flex gap-2">
+								<Button
+									size="sm"
+									variant={positionMode === "long" ? "default" : "outline"}
+									onClick={() => {
+										setPositionMode("long");
+										tryVerify("position_mode", { value: "long" });
+									}}
+								>
+									做多
+								</Button>
+								<Button
+									size="sm"
+									variant={positionMode === "short" ? "default" : "outline"}
+									onClick={() => {
+										setPositionMode("short");
+										tryVerify("position_mode", { value: "short" });
+									}}
+								>
+									融券做空
+								</Button>
+							</div>
 							<Input
 								value={quantityInput}
-								placeholder="买入数量，如 1000"
+								placeholder="数量，如 500 / 1000"
 								onChange={(e) => {
 									setQuantityInput(e.target.value);
 								}}
 								onBlur={() => {
-									if (currentStep.id === "quantity") verifyStep(quantityInput);
+									tryVerify("quantity", { value: Number(quantityInput) });
 								}}
 							/>
 							<div className="flex gap-2">
@@ -215,25 +348,143 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 										setSubmittingOrder(true);
 										setTimeout(() => {
 											setSubmittingOrder(false);
-											setOrderStatus("pending");
-											if (currentStep.id === "buy") verifyStep("click_buy");
+											setOrderStatus(Math.random() > 0.5 ? "pending" : "filled");
+											tryVerify("click_buy", { action: "click_buy" });
 										}, 280);
 									}}
 								>
-									买入
+									{positionMode === "short" ? "买入平空" : "买入"}
 								</Button>
+								<Button
+									disabled={submittingOrder}
+									variant="destructive"
+									onClick={() => {
+										setSubmittingOrder(true);
+										setTimeout(() => {
+											setSubmittingOrder(false);
+											setOrderStatus(Math.random() > 0.5 ? "pending" : "filled");
+											tryVerify("click_sell", { action: "click_sell" });
+										}, 280);
+									}}
+								>
+									{positionMode === "short" ? "卖出开空" : "卖出"}
+								</Button>
+							</div>
+							<div className="flex gap-2">
 								<Button
 									variant="outline"
 									onClick={() => {
-										if (currentStep.id === "confirm") verifyStep("confirm_sent");
+										tryVerify("order_status", { status: orderStatus });
 									}}
 								>
-									确认委托已发送
+									检查状态
+								</Button>
+								<Button variant="outline" onClick={() => tryVerify("confirm", { action: "confirm" })}>
+									确认委托/操作完成
 								</Button>
 							</div>
 							<div className="rounded-md bg-muted p-2 text-xs">
 								<p>模拟委托状态：{statusText}</p>
 							</div>
+						</div>
+
+						<div className="space-y-2 rounded-lg border p-3">
+							<p className="text-sm font-medium">模拟持仓列表</p>
+							<button
+								type="button"
+								className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
+								onClick={() => {
+									setSelectedPositionSymbol("000001");
+									tryVerify("select_position", { symbol: "000001" });
+								}}
+							>
+								000001 平安银行（多头可用 1200）
+							</button>
+							<button
+								type="button"
+								className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
+								onClick={() => {
+									setSelectedPositionSymbol("000001");
+									setPositionMode("short");
+									tryVerify("select_position", { symbol: "000001" });
+								}}
+							>
+								000001 平安银行（空头可用 600）
+							</button>
+							<p className="text-xs text-muted-foreground">当前选中持仓：{selectedPositionSymbol || "未选择"}</p>
+						</div>
+
+						<div className="space-y-2 rounded-lg border p-3">
+							<p className="text-sm font-medium">模拟委托与资源</p>
+							{mockOrderList.map((order) => (
+								<div key={order.id} className="rounded-md border p-2 text-xs">
+									<p>
+										{order.symbol} / {order.side.toUpperCase()} / {order.status}
+									</p>
+									<div className="mt-1 flex gap-2">
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => {
+												setSelectedOrderId(order.id);
+												tryVerify("select_order", { status: order.status });
+											}}
+										>
+											选择委托
+										</Button>
+										<Button
+											size="sm"
+											variant="outline"
+											onClick={() => {
+												setMockOrderList((prev) =>
+													prev.map((row) => (row.id === order.id ? { ...row, status: "cancelled" } : row)),
+												);
+												setOrderStatus("pending");
+												tryVerify("click_cancel", { action: "click_cancel" });
+											}}
+										>
+											撤单
+										</Button>
+									</div>
+								</div>
+							))}
+							<div className="flex gap-2">
+								<Button
+									size="sm"
+									variant={resourceSide === "long" ? "default" : "outline"}
+									onClick={() => {
+										setResourceSide("long");
+										tryVerify("resource_side", { value: "long" });
+									}}
+								>
+									多头资源
+								</Button>
+								<Button
+									size="sm"
+									variant={resourceSide === "short" ? "default" : "outline"}
+									onClick={() => {
+										setResourceSide("short");
+										tryVerify("resource_side", { value: "short" });
+									}}
+								>
+									空头资源
+								</Button>
+								<Button
+									size="sm"
+									onClick={() => {
+										setOrderStatus("pending");
+										tryVerify("click_apply_resource", { action: "click_apply_resource" });
+									}}
+								>
+									申请资源
+								</Button>
+							</div>
+							<div className="flex gap-2">
+								<Button variant="outline" size="sm" onClick={() => tryVerify("confirm_cancel", { action: "confirm_cancel" })}>
+									确认撤单成功
+								</Button>
+							</div>
+							<p className="text-xs text-muted-foreground">当前选中委托：{selectedOrderId || "未选择"}</p>
 						</div>
 					</div>
 				</>

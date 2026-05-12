@@ -35,7 +35,15 @@ function verifyByExpected(expected: PracticeExpected, userInput: unknown): boole
 		case "click_sell":
 		case "click_cancel":
 		case "click_apply_resource":
+		case "confirm":
+		case "confirm_cancel":
 			return normalizeString(input.action) === expected.type;
+		case "select_position":
+			return normalizeString(input.symbol) === expected.symbol;
+		case "view_orders":
+			return normalizeString(input.view) === "orders";
+		case "select_order":
+			return normalizeString(input.status) === expected.status;
 		case "order_status": {
 			const status = normalizeString(input.value ?? input.status);
 			return expected.status.includes(status);
