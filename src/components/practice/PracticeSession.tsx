@@ -4,6 +4,7 @@ import { CheckCircle2, Loader2, Target, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { PracticeTargetHighlighter } from "@/components/practice/PracticeTargetHighlighter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +91,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 	const [verifying, setVerifying] = useState(false);
 	const [completing, setCompleting] = useState(false);
 	const [aborting, setAborting] = useState(false);
+	const [showHighlighter, setShowHighlighter] = useState(true);
 
 	const steps = level?.steps ?? [];
 	const currentStep = steps[currentStepIndex] ?? null;
@@ -261,6 +263,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 			setVerifying(false);
 			return;
 		}
+		setShowHighlighter(true);
 		setCurrentStepIndex(nextIndex);
 		setVerifying(false);
 	};
@@ -268,6 +271,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 	const tryVerify = async (expectedType: PracticeExpected["type"], userInput: Record<string, unknown>) => {
 		if (!currentStep) return;
 		if (currentStep.expected.type !== expectedType) return;
+		setShowHighlighter(false);
 		await verifyStep(userInput);
 	};
 
@@ -300,6 +304,47 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 		return "未提交";
 	}, [orderStatus]);
 
+	const currentTargetKey = useMemo(() => {
+		if (!currentStep) return null;
+		const expected = currentStep.expected;
+		switch (expected.type) {
+			case "search":
+				return "search-input";
+			case "select":
+				return `stock-item-${expected.symbol}`;
+			case "quantity":
+				return "quantity-input";
+			case "click_buy":
+				return "buy-button";
+			case "click_sell":
+				return "sell-button";
+			case "confirm":
+				return "confirm-button";
+			case "order_status":
+				return "order-status-button";
+			case "view_orders":
+				return "tab-orders";
+			case "select_order": {
+				const targetOrder = mockOrderList.find((order) => order.status === expected.status) ?? mockOrderList[0];
+				return targetOrder ? `order-item-${targetOrder.id}` : null;
+			}
+			case "click_cancel":
+				return "cancel-button";
+			case "position_mode":
+				return expected.value === "short" ? "short-mode-button" : "long-mode-button";
+			case "resource_side":
+				return expected.value === "short" ? "resource-side-short" : "resource-side-long";
+			case "click_apply_resource":
+				return "apply-resource-button";
+			case "confirm_cancel":
+				return "confirm-cancel-button";
+			case "select_position":
+				return `position-item-${expected.symbol}`;
+			default:
+				return null;
+		}
+	}, [currentStep, mockOrderList]);
+
 	if (!level) {
 		return (
 			<div className="rounded-xl border p-6">
@@ -313,6 +358,10 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 
 	return (
 		<div className="space-y-4 rounded-2xl border bg-background/80 p-4">
+			<PracticeTargetHighlighter
+				targetKey={currentTargetKey}
+				enabled={Boolean(practiceMode && !completed && showHighlighter && currentStep)}
+			/>
 			<div className="flex items-center justify-between gap-2">
 				<div>
 					<p className="text-lg font-semibold">{level.title}</p>
@@ -336,7 +385,13 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 			{!practiceMode && (
 				<div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
 					<p className="text-sm">点击开始后按步骤练习，每步首次错误扣 1 分，正确得 1 分。</p>
-					<Button className="mt-3" onClick={() => setPracticeMode(true)}>
+					<Button
+						className="mt-3"
+						onClick={() => {
+							setPracticeMode(true);
+							setShowHighlighter(true);
+						}}
+					>
 						开始练习
 					</Button>
 				</div>
@@ -353,6 +408,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						<Button
 							size="sm"
 							variant={activeView === "trade" ? "default" : "outline"}
+							data-practice-target="tab-trade"
 							onClick={() => {
 								setActiveView("trade");
 							}}
@@ -362,6 +418,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						<Button
 							size="sm"
 							variant={activeView === "orders" ? "default" : "outline"}
+							data-practice-target="tab-orders"
 							onClick={() => {
 								setActiveView("orders");
 								void tryVerify("view_orders", { view: "orders" });
@@ -372,6 +429,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						<Button
 							size="sm"
 							variant={activeView === "positions" ? "default" : "outline"}
+							data-practice-target="tab-positions"
 							onClick={() => setActiveView("positions")}
 						>
 							持仓面板
@@ -379,6 +437,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						<Button
 							size="sm"
 							variant={activeView === "resources" ? "default" : "outline"}
+							data-practice-target="tab-resources"
 							onClick={() => setActiveView("resources")}
 						>
 							资源面板
@@ -389,6 +448,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						<div className="space-y-2 rounded-lg border p-3">
 							<p className="text-sm font-medium">股票搜索</p>
 							<Input
+								data-practice-target="search-input"
 								value={searchInput}
 								placeholder="输入代码，如 000001"
 								onChange={(e) => {
@@ -401,6 +461,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							{hasMockSearchResult ? (
 								<button
 									type="button"
+									data-practice-target={`stock-item-${MOCK_STOCK.symbol}`}
 									className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
 									onClick={() => {
 										setSelectedSymbol(MOCK_STOCK.symbol);
@@ -420,6 +481,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							<div className="flex gap-2">
 								<Button
 									size="sm"
+									data-practice-target="long-mode-button"
 									variant={positionMode === "long" ? "default" : "outline"}
 									onClick={() => {
 										setPositionMode("long");
@@ -430,6 +492,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								</Button>
 								<Button
 									size="sm"
+									data-practice-target="short-mode-button"
 									variant={positionMode === "short" ? "default" : "outline"}
 									onClick={() => {
 										setPositionMode("short");
@@ -440,6 +503,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								</Button>
 							</div>
 							<Input
+								data-practice-target="quantity-input"
 								value={quantityInput}
 								placeholder="数量，如 500 / 1000"
 								onChange={(e) => {
@@ -451,6 +515,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							/>
 							<div className="flex gap-2">
 								<Button
+									data-practice-target="buy-button"
 									disabled={submittingOrder}
 									onClick={() => {
 										setSubmittingOrder(true);
@@ -464,6 +529,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									{positionMode === "short" ? "买入平空" : "买入"}
 								</Button>
 								<Button
+									data-practice-target="sell-button"
 									disabled={submittingOrder}
 									variant="destructive"
 									onClick={() => {
@@ -480,6 +546,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							</div>
 							<div className="flex gap-2">
 								<Button
+									data-practice-target="order-status-button"
 									variant="outline"
 									onClick={() => {
 										void tryVerify("order_status", { status: orderStatus });
@@ -487,7 +554,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								>
 									检查状态
 								</Button>
-								<Button variant="outline" onClick={() => void tryVerify("confirm", { action: "confirm" })}>
+								<Button data-practice-target="confirm-button" variant="outline" onClick={() => void tryVerify("confirm", { action: "confirm" })}>
 									确认委托/操作完成
 								</Button>
 							</div>
@@ -500,6 +567,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							<p className="text-sm font-medium">模拟持仓列表</p>
 							<button
 								type="button"
+								data-practice-target="position-item-000001"
 								className="w-full rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
 								onClick={() => {
 									setSelectedPositionSymbol("000001");
@@ -531,6 +599,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									</p>
 									<div className="mt-1 flex gap-2">
 										<Button
+											data-practice-target={`order-item-${order.id}`}
 											size="sm"
 											variant="outline"
 											onClick={() => {
@@ -541,6 +610,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 											选择委托
 										</Button>
 										<Button
+											data-practice-target="cancel-button"
 											size="sm"
 											variant="outline"
 											onClick={() => {
@@ -558,6 +628,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 							))}
 							<div className="flex gap-2">
 								<Button
+									data-practice-target="resource-side-long"
 									size="sm"
 									variant={resourceSide === "long" ? "default" : "outline"}
 									onClick={() => {
@@ -568,6 +639,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									多头资源
 								</Button>
 								<Button
+									data-practice-target="resource-side-short"
 									size="sm"
 									variant={resourceSide === "short" ? "default" : "outline"}
 									onClick={() => {
@@ -578,6 +650,7 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 									空头资源
 								</Button>
 								<Button
+									data-practice-target="apply-resource-button"
 									size="sm"
 									onClick={() => {
 										setOrderStatus("pending");
@@ -588,7 +661,12 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 								</Button>
 							</div>
 							<div className="flex gap-2">
-								<Button variant="outline" size="sm" onClick={() => void tryVerify("confirm_cancel", { action: "confirm_cancel" })}>
+								<Button
+									data-practice-target="confirm-cancel-button"
+									variant="outline"
+									size="sm"
+									onClick={() => void tryVerify("confirm_cancel", { action: "confirm_cancel" })}
+								>
 									确认撤单成功
 								</Button>
 							</div>
