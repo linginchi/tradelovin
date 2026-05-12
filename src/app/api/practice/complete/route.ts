@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getPracticeLevel } from "@/lib/practice/levels";
+import { getNextStage, getStageRequirementHint, getStageByKey, getUserStage, stageRank } from "@/lib/practice/stage";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
 export const runtime = "nodejs";
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
 
 	const { data: currentScore, error: fetchScoreError } = await supabase
 		.from("practice_scores")
-		.select("total_score, completed_levels")
+		.select("total_score, completed_levels, current_stage")
 		.eq("user_id", userId)
 		.maybeSingle();
 	if (fetchScoreError) {
@@ -116,12 +117,18 @@ export async function POST(request: Request) {
 			completedAt: now,
 		},
 	];
+	const stageNow = getStageByKey(typeof currentScore?.current_stage === "string" ? currentScore.current_stage : null);
+	const stageByProgress = getUserStage(newTotal, nextCompleted.length);
+	const shouldUpgrade = stageRank(stageByProgress.key) > stageRank(stageNow.key);
+	const persistedStage = shouldUpgrade ? stageByProgress : stageNow;
+	const nextStage = getNextStage(persistedStage.key);
 
 	const { error: upsertScoreError } = await supabase.from("practice_scores").upsert(
 		{
 			user_id: userId,
 			total_score: newTotal,
 			completed_levels: nextCompleted,
+			current_stage: persistedStage.key,
 			last_practice: now,
 			updated_at: now,
 		},
@@ -138,5 +145,18 @@ export async function POST(request: Request) {
 		}
 	}
 
-	return NextResponse.json({ success: true, newTotalScore: newTotal, completedLevels: nextCompleted });
+	return NextResponse.json({
+		success: true,
+		newTotalScore: newTotal,
+		completedLevels: nextCompleted,
+		currentStage: { ...persistedStage, stageKey: persistedStage.key },
+		newStage: shouldUpgrade ? { ...stageByProgress, stageKey: stageByProgress.key } : null,
+		nextStage: nextStage
+			? {
+					...nextStage,
+					stageKey: nextStage.key,
+					requirementHint: getStageRequirementHint(nextStage, newTotal, nextCompleted.length),
+				}
+			: null,
+	});
 }

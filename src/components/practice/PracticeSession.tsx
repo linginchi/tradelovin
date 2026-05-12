@@ -25,6 +25,18 @@ type CompletePayload = {
 	finalScore: number;
 	stepResults: Array<{ stepId: string; correct: boolean; scoreDelta: number }>;
 	logs: PracticeLog[];
+	newStage?: {
+		key: string;
+		title: string;
+		description: string;
+		icon: string;
+	} | null;
+	currentStage?: {
+		key: string;
+		title: string;
+		description: string;
+		icon: string;
+	} | null;
 };
 
 type Props = {
@@ -209,9 +221,38 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						logs: nextLogs,
 					}),
 				});
-				const completeJson = (await completeRes.json()) as { newTotalScore?: unknown };
+				const completeJson = (await completeRes.json()) as {
+					newTotalScore?: unknown;
+					newStage?: unknown;
+					currentStage?: unknown;
+				};
 				const score = Number(completeJson.newTotalScore);
 				if (Number.isFinite(score)) newTotalScore = score;
+				const newStage =
+					completeJson.newStage && typeof completeJson.newStage === "object"
+						? (completeJson.newStage as CompletePayload["newStage"])
+						: null;
+				const currentStage =
+					completeJson.currentStage && typeof completeJson.currentStage === "object"
+						? (completeJson.currentStage as CompletePayload["currentStage"])
+						: null;
+				setCompleted(true);
+				console.log("[practice logs]", nextLogs);
+				onCompleted?.({
+					levelId,
+					finalScore: nextTotal,
+					stepResults: steps.map((step) => ({
+						stepId: step.id,
+						correct: true,
+						scoreDelta: nextStepScores[step.id] ?? 0,
+					})),
+					logs: nextLogs,
+					newTotalScore,
+					newStage,
+					currentStage,
+				});
+				setVerifying(false);
+				return;
 			} catch {
 				toast.warning("练习已完成，后端暂不可用，已保留本地记录");
 			} finally {
@@ -229,6 +270,8 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 				})),
 				logs: nextLogs,
 				newTotalScore,
+				newStage: null,
+				currentStage: null,
 			});
 			setVerifying(false);
 			return;

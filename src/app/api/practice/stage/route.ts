@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getNextStage, getStageRequirementHint, getStageByKey, getUserStage } from "@/lib/practice/stage";
+import { getNextStage, getStageByKey, getStageRequirementHint, getUserStage } from "@/lib/practice/stage";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
 export const runtime = "nodejs";
@@ -39,18 +39,14 @@ export async function GET() {
 	if (error) {
 		return NextResponse.json({ success: false, error: error.message }, { status: 500 });
 	}
-
 	const totalScore = Number(data?.total_score ?? 0);
 	const completedLevels = normalizeCompletedLevels(data?.completed_levels);
-	const calculated = getUserStage(totalScore, completedLevels.length);
+	const computed = getUserStage(totalScore, completedLevels.length);
 	const persisted = getStageByKey(typeof data?.current_stage === "string" ? data.current_stage : null);
-	const currentStage = calculated.key === persisted.key ? persisted : calculated;
+	const currentStage = computed.key === persisted.key ? persisted : computed;
 	const nextStage = getNextStage(currentStage.key);
-
 	return NextResponse.json({
 		success: true,
-		totalScore,
-		completedLevels,
 		currentStage: { ...currentStage, stageKey: currentStage.key },
 		nextStage: nextStage
 			? {
