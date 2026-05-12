@@ -60,17 +60,6 @@ export function PracticeTargetHighlighter({ targetKey, enabled }: Props) {
 	return (
 		<div className="pointer-events-none fixed inset-0 z-[70]">
 			<div
-				className="absolute rounded-lg"
-				style={{
-					top: rect.top,
-					left: rect.left,
-					width: rect.width,
-					height: rect.height,
-					boxShadow: "0 0 0 4px rgba(255, 107, 0, 0.6), 0 0 0 8px rgba(255, 107, 0, 0.3)",
-					transition: "all 0.2s ease",
-				}}
-			/>
-			<div
 				className="absolute text-2xl"
 				style={{
 					top: Math.max(0, rect.top - 28),
