@@ -41,6 +41,7 @@ export function MembershipCenterClient() {
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   const [payTab, setPayTab] = useState<"stripe" | "fps">("stripe");
   const [error, setError] = useState("");
+  const [suggestFps, setSuggestFps] = useState(false);
   const [proofImageUrl, setProofImageUrl] = useState("");
   const [manualOrder, setManualOrder] = useState<ManualOrder | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
@@ -75,21 +76,58 @@ export function MembershipCenterClient() {
   async function subscribe(plan: PaidPlan) {
     setSubmitting(true);
     setError("");
+    setSuggestFps(false);
     try {
+      if (
+        process.env.NODE_ENV === "production" &&
+        typeof window !== "undefined" &&
+        window.location.protocol !== "https:"
+      ) {
+        throw new Error("仅允许 HTTPS 请求，请确认当前站点使用 https 打开。");
+      }
+
+      if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+        console.warn(
+          "[membership] Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY. Stripe checkout may fail.",
+        );
+      }
+
       const res = await fetch("/api/membership/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ plan, period }),
       });
-      const json = (await res.json()) as { success?: boolean; sessionUrl?: string; error?: string };
+      const json = (await res.json()) as {
+        success?: boolean;
+        sessionUrl?: string;
+        error?: string;
+      };
       if (!res.ok || !json.success || !json.sessionUrl) {
-        setError(json.error ?? "发起支付失败");
+        const message =
+          json.error ??
+          "发起支付失败。请尝试使用银行转账（FPS），或稍后重试。";
+        console.error("[membership] create-checkout failed", {
+          status: res.status,
+          plan,
+          period,
+          response: json,
+        });
+        setError(message);
+        setSuggestFps(true);
+        setPayTab("fps");
         return;
       }
       window.location.assign(json.sessionUrl);
-    } catch {
-      setError("发起支付失败");
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : "发起支付失败。请尝试使用银行转账（FPS），或稍后重试。";
+      console.error("[membership] subscribe exception", { plan, period, err });
+      setError(message);
+      setSuggestFps(true);
+      setPayTab("fps");
     } finally {
       setSubmitting(false);
     }
@@ -321,7 +359,16 @@ export function MembershipCenterClient() {
         </div>
       </section>
 
-      {error ? <p className="text-sm text-amber-300">{error}</p> : null}
+      {error ? (
+        <div className="rounded-xl border border-amber-300/35 bg-amber-500/10 p-3 text-sm text-amber-200">
+          <p>{error}</p>
+          {suggestFps ? (
+            <p className="mt-1 text-xs text-amber-100/90">
+              已为你切换到银行转账（FPS）方式，可继续完成支付。
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </main>
   );
 }

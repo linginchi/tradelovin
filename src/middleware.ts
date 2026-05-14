@@ -107,6 +107,17 @@ export default function middleware(request: NextRequest) {
 
 async function middlewareAsync(request: NextRequest) {
 	const { pathname } = request.nextUrl;
+	const host = request.headers.get("host") ?? "";
+
+	if (process.env.NODE_ENV === "production") {
+		const forwardedProto = request.headers.get("x-forwarded-proto");
+		if (forwardedProto && forwardedProto !== "https" && host) {
+			const url = request.nextUrl.clone();
+			url.protocol = "https:";
+			url.host = host;
+			return NextResponse.redirect(url, 301);
+		}
+	}
 
 	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
 		return new NextResponse(null, { status: 404 });
@@ -133,7 +144,6 @@ async function middlewareAsync(request: NextRequest) {
 	/* guo3guan.com：默认入口为繁体（zh-TW）；tradelovin.com / 其余域名仍为 defaultLocale（zh）。
 	 * localePrefix=as-needed 时简体无前缀 /trade，仅用「是否已为 /zh-TW 或 /en」判断。
 	 */
-	const host = request.headers.get("host") ?? "";
 	if (host.includes("guo3guan.com")) {
 		const explicitTw =
 			pathname === "/zh-TW" || pathname.startsWith("/zh-TW/");
