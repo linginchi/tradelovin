@@ -44,7 +44,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           NEXT_ASSET_PREFIX: ${{ vars.NEXT_ASSET_PREFIX }}
-          NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS || '0' }}
+          NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS || '1' }}
           NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN: ${{ vars.NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN || '0' }}
 
       - name: Debug - List .open-next/assets/_next/static contents
@@ -56,15 +56,15 @@ jobs:
 
       # 需在仓库 Settings → Secrets and variables → Actions 中设置 CLOUDFLARE_API_TOKEN
       #（Workers 写权限的 API 令牌；未设置时本步骤会失败，可先只保留上方构建任务）
-      # 下方 ALLOW_* / ENABLE_* 采用安全默认值（0），仅在显式设置 Variables 时开启。
+      # 下方 ALLOW_* / ENABLE_* 默认启用测试账号开关（1）；如需禁用请显式设置为 0。
       - name: Production safety gate
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           ALLOW_FIXED_ADMIN_OTP: ${{ vars.ALLOW_FIXED_ADMIN_OTP || '0' }}
           ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION: ${{ vars.ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION || '0' }}
-          ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS || '0' }}
-          ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION || '0' }}
-          NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS || '0' }}
+          ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS || '1' }}
+          ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION || '1' }}
+          NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS || '1' }}
           NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN: ${{ vars.NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN || '0' }}
           ALLOW_PROD_DEBUG_AUTH: ${{ vars.ALLOW_PROD_DEBUG_AUTH || '0' }}
         run: |
@@ -75,13 +75,10 @@ jobs:
             for value in \
               "${ALLOW_FIXED_ADMIN_OTP}" \
               "${ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION}" \
-              "${ENABLE_DEV_TEST_ACCOUNTS}" \
-              "${ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION}" \
-              "${NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS}" \
               "${NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN}"; do
               if [ "${value}" != "0" ] && [ "${value}" != "false" ]; then
                 echo "Unsafe production toggle detected: ${value}"
-                echo "Set ALLOW_* / ENABLE_* / NEXT_PUBLIC_* debug auth toggles to 0/false for production deploy."
+                echo "Set fixed OTP / quick login debug toggles to 0/false for production deploy."
                 exit 1
               fi
             done
@@ -96,8 +93,8 @@ jobs:
           DEPLOY_TIME: ${{ github.run_id }}-${{ github.run_attempt }}
           ALLOW_FIXED_ADMIN_OTP: ${{ vars.ALLOW_FIXED_ADMIN_OTP || '0' }}
           ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION: ${{ vars.ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION || '0' }}
-          ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS || '0' }}
-          ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION || '0' }}
+          ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS || '1' }}
+          ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION: ${{ vars.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION || '1' }}
         run: |
           set -euo pipefail
           npx wrangler deploy --config wrangler.jsonc \

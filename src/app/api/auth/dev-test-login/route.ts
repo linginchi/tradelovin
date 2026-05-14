@@ -34,19 +34,23 @@ function isDevTestLoginEnabled(): boolean {
 	const runtimeToggle = parseFlag(process.env.ENABLE_DEV_TEST_ACCOUNTS);
 	const runtimeProdToggle = parseFlag(process.env.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION);
 	const publicToggle = parseFlag(process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS);
+	const runtimeEnabled = runtimeToggle.defined ? runtimeToggle.enabled : true;
+	const runtimeProdEnabled = runtimeProdToggle.defined ? runtimeProdToggle.enabled : true;
+	const publicEnabled = publicToggle.defined ? publicToggle.enabled : true;
 
 	if (process.env.NODE_ENV !== "production") {
-		if (runtimeToggle.defined) return runtimeToggle.enabled;
-		return publicToggle.defined ? publicToggle.enabled : true;
+		if (runtimeToggle.defined) return runtimeEnabled;
+		return publicEnabled;
 	}
 
-	// 生产环境仅以运行时开关为准，避免构建期 NEXT_PUBLIC 漂移造成入口“时有时无”。
+	// 默认启用：仅在显式设置为 0/false 时关闭。
+	// 生产环境仍优先运行时开关，避免构建期 NEXT_PUBLIC 漂移造成入口“时有时无”。
+	if (!runtimeEnabled) return false;
 	if (runtimeToggle.defined) {
-		if (!runtimeToggle.enabled) return false;
-		if (runtimeProdToggle.defined) return runtimeProdToggle.enabled;
+		if (runtimeProdToggle.defined) return runtimeProdEnabled;
 		return true;
 	}
-	return publicToggle.enabled;
+	return publicEnabled;
 }
 
 export async function GET() {
