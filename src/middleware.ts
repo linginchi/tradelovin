@@ -7,7 +7,7 @@ import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
 import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
-const PROTECTED_PATHS = ["/my-learning", "/membership", "/trade", "/trade-v2"] as const;
+const PROTECTED_PATHS = ["/courses", "/my-learning", "/membership", "/trade", "/trade-v2"] as const;
 
 const LEGACY_LEARNING = [
 	{ from: "my-courses", to: "my-learning" },

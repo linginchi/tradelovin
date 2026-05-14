@@ -80,7 +80,7 @@ export function SiteTopBar({ className }: Props) {
 						<span className="text-foreground/90 max-w-[8rem] truncate">{nickname || tNav("userFallback")}</span>
 					)}
 					{isAuthed && (
-						<Link href="/enroll" className="hover:text-foreground truncate transition-colors">
+						<Link href="/courses" className="hover:text-foreground truncate transition-colors">
 							{tNav("enrollCourses")}
 						</Link>
 					)}
