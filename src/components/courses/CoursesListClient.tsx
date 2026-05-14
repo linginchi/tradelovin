@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/use-auth";
 import { cn } from "@/lib/utils";
 
 export type CourseRow = {
@@ -28,7 +28,7 @@ export function CoursesListClient() {
 	const t = useTranslations("CoursesPage");
 	const [rows, setRows] = useState<CourseRow[] | null>(null);
 	const [err, setErr] = useState<string | null>(null);
-	const [authed, setAuthed] = useState<boolean | null>(null);
+	const { isAuthed, isLoading } = useAuth();
 	const [myStatus, setMyStatus] = useState<Record<string, string>>({});
 
 	useEffect(() => {
@@ -43,23 +43,26 @@ export function CoursesListClient() {
 				return;
 			}
 			setRows(js.courses ?? []);
+		}
+		void run();
+		return () => {
+			alive = false;
+		};
+	}, []);
 
-			const sb = getSupabaseBrowserClient();
-			if (!sb) {
-				setAuthed(false);
+	useEffect(() => {
+		let alive = true;
+		async function run() {
+			if (!isAuthed) {
+				setMyStatus({});
 				return;
 			}
-			const { data: sess } = await sb.auth.getSession();
-			if (!sess.session) {
-				setAuthed(false);
-				return;
-			}
-			setAuthed(true);
 			const mr = await fetch("/api/courses/my-registrations", { credentials: "include" });
 			const mjs = (await mr.json()) as {
 				success?: boolean;
 				registrations?: RegRow[];
 			};
+			if (!alive) return;
 			if (mr.ok && mjs.registrations) {
 				const map: Record<string, string> = {};
 				for (const r of mjs.registrations) {
@@ -73,7 +76,7 @@ export function CoursesListClient() {
 		return () => {
 			alive = false;
 		};
-	}, []);
+	}, [isAuthed]);
 
 	if (rows === null && !err) {
 		return (
@@ -127,7 +130,7 @@ export function CoursesListClient() {
 								>
 									{st === "pending" ? t("pending") : st === "approved" ? t("approved") : t("rejected")}
 								</span>
-							) : authed === false ? (
+							) : !isLoading && !isAuthed ? (
 								<span className="text-muted-foreground text-xs">{t("needLogin")}</span>
 							) : null}
 						</div>

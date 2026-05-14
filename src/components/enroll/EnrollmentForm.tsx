@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resolveNicknameFromMetadata } from "@/lib/auth/profile-resolve";
+import { useAuth } from "@/lib/auth/use-auth";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -94,6 +95,7 @@ export function EnrollmentForm() {
 	});
 
 	const selectedStyles = watch("trading_style_preferences") ?? [];
+	const { isAuthed, isLoading: authLoading } = useAuth();
 
 	const toggleStyle = (value: z.infer<typeof tradingStyleValueEnum>) => {
 		const next = new Set(selectedStyles);
@@ -108,6 +110,12 @@ export function EnrollmentForm() {
 	};
 
 	useEffect(() => {
+		if (authLoading) return;
+		if (!isAuthed) {
+			router.replace("/login");
+			return;
+		}
+
 		let alive = true;
 		async function run() {
 			const sb = getSupabaseBrowserClient();
@@ -116,13 +124,14 @@ export function EnrollmentForm() {
 				toast.error(t("errors.supabaseMissing"));
 				return;
 			}
-			const { data: sess } = await sb.auth.getSession();
-			if (!sess.session) {
+			const { data: userRes } = await sb.auth.getUser();
+			const user = userRes.user;
+			if (!user) {
 				router.replace("/login");
 				return;
 			}
-			const uid = sess.session.user.id;
-			const meta = sess.session.user.user_metadata as Record<string, unknown> | undefined;
+			const uid = user.id;
+			const meta = user.user_metadata as Record<string, unknown> | undefined;
 			const nickFromAuth = resolveNicknameFromMetadata(meta, "学员");
 
 			const { data, error } = await sb
@@ -136,7 +145,7 @@ export function EnrollmentForm() {
 				console.warn("[enroll profiles]", error.message);
 			}
 
-			const emailAddr = (sess.session.user.email ?? "").trim();
+			const emailAddr = (user.email ?? "").trim();
 			if (!emailAddr) {
 				setLoading(false);
 				toast.error(tEnroll("needLogin"));
@@ -157,7 +166,7 @@ export function EnrollmentForm() {
 		return () => {
 			alive = false;
 		};
-	}, [router, t, tEnroll]);
+	}, [authLoading, isAuthed, router, t, tEnroll]);
 
 	const onSubmit = async (raw: RegistrationFormValues) => {
 		const parsed = schema.safeParse({

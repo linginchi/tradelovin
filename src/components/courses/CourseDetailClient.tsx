@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/use-auth";
 import type { CourseRow } from "@/components/courses/CoursesListClient";
 
 type Props = { courseId: string };
@@ -16,9 +16,9 @@ export function CourseDetailClient({ courseId }: Props) {
 	const t = useTranslations("CourseDetailPage");
 	const tc = useTranslations("CoursesPage");
 	const [course, setCourse] = useState<CourseRow | null | undefined>(undefined);
-	const [authed, setAuthed] = useState(false);
 	const [applied, setApplied] = useState(false);
 	const [busy, setBusy] = useState(false);
+	const { isAuthed } = useAuth();
 
 	useEffect(() => {
 		let alive = true;
@@ -31,16 +31,22 @@ export function CourseDetailClient({ courseId }: Props) {
 				return;
 			}
 			setCourse(js.course ?? null);
+		}
+		void run();
+		return () => {
+			alive = false;
+		};
+	}, [courseId]);
 
-			const sb = getSupabaseBrowserClient();
-			if (!sb) return;
-			const { data: sess } = await sb.auth.getSession();
-			if (!sess.session) return;
-			setAuthed(true);
+	useEffect(() => {
+		let alive = true;
+		async function run() {
+			if (!isAuthed) return;
 			const mr = await fetch("/api/courses/my-registrations", { credentials: "include" });
 			const mjs = (await mr.json()) as {
 				registrations?: { courses?: { id: string } | null }[];
 			};
+			if (!alive) return;
 			if (mr.ok && mjs.registrations?.some((r) => r.courses?.id === courseId)) {
 				setApplied(true);
 			}
@@ -49,7 +55,7 @@ export function CourseDetailClient({ courseId }: Props) {
 		return () => {
 			alive = false;
 		};
-	}, [courseId]);
+	}, [courseId, isAuthed]);
 
 	async function apply() {
 		setBusy(true);
@@ -100,7 +106,7 @@ export function CourseDetailClient({ courseId }: Props) {
 			<div>
 				{applied ? (
 					<p className="text-cyan-200/90 text-sm">{t("applied")}</p>
-				) : authed ? (
+				) : isAuthed ? (
 					<Button type="button" onClick={() => void apply()} disabled={busy}>
 						{busy ? <Loader2 className="size-4 animate-spin" /> : t("apply")}
 					</Button>

@@ -5,20 +5,12 @@ import { useTranslations } from "next-intl";
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { useAuth } from "@/lib/auth/use-auth";
 import { useMembershipCurrent } from "@/lib/membership/client";
 import { cn } from "@/lib/utils";
 
 type Props = {
 	className?: string;
-};
-
-type AuthGate = "loading" | "in" | "out";
-
-type MeApi = {
-	success?: boolean;
-	loggedIn?: boolean;
-	nickname?: string | null;
-	hasEnrollment?: boolean;
 };
 
 /** 顶栏导航：「报名课程」需登录可见；「求职」需已有报名记录（含注册时写入的记录）可见 */
@@ -28,57 +20,13 @@ export function SiteTopBar({ className }: Props) {
 	const tMembership = useTranslations("membership");
 	const router = useRouter();
 	const pathname = usePathname();
+	const { status, user, refresh } = useAuth();
 
-	const [auth, setAuth] = useState<AuthGate>("loading");
-	const [nickname, setNickname] = useState("");
-	const [hasEnrollment, setHasEnrollment] = useState(false);
 	const [busyLogout, setBusyLogout] = useState(false);
-	const { expired: membershipExpired } = useMembershipCurrent(auth === "in");
-
-	const refreshMe = useCallback(async () => {
-		const res = await fetch("/api/auth/me", {
-			method: "GET",
-			credentials: "include",
-			cache: "no-store",
-		});
-		const js = (await res.json()) as MeApi;
-		if (!res.ok || !js.success) {
-			return { auth: "out" as const, nickname: "", hasEnrollment: false };
-		}
-		if (!js.loggedIn) {
-			return { auth: "out" as const, nickname: "", hasEnrollment: false };
-		}
-		return {
-			auth: "in" as const,
-			nickname: (typeof js.nickname === "string" && js.nickname.trim()) || "",
-			hasEnrollment: !!js.hasEnrollment,
-		};
-	}, []);
-
-	useEffect(() => {
-		let cancelled = false;
-
-		const applyState = (next: { auth: AuthGate; nickname: string; hasEnrollment: boolean }) => {
-			setTimeout(() => {
-				if (cancelled) return;
-				setAuth(next.auth);
-				setNickname(next.nickname);
-				setHasEnrollment(next.hasEnrollment);
-			}, 0);
-		};
-
-		void (async () => {
-			try {
-				const next = await refreshMe();
-				applyState(next);
-			} catch {
-				applyState({ auth: "out", nickname: "", hasEnrollment: false });
-			}
-		})();
-		return () => {
-			cancelled = true;
-		};
-	}, [refreshMe, pathname]);
+	const isAuthed = status === "authenticated";
+	const nickname = user?.nickname ?? "";
+	const hasEnrollment = !!user?.hasEnrollment;
+	const { expired: membershipExpired } = useMembershipCurrent(isAuthed);
 
 	const onLogout = useCallback(async () => {
 		if (busyLogout) return;
@@ -91,15 +39,15 @@ export function SiteTopBar({ className }: Props) {
 			});
 		} finally {
 			setBusyLogout(false);
-			setTimeout(() => {
-				setAuth("out");
-				setNickname("");
-				setHasEnrollment(false);
-			}, 0);
+			await refresh();
 			router.replace("/login");
 			router.refresh();
 		}
-	}, [busyLogout, router]);
+	}, [busyLogout, refresh, router]);
+
+	useEffect(() => {
+		void refresh();
+	}, [pathname, refresh]);
 
 	return (
 		<header
@@ -128,20 +76,20 @@ export function SiteTopBar({ className }: Props) {
 					className="text-muted-foreground flex max-w-[42%] min-w-0 shrink-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 text-[10px] font-medium tracking-tight sm:max-w-none sm:gap-3 sm:text-xs md:text-sm"
 					aria-label={tNav("mainLabel")}
 				>
-					{auth === "in" && (
+					{isAuthed && (
 						<span className="text-foreground/90 max-w-[8rem] truncate">{nickname || tNav("userFallback")}</span>
 					)}
-					{auth === "in" && (
+					{isAuthed && (
 						<Link href="/enroll" className="hover:text-foreground truncate transition-colors">
 							{tNav("enrollCourses")}
 						</Link>
 					)}
-					{auth === "in" && hasEnrollment && (
+					{isAuthed && hasEnrollment && (
 						<Link href="/career" className="hover:text-foreground truncate transition-colors">
 							{tNav("career")}
 						</Link>
 					)}
-					{auth === "in" && (
+					{isAuthed && (
 						<button
 							type="button"
 							onClick={() => {

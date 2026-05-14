@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "@/i18n/navigation";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+import { useAuth } from "@/lib/auth/use-auth";
 import { cn } from "@/lib/utils";
 
 type FormValues = {
@@ -71,6 +71,7 @@ export function CareerIntentForm() {
 	const [tqScore, setTqScore] = useState<TqResp | null>(null);
 	const [tqEnv, setTqEnv] = useState<TqEnv>("sim");
 	const [tqCert, setTqCert] = useState<TqCertificate | null>(null);
+	const { isAuthed, isLoading: authLoading } = useAuth();
 
 	const { register, handleSubmit, formState: { isSubmitting } } = useForm<FormValues>({
 		defaultValues: {
@@ -84,18 +85,14 @@ export function CareerIntentForm() {
 	});
 
 	useEffect(() => {
+		if (authLoading) return;
+		if (!isAuthed) {
+			router.replace("/login");
+			return;
+		}
+
 		let alive = true;
 		async function run() {
-			const sb = getSupabaseBrowserClient();
-			if (!sb) {
-				setReady(true);
-				return;
-			}
-			const { data: sess } = await sb.auth.getSession();
-			if (!sess.session) {
-				router.replace("/login");
-				return;
-			}
 			const res = await fetch("/api/job/my-application", { credentials: "include" });
 			const js = (await res.json()) as {
 				success?: boolean;
@@ -128,7 +125,7 @@ export function CareerIntentForm() {
 		return () => {
 			alive = false;
 		};
-	}, [router, tqEnv]);
+	}, [authLoading, isAuthed, router, tqEnv]);
 
 	const onSubmit = async (values: FormValues) => {
 		const res = await fetch("/api/job/apply", {

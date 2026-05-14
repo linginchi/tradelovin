@@ -1,11 +1,13 @@
 import createMiddleware from "next-intl/middleware";
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
 
 import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
+const PROTECTED_PATHS = ["/my-learning", "/membership", "/trade", "/trade-v2"] as const;
 
 const LEGACY_LEARNING = [
 	{ from: "my-courses", to: "my-learning" },
@@ -47,7 +49,63 @@ function redirectLegacyLearningPaths(request: NextRequest): NextResponse | null 
 	return null;
 }
 
+function readEnv(name: string): string {
+	const value = process.env[name];
+	return typeof value === "string" ? value : "";
+}
+
+function isProtectedPath(pathname: string): boolean {
+	for (const raw of PROTECTED_PATHS) {
+		const root = raw.replace(/\/$/, "");
+		if (pathname === root || pathname.startsWith(`${root}/`)) return true;
+		for (const loc of LOCALES) {
+			const localPath = `/${loc}${root}`;
+			if (pathname === localPath || pathname.startsWith(`${localPath}/`)) return true;
+		}
+	}
+	return false;
+}
+
+function buildLoginRedirect(request: NextRequest): NextResponse {
+	const url = request.nextUrl.clone();
+	url.pathname = "/login";
+	url.searchParams.set("next", request.nextUrl.pathname);
+	return NextResponse.redirect(url);
+}
+
+async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
+	if (!isProtectedPath(request.nextUrl.pathname)) return null;
+
+	const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
+	const anon = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+	if (!url || !anon) return null;
+
+	const supabase = createServerClient(url, anon, {
+		cookies: {
+			getAll() {
+				return request.cookies.getAll();
+			},
+			setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+				void cookiesToSet;
+			},
+		},
+	});
+
+	const {
+		data: { user },
+		error,
+	} = await supabase.auth.getUser();
+	if (error || !user) {
+		return buildLoginRedirect(request);
+	}
+	return null;
+}
+
 export default function middleware(request: NextRequest) {
+	return middlewareAsync(request);
+}
+
+async function middlewareAsync(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 
 	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
@@ -65,6 +123,11 @@ export default function middleware(request: NextRequest) {
 	const legacyLearning = redirectLegacyLearningPaths(request);
 	if (legacyLearning) {
 		return legacyLearning;
+	}
+
+	const authedGuard = await enforceAuth(request);
+	if (authedGuard) {
+		return authedGuard;
 	}
 
 	/* guo3guan.com：默认入口为繁体（zh-TW）；tradelovin.com / 其余域名仍为 defaultLocale（zh）。
