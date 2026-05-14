@@ -86,9 +86,12 @@ export function MembershipCenterClient() {
         throw new Error("仅允许 HTTPS 请求，请确认当前站点使用 https 打开。");
       }
 
-      if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      const publishableKey =
+        process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
+        process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY;
+      if (!publishableKey) {
         console.warn(
-          "[membership] Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY. Stripe checkout may fail.",
+          "[membership] Missing NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY / NEXT_PUBLIC_STRIPE_PUBLIC_KEY. Stripe checkout may fail.",
         );
       }
 

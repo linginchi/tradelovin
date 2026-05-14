@@ -11,6 +11,14 @@ function env(name: string): string {
   return value;
 }
 
+function envAny(...names: string[]): string {
+  for (const name of names) {
+    const value = process.env[name];
+    if (value) return value;
+  }
+  throw new Error(`Missing required env: ${names.join(" or ")}`);
+}
+
 export function getStripeClient(): Stripe {
   return new Stripe(env("STRIPE_SECRET_KEY"));
 }
@@ -18,16 +26,16 @@ export function getStripeClient(): Stripe {
 export function getStripePriceMap(): PriceMap {
   return {
     T1: {
-      month: env("STRIPE_PRICE_T1_MONTHLY"),
-      year: env("STRIPE_PRICE_T1_YEARLY"),
+      month: envAny("PRICE_T1_MONTHLY", "STRIPE_PRICE_T1_MONTHLY"),
+      year: envAny("PRICE_T1_YEARLY", "STRIPE_PRICE_T1_YEARLY"),
     },
     T2: {
-      month: env("STRIPE_PRICE_T2_MONTHLY"),
-      year: env("STRIPE_PRICE_T2_YEARLY"),
+      month: envAny("PRICE_T2_MONTHLY", "STRIPE_PRICE_T2_MONTHLY"),
+      year: envAny("PRICE_T2_YEARLY", "STRIPE_PRICE_T2_YEARLY"),
     },
     T3: {
-      month: env("STRIPE_PRICE_T3_MONTHLY"),
-      year: env("STRIPE_PRICE_T3_YEARLY"),
+      month: envAny("PRICE_T3_MONTHLY", "STRIPE_PRICE_T3_MONTHLY"),
+      year: envAny("PRICE_T3_YEARLY", "STRIPE_PRICE_T3_YEARLY"),
     },
   };
 }
