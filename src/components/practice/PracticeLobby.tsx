@@ -10,6 +10,7 @@ import { StageCard } from "@/components/practice/StageCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LEVELS } from "@/lib/practice/levels";
+import type { PracticeStageInfo } from "@/lib/practice/types";
 
 type Props = {
 	onClose?: () => void;
@@ -109,6 +110,8 @@ export function PracticeLobby({ onClose }: Props) {
 			timestamp: string;
 		}>;
 		newTotalScore?: number;
+		newStage?: PracticeStageInfo | null;
+		currentStage?: PracticeStageInfo | null;
 	}) => {
 		const previous = Number(globalThis.localStorage?.getItem(LOCAL_SCORE_KEY) ?? "0");
 		const fromServer =
@@ -120,7 +123,12 @@ export function PracticeLobby({ onClose }: Props) {
 		globalThis.localStorage?.setItem(STATS_MOCK_KEY, String(next));
 		setStats((prev) => ({ ...prev, totalScore: next }));
 		if (payload.newStage) {
-			setNewStage(payload.newStage);
+			setNewStage({
+				key: payload.newStage.key,
+				title: payload.newStage.title,
+				description: payload.newStage.description,
+				icon: payload.newStage.icon ?? "🐆",
+			});
 			setNewStageOpen(true);
 			globalThis.localStorage?.setItem(LAST_STAGE_KEY, payload.newStage.key);
 		}

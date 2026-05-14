@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LEVELS, type PracticeExpected, type PracticeLevel } from "@/lib/practice/levels";
+import type { PracticeCompleteResponse, PracticeStageInfo } from "@/lib/practice/types";
 import { verifyPracticeStep } from "@/lib/practice/verify";
 
 type StepScoreMap = Record<string, number>;
@@ -26,18 +27,8 @@ type CompletePayload = {
 	finalScore: number;
 	stepResults: Array<{ stepId: string; correct: boolean; scoreDelta: number }>;
 	logs: PracticeLog[];
-	newStage?: {
-		key: string;
-		title: string;
-		description: string;
-		icon: string;
-	} | null;
-	currentStage?: {
-		key: string;
-		title: string;
-		description: string;
-		icon: string;
-	} | null;
+	newStage?: PracticeStageInfo | null;
+	currentStage?: PracticeStageInfo | null;
 };
 
 type Props = {
@@ -208,20 +199,16 @@ export function PracticeSession({ levelId, onBack, onCompleted }: Props) {
 						logs: completeLogs,
 					}),
 				});
-				const completeJson = (await completeRes.json()) as {
-					newTotalScore?: unknown;
-					newStage?: unknown;
-					currentStage?: unknown;
-				};
+				const completeJson = (await completeRes.json()) as PracticeCompleteResponse;
 				const score = Number(completeJson.newTotalScore);
 				if (Number.isFinite(score)) newTotalScore = score;
 				const newStage =
 					completeJson.newStage && typeof completeJson.newStage === "object"
-						? (completeJson.newStage as CompletePayload["newStage"])
+						? (completeJson.newStage as PracticeStageInfo)
 						: null;
 				const currentStage =
 					completeJson.currentStage && typeof completeJson.currentStage === "object"
-						? (completeJson.currentStage as CompletePayload["currentStage"])
+						? (completeJson.currentStage as PracticeStageInfo)
 						: null;
 				setCompleted(true);
 				console.log("[practice logs]", completeLogs);
