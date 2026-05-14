@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link, useRouter } from "@/i18n/navigation";
+import { useMembershipCurrent } from "@/lib/membership/client";
 import { mapUserSymbolToSina } from "@/lib/trade/symbol-mapping";
 import {
 	buildExecutionResultView,
@@ -72,11 +73,6 @@ type TradeRow = LegacyTradeDeal;
 type QuoteResp = TradeV2QuoteData;
 type ChallengeResp = LegacyTradeChallengesItem;
 type LeaderboardRow = LegacyTradeLeaderboardItem;
-
-type CurrentMembership = {
-	plan: "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
-	trialDaysLeft?: number;
-};
 
 type SimTradingDeniedReason = "TRIAL_EXPIRED" | "MEMBERSHIP_FORBIDDEN";
 
@@ -120,6 +116,7 @@ async function parseJson<T>(res: Response): Promise<T> {
 export function TradePageClient() {
 	const t = useTranslations("Trade");
 	const tCommon = useTranslations("Common");
+	const tMembership = useTranslations("membership");
 	const locale = useLocale();
 	const router = useRouter();
 
@@ -142,8 +139,8 @@ export function TradePageClient() {
 	const [quote, setQuote] = useState<QuoteResp | null>(null);
 	const [challenges, setChallenges] = useState<ChallengeResp[]>([]);
 	const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
-	const [membershipHint, setMembershipHint] = useState<CurrentMembership | null>(null);
 	const [simTradingDeniedReason, setSimTradingDeniedReason] = useState<SimTradingDeniedReason | null>(null);
+	const { membership: membershipHint, expired: membershipExpired } = useMembershipCurrent(sessionReady);
 
 	const loadAccount = useCallback(async () => {
 		const res = await fetch("/api/trade/account", { credentials: "include" });
@@ -260,22 +257,6 @@ export function TradePageClient() {
 		}, 0);
 		return () => window.clearTimeout(timer);
 	}, [sessionReady, simTradingDeniedReason, loadInitial]);
-
-	useEffect(() => {
-		if (!sessionReady) return;
-		const timer = window.setTimeout(async () => {
-			try {
-				const res = await fetch("/api/membership/current", { credentials: "include" });
-				const json = await parseJson<ApiResponse<CurrentMembership>>(res);
-				if (res.ok && json.success && json.data) {
-					setMembershipHint(json.data);
-				}
-			} catch {
-				// ignore
-			}
-		}, 50);
-		return () => window.clearTimeout(timer);
-	}, [sessionReady]);
 
 	useEffect(() => {
 		if (!sessionReady || simTradingDeniedReason) return;
@@ -492,6 +473,14 @@ export function TradePageClient() {
 						<h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{t("title")}</h1>
 						<p className="text-muted-foreground text-sm">{t("subtitle")}</p>
 					</header>
+					{membershipExpired ? (
+						<Link
+							href="/membership"
+							className="block rounded-xl border border-orange-300/40 bg-orange-500/12 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+						>
+							{tMembership("expiredBanner")}
+						</Link>
+					) : null}
 					{simTradingDeniedReason ? (
 						<div className="rounded-xl border border-rose-400/40 bg-rose-400/10 p-3 text-sm text-rose-100">
 							当前账户暂不可下单。每位用户均有 14 天试用期；若你认为仍在试用期内，请联系管理员核验会员状态。

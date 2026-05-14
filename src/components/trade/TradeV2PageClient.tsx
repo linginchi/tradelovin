@@ -2,7 +2,7 @@
 
 import { ArrowLeft, RefreshCcw, Signal, SignalHigh } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "sonner";
 
@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PracticeButton } from "@/components/practice/PracticeButton";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { useMembershipCurrent } from "@/lib/membership/client";
 import {
 	isCanonicalCnSymbol,
 	normalizeCnSymbol,
@@ -166,6 +167,7 @@ function resolveEventFailureScore(event: TriggerEvent): number {
 }
 
 export function TradeV2PageClient() {
+	const tMembership = useTranslations("membership");
 	const locale = useLocale();
 	const searchParams = useSearchParams();
 	const pathname = usePathname();
@@ -196,6 +198,7 @@ export function TradeV2PageClient() {
 	const [resourceLoading, setResourceLoading] = useState(false);
 	const [nowTick, setNowTick] = useState(0);
 	const [autoLogoutNight, setAutoLogoutNight] = useState(false);
+	const { expired: membershipExpired } = useMembershipCurrent(true);
 	const failureOnlyEvents = isFailedEventView(searchParams.get("eventView"));
 
 	const loadQuote = useCallback(
@@ -765,6 +768,14 @@ export function TradeV2PageClient() {
 					<Badge variant="secondary">Beta</Badge>
 				</div>
 			</div>
+			{membershipExpired ? (
+				<Link
+					href="/membership"
+					className="block rounded-xl border border-orange-300/40 bg-orange-500/12 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+				>
+					{tMembership("expiredBanner")}
+				</Link>
+			) : null}
 
 			<Card className="sticky top-2 z-10">
 				<CardHeader className="pb-2">

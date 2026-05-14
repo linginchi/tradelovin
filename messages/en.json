@@ -30,6 +30,10 @@
 		"backHome": "Back to home",
 		"comingSoon": "Coming soon"
 	},
+	"membership": {
+		"expiredBanner": "Trial ended, click to upgrade",
+		"expiredBannerAction": "Upgrade membership"
+	},
 	"Trade": {
 		"title": "Simulated Trading",
 		"subtitle": "Review balances, today's orders/fills; limit-order practice (matching engine rollout in progress).",

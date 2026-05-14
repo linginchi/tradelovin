@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { useMembershipCurrent } from "@/lib/membership/client";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -24,6 +25,7 @@ type MeApi = {
 export function SiteTopBar({ className }: Props) {
 	const tHome = useTranslations("Home");
 	const tNav = useTranslations("Nav");
+	const tMembership = useTranslations("membership");
 	const router = useRouter();
 	const pathname = usePathname();
 
@@ -31,6 +33,7 @@ export function SiteTopBar({ className }: Props) {
 	const [nickname, setNickname] = useState("");
 	const [hasEnrollment, setHasEnrollment] = useState(false);
 	const [busyLogout, setBusyLogout] = useState(false);
+	const { expired: membershipExpired } = useMembershipCurrent(auth === "in");
 
 	const refreshMe = useCallback(async () => {
 		const res = await fetch("/api/auth/me", {
@@ -106,6 +109,14 @@ export function SiteTopBar({ className }: Props) {
 				className,
 			)}
 		>
+			{membershipExpired ? (
+				<Link
+					href="/membership"
+					className="block border-b border-orange-300/35 bg-orange-500/12 px-4 py-2 text-center text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20 sm:px-6"
+				>
+					{tMembership("expiredBanner")}
+				</Link>
+			) : null}
 			<div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-3">
 				<Link
 					href="/"

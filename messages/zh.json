@@ -30,6 +30,10 @@
 		"backHome": "返回首页",
 		"comingSoon": "待连接"
 	},
+	"membership": {
+		"expiredBanner": "试用已结束，点击升级会员",
+		"expiredBannerAction": "升级会员"
+	},
 	"Trade": {
 		"title": "豹仔乐园 · 模拟交易",
 		"subtitle": "查看资产与当日委托成交，限价练习下单（撮合功能陆续开放）。",

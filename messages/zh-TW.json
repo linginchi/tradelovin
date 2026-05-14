@@ -30,6 +30,10 @@
 		"backHome": "返回首頁",
 		"comingSoon": "待連接"
 	},
+	"membership": {
+		"expiredBanner": "試用已結束，點擊升級會員",
+		"expiredBannerAction": "升級會員"
+	},
 	"Trade": {
 		"title": "豹仔樂園 · 模擬交易",
 		"subtitle": "查看資產與當日委託成交，限價練習下單（撮合功能將陸續開放）。",
