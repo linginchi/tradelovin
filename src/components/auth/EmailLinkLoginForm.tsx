@@ -101,7 +101,7 @@ export function EmailLinkLoginForm() {
 				</div>
 
 				<div className="flex flex-wrap gap-2">
-					<Button type="submit" disabled={busy || remainingSeconds > 0} className={busy ? "gap-2" : ""}>
+					<Button type="submit" disabled={busy || cooldownSeconds > 0} className={busy ? "gap-2" : ""}>
 						{busy ? (
 							<>
 								<Loader2 className="size-4 animate-spin" aria-hidden /> {t("sending")}
