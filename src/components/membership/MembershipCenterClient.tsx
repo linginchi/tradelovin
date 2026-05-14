@@ -60,14 +60,6 @@ export function MembershipCenterClient() {
     setSubmitting(true);
     setError("");
     try {
-      if (
-        process.env.NODE_ENV === "production" &&
-        typeof window !== "undefined" &&
-        window.location.protocol !== "https:"
-      ) {
-        throw new Error("仅允许 HTTPS 请求，请确认当前站点使用 https 打开。");
-      }
-
       const publishableKey =
         process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ??
         process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY;

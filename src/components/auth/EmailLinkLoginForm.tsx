@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "@/i18n/navigation";
+import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
 
 type FormValues = {
 	email: string;
@@ -120,6 +121,7 @@ export function EmailLinkLoginForm() {
 					>
 						{cooldownSeconds > 0 ? t("resendDisabled") : t("resend")}
 					</Button>
+					<GoogleLoginButton nextPath={searchParams.get("next")} />
 				</div>
 
 				<p className="text-muted-foreground text-xs">

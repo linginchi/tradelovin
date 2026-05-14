@@ -15,6 +15,7 @@ const LEGACY_LEARNING = [
 ] as const;
 
 const LOCALES = ["zh", "zh-TW", "en"] as const;
+const HTTPS_ONLY_HOST_SUFFIXES = ["xeoaxis.com", "tradelovin.com"] as const;
 
 /** 供根 layout 设置 `<html lang>`（须写入 request headers，Server Components 才可读） */
 function withInvokePath(request: NextRequest): NextResponse {
@@ -73,6 +74,11 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 	return NextResponse.redirect(url);
 }
 
+function isHttpsOnlyHost(hostname: string): boolean {
+	const host = hostname.toLowerCase();
+	return HTTPS_ONLY_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
 	if (!isProtectedPath(request.nextUrl.pathname)) return null;
 
@@ -108,10 +114,15 @@ export default function middleware(request: NextRequest) {
 async function middlewareAsync(request: NextRequest) {
 	const { pathname } = request.nextUrl;
 	const host = request.headers.get("host") ?? "";
+	const hostname = host.split(":")[0] ?? "";
 
 	if (process.env.NODE_ENV === "production") {
 		const forwardedProto = request.headers.get("x-forwarded-proto");
-		if (forwardedProto && forwardedProto !== "https" && host) {
+		const protocol = request.nextUrl.protocol;
+		const shouldForceHttps = isHttpsOnlyHost(hostname);
+		const isHttpByHeader = forwardedProto ? forwardedProto !== "https" : false;
+		const isHttpByUrl = protocol !== "https:";
+		if (shouldForceHttps && host && (isHttpByHeader || isHttpByUrl)) {
 			const url = request.nextUrl.clone();
 			url.protocol = "https:";
 			url.host = host;
