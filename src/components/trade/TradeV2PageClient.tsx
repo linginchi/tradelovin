@@ -749,8 +749,9 @@ export function TradeV2PageClient() {
 						</Button>
 					</Link>
 					<div>
-						<p className="text-sm font-semibold">T+0 模拟交易 V2（P1）</p>
-						<p className="text-muted-foreground text-xs">已接入下单/委托/成交/仓位真实数据链路</p>
+						<p className="text-sm font-semibold sm:hidden">T+0 模拟交易 (已接入真实数据)</p>
+						<p className="hidden text-sm font-semibold sm:block">T+0 模拟交易 V2（P1）</p>
+						<p className="text-muted-foreground hidden text-xs sm:block">已接入下单/委托/成交/仓位真实数据链路</p>
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
