@@ -14,19 +14,6 @@ type Membership = {
   cancelAtPeriodEnd: boolean;
 };
 
-type ManualOrder = {
-  orderNo: string;
-  amount: number;
-  expiresAt: string;
-  bankInfo: {
-    bankName: string;
-    accountName: string;
-    fpsId: string;
-    qrCodeUrl: string;
-    note: string;
-  };
-};
-
 type PaidPlan = "T1" | "T2" | "T3";
 
 const PLAN_PRICE = {
@@ -39,11 +26,7 @@ export function MembershipCenterClient() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
-  const [payTab, setPayTab] = useState<"stripe" | "fps">("stripe");
   const [error, setError] = useState("");
-  const [suggestFps, setSuggestFps] = useState(false);
-  const [proofImageUrl, setProofImageUrl] = useState("");
-  const [manualOrder, setManualOrder] = useState<ManualOrder | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
 
   async function load() {
@@ -76,7 +59,6 @@ export function MembershipCenterClient() {
   async function subscribe(plan: PaidPlan) {
     setSubmitting(true);
     setError("");
-    setSuggestFps(false);
     try {
       if (
         process.env.NODE_ENV === "production" &&
@@ -107,9 +89,7 @@ export function MembershipCenterClient() {
         error?: string;
       };
       if (!res.ok || !json.success || !json.sessionUrl) {
-        const message =
-          json.error ??
-          "发起支付失败。请尝试使用银行转账（FPS），或稍后重试。";
+        const message = json.error ?? "发起支付失败，请稍后重试。";
         console.error("[membership] create-checkout failed", {
           status: res.status,
           plan,
@@ -117,8 +97,6 @@ export function MembershipCenterClient() {
           response: json,
         });
         setError(message);
-        setSuggestFps(true);
-        setPayTab("fps");
         return;
       }
       window.location.assign(json.sessionUrl);
@@ -126,11 +104,9 @@ export function MembershipCenterClient() {
       const message =
         err instanceof Error
           ? err.message
-          : "发起支付失败。请尝试使用银行转账（FPS），或稍后重试。";
+          : "发起支付失败，请稍后重试。";
       console.error("[membership] subscribe exception", { plan, period, err });
       setError(message);
-      setSuggestFps(true);
-      setPayTab("fps");
     } finally {
       setSubmitting(false);
     }
@@ -173,65 +149,6 @@ export function MembershipCenterClient() {
       await load();
     } catch {
       setError("恢复失败");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function createFpsOrder(plan: PaidPlan) {
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/membership/fps/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ plan, period }),
-      });
-      const json = (await res.json()) as { success?: boolean } & ManualOrder & { error?: string };
-      if (!res.ok || !json.success) {
-        setError(json.error ?? "创建订单失败");
-        return;
-      }
-      setManualOrder({
-        orderNo: json.orderNo,
-        amount: json.amount,
-        expiresAt: json.expiresAt,
-        bankInfo: json.bankInfo,
-      });
-    } catch {
-      setError("创建订单失败");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function submitProof() {
-    if (!manualOrder?.orderNo || !proofImageUrl.trim()) {
-      setError("请填写转账凭证图片地址");
-      return;
-    }
-    setSubmitting(true);
-    setError("");
-    try {
-      const res = await fetch("/api/membership/fps/upload-proof", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          orderNo: manualOrder.orderNo,
-          proofImageUrl: proofImageUrl.trim(),
-        }),
-      });
-      const json = (await res.json()) as { success?: boolean; error?: string };
-      if (!res.ok || !json.success) {
-        setError(json.error ?? "提交凭证失败");
-        return;
-      }
-      setProofImageUrl("");
-      await load();
-    } catch {
-      setError("提交凭证失败");
     } finally {
       setSubmitting(false);
     }
@@ -298,15 +215,9 @@ export function MembershipCenterClient() {
               <p className="font-semibold">{row.plan}</p>
               <p className="text-sm text-muted-foreground">{row.price}</p>
               <p className="mt-1 text-sm">{row.rights}</p>
-              {payTab === "stripe" ? (
-                <Button className="mt-3" disabled={submitting} onClick={() => void subscribe(row.plan)}>
-                  {submitting ? "处理中..." : `立即支付 ${row.plan}`}
-                </Button>
-              ) : (
-                <Button className="mt-3" disabled={submitting} onClick={() => void createFpsOrder(row.plan)}>
-                  {submitting ? "处理中..." : `FPS 下单 ${row.plan}`}
-                </Button>
-              )}
+              <Button className="mt-3" disabled={submitting} onClick={() => void subscribe(row.plan)}>
+                {submitting ? "处理中..." : `立即支付 ${row.plan}`}
+              </Button>
             </div>
           ))}
         </div>
@@ -314,33 +225,9 @@ export function MembershipCenterClient() {
 
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
         <h2 className="text-lg font-semibold">支付方式</h2>
-        <div className="mt-3 flex gap-2">
-          <Button variant={payTab === "stripe" ? "default" : "outline"} onClick={() => setPayTab("stripe")}>
-            在线支付（Stripe）
-          </Button>
-          <Button variant={payTab === "fps" ? "default" : "outline"} onClick={() => setPayTab("fps")}>
-            银行转账（FPS）
-          </Button>
+        <div className="mt-3">
+          <Button disabled>在线支付（Stripe）</Button>
         </div>
-        {payTab === "fps" && manualOrder ? (
-          <div className="mt-4 space-y-2 rounded-xl border border-border/70 p-3 text-sm">
-            <p>订单号：{manualOrder.orderNo}</p>
-            <p>金额：{manualOrder.amount} HKD</p>
-            <p>到期时间：{new Date(manualOrder.expiresAt).toLocaleString()}</p>
-            <p>收款账户：{manualOrder.bankInfo.accountName}</p>
-            <p>FPS 识别码：{manualOrder.bankInfo.fpsId}</p>
-            <p className="text-muted-foreground">{manualOrder.bankInfo.note}</p>
-            <input
-              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              placeholder="粘贴凭证图片 URL（已上传到 Supabase Storage）"
-              value={proofImageUrl}
-              onChange={(e) => setProofImageUrl(e.target.value)}
-            />
-            <Button disabled={submitting} onClick={() => void submitProof()}>
-              提交凭证（等待审核）
-            </Button>
-          </div>
-        ) : null}
       </section>
 
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
@@ -365,11 +252,6 @@ export function MembershipCenterClient() {
       {error ? (
         <div className="rounded-xl border border-amber-300/35 bg-amber-500/10 p-3 text-sm text-amber-200">
           <p>{error}</p>
-          {suggestFps ? (
-            <p className="mt-1 text-xs text-amber-100/90">
-              已为你切换到银行转账（FPS）方式，可继续完成支付。
-            </p>
-          ) : null}
         </div>
       ) : null}
     </main>

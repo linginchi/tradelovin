@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 
+const CSRF_EXEMPT_PATHS = new Set([
+  "/api/membership/create-checkout",
+  "/api/membership/webhook/stripe",
+]);
+
 function normalizeOrigin(value: string | null): string | null {
   if (!value) return null;
   try {
@@ -13,6 +18,9 @@ function normalizeOrigin(value: string | null): string | null {
 export function requireSameOriginForMutation(request: Request): NextResponse | null {
   const method = request.method.toUpperCase();
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return null;
+
+  const pathname = new URL(request.url).pathname;
+  if (CSRF_EXEMPT_PATHS.has(pathname)) return null;
 
   const originHeader = request.headers.get("origin");
   const refererHeader = request.headers.get("referer");

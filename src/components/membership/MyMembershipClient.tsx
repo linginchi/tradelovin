@@ -18,41 +18,26 @@ type Transaction = {
   created_at: string;
 };
 
-type ManualOrder = {
-  id: string;
-  order_no: string;
-  plan: string;
-  period: string;
-  amount: number;
-  status: string;
-  admin_notes: string | null;
-  created_at: string;
-};
-
 export function MyMembershipClient() {
   const [membership, setMembership] = useState<Membership | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [orders, setOrders] = useState<ManualOrder[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     void (async () => {
       try {
-        const [mRes, tRes, oRes] = await Promise.all([
+        const [mRes, tRes] = await Promise.all([
           fetch("/api/membership/current", { credentials: "include" }),
           fetch("/api/membership/transactions", { credentials: "include" }),
-          fetch("/api/membership/fps/orders", { credentials: "include" }),
         ]);
         const mJson = (await mRes.json()) as { success?: boolean; data?: Membership };
         const tJson = (await tRes.json()) as { success?: boolean; data?: Transaction[] };
-        const oJson = (await oRes.json()) as { success?: boolean; data?: ManualOrder[] };
-        if (!mRes.ok || !tRes.ok || !oRes.ok) {
+        if (!mRes.ok || !tRes.ok) {
           setError("加载会员信息失败");
           return;
         }
         setMembership(mJson.data ?? null);
         setTransactions(tJson.data ?? []);
-        setOrders(oJson.data ?? []);
       } catch {
         setError("加载会员信息失败");
       }
@@ -113,35 +98,6 @@ export function MyMembershipClient() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
-        <h2 className="text-lg font-semibold">FPS 手动订单</h2>
-        <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border/60">
-                <th className="py-2">订单号</th>
-                <th className="py-2">套餐</th>
-                <th className="py-2">金额</th>
-                <th className="py-2">状态</th>
-                <th className="py-2">备注</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.map((row) => (
-                <tr key={row.id} className="border-b border-border/40">
-                  <td className="py-2 font-mono text-xs">{row.order_no}</td>
-                  <td className="py-2">
-                    {row.plan} / {row.period}
-                  </td>
-                  <td className="py-2">{row.amount}</td>
-                  <td className="py-2">{row.status}</td>
-                  <td className="py-2">{row.admin_notes ?? "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
       {error ? <p className="text-sm text-amber-300">{error}</p> : null}
     </main>
   );
