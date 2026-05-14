@@ -25,7 +25,7 @@ export function DevTestQuickLoginCard({
 }: Props) {
 	const router = useRouter();
 	const locale = useLocale();
-	const t = useTranslations("OtpLogin");
+	const t = useTranslations("MagicLogin");
 	const [busy, setBusy] = useState(false);
 	const [runtimeEnabled, setRuntimeEnabled] = useState<boolean | null>(null);
 	const [account, setAccount] = useState<DevTestAccount>("kk");
@@ -48,7 +48,7 @@ export function DevTestQuickLoginCard({
 
 	const onQuickLogin = async () => {
 		if (!password.trim()) {
-			toast.error(t("verifyFailed"));
+			toast.error(t("sendFailed"));
 			return;
 		}
 		setBusy(true);
@@ -66,8 +66,8 @@ export function DevTestQuickLoginCard({
 			}
 			const errMsg =
 				locale === "en"
-					? (js.errorEn ?? js.error ?? t("verifyFailed"))
-					: (js.error ?? js.errorEn ?? t("verifyFailed"));
+					? (js.errorEn ?? js.error ?? t("sendFailed"))
+					: (js.error ?? js.errorEn ?? t("sendFailed"));
 			toast.error(errMsg);
 			return;
 		}

@@ -1,6 +1,6 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
-import { RegisterQuickForm } from "@/components/register/RegisterQuickForm";
+import { EmailLinkLoginForm } from "@/components/auth/EmailLinkLoginForm";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,7 @@ type Props = {
 
 export async function generateMetadata({ params }: Props) {
 	const { locale } = await params;
-	const t = await getTranslations({ locale, namespace: "RegisterGate1" });
+	const t = await getTranslations({ locale, namespace: "MagicLogin" });
 
 	return {
 		title: t("metaTitle"),
@@ -33,7 +33,7 @@ export default async function RegisterPage({ params }: Props) {
 				</Link>
 			</div>
 			<div className="flex flex-1 flex-col items-center px-4 py-8 md:py-14">
-				<RegisterQuickForm />
+				<EmailLinkLoginForm />
 			</div>
 		</div>
 	);
