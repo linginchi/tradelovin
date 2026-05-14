@@ -82,13 +82,14 @@ export default function Home() {
 							{t("ctaTrading")}
 						</Link>
 						<Link
-							href="/register"
+							href="/my-learning"
 							className={cn(
-								buttonVariants({ variant: "outline", size: "lg" }),
-								"border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10",
+								buttonVariants({ size: "lg" }),
+								"border border-orange-300/70 bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-[0_10px_24px_-12px_rgba(251,146,60,0.75)]",
+								"hover:from-orange-500 hover:via-orange-500 hover:to-amber-500",
 							)}
 						>
-							{t("ctaRegister")}
+							{t("hero.classroomButton")}
 						</Link>
 					</div>
 				</motion.div>

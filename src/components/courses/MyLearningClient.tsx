@@ -315,6 +315,19 @@ export default function MyLearningClient() {
 
 	return (
 		<div className="mx-auto max-w-3xl space-y-5">
+			<div className="rounded-xl border border-orange-300/50 bg-orange-500/10 px-4 py-3 shadow-[0_0_0_1px_rgba(251,146,60,0.2)]">
+				<p className="text-sm font-semibold text-orange-300">{t("courseTeaser")}</p>
+			</div>
+
+			<div className="flex justify-start">
+				<Link
+					href="/courses"
+					className="rounded-lg border border-orange-300/45 bg-orange-500/10 px-3 py-1.5 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+				>
+					{t("browseAllCourses")}
+				</Link>
+			</div>
+
 			<section className="space-y-3">
 				<h2 className="text-base font-semibold tracking-tight">{t("courseInfoTitle")}</h2>
 				{rows?.length ? (

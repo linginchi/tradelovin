@@ -14,7 +14,7 @@
 		"enrollCourses": "报名课程",
 		"career": "求职",
 		"myProfile": "我的",
-		"myLearning": "学习与成绩",
+		"myLearning": "豹仔课堂",
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用户"
@@ -125,6 +125,9 @@
 		"subtitle": "没有什么能够阻挡你对大交易员的向往",
 		"ctaTrading": "模拟交易测试入口",
 		"ctaRegister": "注册 / 开始交易",
+		"hero": {
+			"classroomButton": "豹仔课堂"
+		},
 		"promoKicker": "核心亮点",
 		"promoTitle": "毕业后导师直接推荐求职",
 		"promoSubtitle": "导师、课程和考核标准均紧密结合自营交易机构和资管机构的招聘需求，合格者优先推荐。",
@@ -286,9 +289,11 @@
 		"back": "← 返回"
 	},
 	"MyLearningPage": {
-		"metaTitle": "学习与成绩",
-		"title": "学习与成绩",
+		"metaTitle": "豹仔课堂",
+		"title": "豹仔课堂",
 		"intro": "集中查看已报名课程、审核状态与课程成绩。",
+		"courseTeaser": "暑期交易员入门课程报名即将开始，敬请期待！",
+		"browseAllCourses": "查看所有课程",
 		"courseInfoTitle": "课程信息",
 		"tqSectionTitle": "TradeQuotient（TQ 评分）",
 		"mentorScoreTitle": "导师上课学习成绩",

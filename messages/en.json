@@ -14,7 +14,7 @@
 		"enrollCourses": "Course enrollment",
 		"career": "Careers",
 		"myProfile": "Profile",
-		"myLearning": "Learning & Scores",
+		"myLearning": "Leopard Classroom",
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
 		"userFallback": "User"
@@ -125,6 +125,9 @@
 		"subtitle": "Nothing can stop your aspiration to become a great trader",
 		"ctaTrading": "Sim trading test entry",
 		"ctaRegister": "Register / Start trading",
+		"hero": {
+			"classroomButton": "Leopard Classroom"
+		},
 		"promoKicker": "Core highlights",
 		"promoTitle": "Direct job referrals from mentors after graduation",
 		"promoSubtitle": "Mentors, curriculum, and assessment standards are closely aligned with the hiring needs of proprietary trading firms and asset management institutions. Qualified graduates receive priority referrals.",
@@ -289,9 +292,11 @@
 		"back": "← Back"
 	},
 	"MyLearningPage": {
-		"metaTitle": "Learning & Scores",
-		"title": "Learning & Scores",
+		"metaTitle": "Leopard Classroom",
+		"title": "Leopard Classroom",
 		"intro": "See your enrollments, review status, and course grades in one place.",
+		"courseTeaser": "Summer trader starter course enrollment will open soon. Stay tuned!",
+		"browseAllCourses": "View all courses",
 		"courseInfoTitle": "Course Information",
 		"tqSectionTitle": "TradeQuotient (TQ Score)",
 		"mentorScoreTitle": "Instructor Learning Scores",

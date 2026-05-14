@@ -14,7 +14,7 @@
 		"enrollCourses": "報名課程",
 		"career": "求職",
 		"myProfile": "我的",
-		"myLearning": "學習與成績",
+		"myLearning": "豹仔課堂",
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用戶"
@@ -125,6 +125,9 @@
 		"subtitle": "沒有什麼能夠阻擋你對大交易員的嚮往",
 		"ctaTrading": "模擬交易測試入口",
 		"ctaRegister": "註冊 / 開始交易",
+		"hero": {
+			"classroomButton": "豹仔課堂"
+		},
 		"promoKicker": "核心亮點",
 		"promoTitle": "畢業後導師直接推薦求職",
 		"promoSubtitle": "導師、課程和考核標準均緊密結合自營交易機構和資管機構的招聘需求，合格者優先推薦。",
@@ -289,9 +292,11 @@
 		"back": "← 返回"
 	},
 	"MyLearningPage": {
-		"metaTitle": "學習與成績",
-		"title": "學習與成績",
+		"metaTitle": "豹仔課堂",
+		"title": "豹仔課堂",
 		"intro": "集中查看已報名課程、審核狀態與課程成績。",
+		"courseTeaser": "暑期交易員入門課程報名即將開始，敬請期待！",
+		"browseAllCourses": "查看所有課程",
 		"courseInfoTitle": "課程資訊",
 		"tqSectionTitle": "TradeQuotient（TQ 評分）",
 		"mentorScoreTitle": "導師上課學習成績",
