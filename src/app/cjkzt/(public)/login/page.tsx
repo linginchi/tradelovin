@@ -2,7 +2,7 @@ import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
 
-import { AdminLoginForm } from "@/components/admin/AdminLoginForm";
+import { AdminEmailLinkLoginForm } from "@/components/admin/AdminEmailLinkLoginForm";
 import { getAdminSession } from "@/lib/auth/admin-session";
 import { routing } from "@/i18n/routing";
 
@@ -20,7 +20,7 @@ export default async function CjkztLoginPage() {
 		<div className="relative flex min-h-full flex-1 flex-col">
 			<div className="flex flex-1 flex-col items-center justify-center px-4 py-16">
 				<Suspense fallback={<p className="text-muted-foreground text-sm">…</p>}>
-					<AdminLoginForm />
+					<AdminEmailLinkLoginForm />
 				</Suspense>
 			</div>
 		</div>

@@ -8,6 +8,7 @@ import {
 	issueMagicLinkToken,
 	MAGIC_LINK_SEND_LIMIT_PER_HOUR,
 } from "@/lib/auth/magic-link";
+import { isAdminPortalEmail } from "@/lib/auth/admin-gate";
 import { resolveResendEnv } from "@/lib/email/resend-config";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -47,10 +48,13 @@ export async function POST(request: Request) {
 	}
 
 	const email = parsed.data.email.trim().toLowerCase();
+	const isAdminPortal = isAdminPortalEmail(email);
 	const nextPath =
 		parsed.data.next && parsed.data.next.startsWith("/") && !parsed.data.next.startsWith("//")
 			? parsed.data.next
-			: null;
+			: isAdminPortal
+				? "/cjkzt"
+				: null;
 	const sentInLastHour = await countRecentMagicLinkSends(srv, email);
 	if (sentInLastHour >= MAGIC_LINK_SEND_LIMIT_PER_HOUR) {
 		return NextResponse.json(

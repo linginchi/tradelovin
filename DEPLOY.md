@@ -208,6 +208,28 @@ npm run deploy:cloudflare
 BASE_URL="https://tradelovin.com" USER_COOKIE="<user-cookie>" TQ_CRON_API_KEY="<cron-key>" npm run smoke:api
 ```
 
+Auth Magic Link 冒烟（指令113）：
+
+```bash
+BASE_URL="https://tradelovin.com" \
+MAGIC_LINK_EMAIL="<可收件邮箱>" \
+MAGIC_LINK_TOKEN="<从 email_login_tokens 表复制的 token>" \
+MAGIC_LINK_NEXT="/my-learning" \
+npm run smoke:auth-magic-link
+```
+
+脚本位置：[`scripts/deploy/auth-magic-link-smoke.mjs`](scripts/deploy/auth-magic-link-smoke.mjs)
+
+说明：
+
+- `MAGIC_LINK_TOKEN` 需使用刚发送且未消费、未过期（15 分钟内）的 token。
+- 脚本会验证：
+  - 发送登录链接接口可用；
+  - 首次消费 token 成功并重定向；
+  - 已建立 Supabase 会话 cookie 且 `/api/auth/me` 为登录态；
+  - 同一 token 二次消费被拒绝（重定向到 `/login?error=invalid_link`）。
+- 结构回滚迁移：[`supabase/migrations/20260514154500_email_login_tokens_rollback.sql`](supabase/migrations/20260514154500_email_login_tokens_rollback.sql)
+
 ### 6.4 交易执行文案单源同步（脚本/页面/API 一致）
 
 交易执行文案以 `src/lib/trade/execution-messages.ts` 为源，脚本侧通过生成文件保持一致：

@@ -15,6 +15,7 @@
 		"deploy": "npm run clean:open-next && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 		"deploy:cloudflare": "npm run build:cloudflare && npx wrangler deploy --config wrangler.jsonc",
 		"smoke:api": "node scripts/deploy/api-smoke.mjs",
+		"smoke:auth-magic-link": "node scripts/deploy/auth-magic-link-smoke.mjs",
 		"smoke:trade-v2": "npm run verify:trade-execution-messages && node scripts/deploy/trade-v2-e2e-smoke.mjs",
 		"sync:generated": "npm run sync:trade-execution-messages",
 		"sync:trade-execution-messages": "node scripts/shared/sync-trade-execution-messages.mjs",

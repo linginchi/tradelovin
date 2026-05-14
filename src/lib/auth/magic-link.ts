@@ -4,6 +4,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseRouteClient, randomInternalPassword } from "@/lib/auth/auto-register";
+import { isBootstrapSuperAdminEmail } from "@/lib/auth/bootstrap-super-admin";
+import { signAdminToken } from "@/lib/auth/admin-jwt";
+import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { getTradeUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 
@@ -120,6 +123,40 @@ async function signInWithFreshPassword(
 	return true;
 }
 
+async function ensureSuperAdminProfile(srv: SupabaseClient, userId: string, emailLower: string): Promise<boolean> {
+	if (!isBootstrapSuperAdminEmail(emailLower)) return true;
+
+	const { error: profileErr } = await srv
+		.from("profiles")
+		.upsert({ id: userId, role: "super_admin" }, { onConflict: "id" });
+	if (profileErr) {
+		console.error("[magic-link ensureSuperAdminProfile profile]", profileErr.message);
+		return false;
+	}
+
+	const { error: adminErr } = await srv
+		.from("admins")
+		.upsert({ email: emailLower, role: "super_admin", created_by: null }, { onConflict: "email" });
+	if (adminErr) {
+		console.error("[magic-link ensureSuperAdminProfile admins]", adminErr.message);
+		return false;
+	}
+	return true;
+}
+
+function attachAdminCookie(response: NextResponse, emailLower: string): Promise<void> | void {
+	if (!isBootstrapSuperAdminEmail(emailLower)) return;
+	return signAdminToken({ email: emailLower, role: "super_admin" }).then((adminToken) => {
+		response.cookies.set(ADMIN_TOKEN_COOKIE, adminToken, {
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "lax",
+			path: "/",
+			maxAge: 60 * 60 * 24 * 7,
+		});
+	});
+}
+
 export async function consumeMagicLink(
 	srv: SupabaseClient,
 	request: NextRequest,
@@ -163,8 +200,13 @@ export async function consumeMagicLink(
 	const userId = await ensureTradeUserByEmail(srv, emailLower);
 	if (!userId) return { ok: false };
 
+	const adminProfileOk = await ensureSuperAdminProfile(srv, userId, emailLower);
+	if (!adminProfileOk) return { ok: false };
+
 	const signedIn = await signInWithFreshPassword(srv, request, response, emailLower, userId);
 	if (!signedIn) return { ok: false };
+
+	await attachAdminCookie(response, emailLower);
 
 	return { ok: true };
 }
