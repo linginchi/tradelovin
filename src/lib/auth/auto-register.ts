@@ -7,6 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { RegisterPayload } from "@/lib/auth/register-payload";
 import { mapRegistrationInsertError } from "@/lib/auth/registration-db-errors";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
+import { withPersistentSessionCookieOptions } from "@/lib/supabase/session";
 
 export function randomInternalPassword(): string {
 	const raw = randomBytes(32).toString("base64url");
@@ -26,7 +27,7 @@ export function createSupabaseRouteClient(request: NextRequest, response: NextRe
 			},
 			setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
 				for (const { name, value, options } of cookiesToSet) {
-					response.cookies.set(name, value, options);
+					response.cookies.set(name, value, withPersistentSessionCookieOptions(options));
 				}
 			},
 		},

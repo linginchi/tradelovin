@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { withPersistentSessionCookieOptions } from "@/lib/supabase/session";
 
 /** App Router 服务端：从 Cookie 读取 Supabase 会话，供 Route Handler / Server Component 使用。 */
 export async function createServerSupabaseClient() {
@@ -17,7 +18,7 @@ export async function createServerSupabaseClient() {
 			setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
 				try {
 					for (const { name, value, options } of cookiesToSet) {
-						cookieStore.set(name, value, options);
+						cookieStore.set(name, value, withPersistentSessionCookieOptions(options));
 					}
 				} catch {
 					// 在部分 Server 上下文中不可写 Cookie，忽略

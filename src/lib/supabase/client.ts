@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SESSION_COOKIE_MAX_AGE_SECONDS } from "@/lib/supabase/session";
 
 let browserClient: SupabaseClient | null = null;
 
@@ -19,7 +20,11 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
 	}
 
 	if (!browserClient) {
-		browserClient = createBrowserClient(url, key);
+		browserClient = createBrowserClient(url, key, {
+			cookieOptions: {
+				maxAge: SESSION_COOKIE_MAX_AGE_SECONDS,
+			},
+		});
 	}
 	return browserClient;
 }

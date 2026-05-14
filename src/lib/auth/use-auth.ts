@@ -65,7 +65,10 @@ export function useAuth() {
 		}, 10 * 60 * 1000);
 
 		const sb = getSupabaseBrowserClient();
-		const authListener = sb?.auth.onAuthStateChange(() => {
+		const authListener = sb?.auth.onAuthStateChange((event) => {
+			if (event === "TOKEN_REFRESHED") {
+				console.info("[auth] token refreshed, session extended");
+			}
 			void refresh();
 		});
 
