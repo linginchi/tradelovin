@@ -169,7 +169,7 @@ export function AdminInstructorsPanel() {
 				credentials: "include",
 				body: JSON.stringify({
 					name: name.trim(),
-					email: email.trim() ? email.trim().toLowerCase() : null,
+					email: email.trim().toLowerCase(),
 					bio: bio.trim() || null,
 				}),
 			});
@@ -338,7 +338,11 @@ export function AdminInstructorsPanel() {
 						<Button type="button" variant="outline" disabled={saving} onClick={() => setAddOpen(false)}>
 							{t("cancel")}
 						</Button>
-						<Button type="button" disabled={saving || !name.trim()} onClick={() => void add()}>
+						<Button
+							type="button"
+							disabled={saving || !name.trim() || !email.trim()}
+							onClick={() => void add()}
+						>
 							{t("save")}
 						</Button>
 					</DialogFooter>
