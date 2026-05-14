@@ -19,9 +19,13 @@ const bodySchema = z.object({
 });
 
 function getMagicLinkBaseUrl(request: Request): string {
-	const configured = process.env.APP_ORIGIN?.trim();
-	if (configured) return configured.replace(/\/+$/, "");
-	return new URL(request.url).origin;
+	const preferred =
+		process.env.MAGIC_LINK_ORIGIN?.trim() ||
+		process.env.APP_ORIGIN?.trim() ||
+		"https://xeoaxis.com";
+	if (/^https?:\/\//i.test(preferred)) return preferred.replace(/\/+$/, "");
+	const reqUrl = new URL(request.url);
+	return `${reqUrl.protocol}//${preferred}`.replace(/\/+$/, "");
 }
 
 export async function POST(request: Request) {
