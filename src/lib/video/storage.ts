@@ -1,6 +1,3 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
 type VideoStorageConfig = {
   provider: "r2" | "aliyun";
   bucket: string;
@@ -68,7 +65,29 @@ export function getVideoStorageMissingEnvNames(): string[] {
   return missing;
 }
 
-function createS3Client(config: VideoStorageConfig): S3Client {
+type AwsSdk = {
+  S3Client: new (...args: any[]) => {
+    send: (command: unknown) => Promise<unknown>;
+  };
+  PutObjectCommand: new (...args: any[]) => unknown;
+  GetObjectCommand: new (...args: any[]) => unknown;
+  getSignedUrl: (
+    client: unknown,
+    command: unknown,
+    options: { expiresIn: number },
+  ) => Promise<string>;
+};
+
+async function loadAwsSdk(): Promise<AwsSdk> {
+  const [{ S3Client, PutObjectCommand, GetObjectCommand }, { getSignedUrl }] = await Promise.all([
+    import("@aws-sdk/client-s3"),
+    import("@aws-sdk/s3-request-presigner"),
+  ]);
+  return { S3Client, PutObjectCommand, GetObjectCommand, getSignedUrl };
+}
+
+async function createS3Client(config: VideoStorageConfig) {
+  const { S3Client } = await loadAwsSdk();
   return new S3Client({
     endpoint: normalizeEndpoint(config.endpoint),
     region: "auto",
@@ -90,7 +109,8 @@ export async function uploadVideoObject(
     return { ok: false, error: "视频存储未配置，请联系管理员配置 VIDEO_STORAGE_* 环境变量" };
   }
   try {
-    const client = createS3Client(config);
+    const { PutObjectCommand } = await loadAwsSdk();
+    const client = await createS3Client(config);
     await client.send(
       new PutObjectCommand({
         Bucket: config.bucket,
@@ -115,7 +135,8 @@ export async function createSignedVideoUrl(
   const config = getVideoStorageConfig();
   if (!config) return null;
   try {
-    const client = createS3Client(config);
+    const { GetObjectCommand, getSignedUrl } = await loadAwsSdk();
+    const client = await createS3Client(config);
     if (config.publicUrl) {
       const encodedKey = encodeKeyPath(storageKey);
       const baseUrl = `${config.publicUrl.replace(/\/+$/, "")}/${encodedKey}`;
