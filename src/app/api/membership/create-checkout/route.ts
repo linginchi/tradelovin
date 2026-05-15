@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { getStripeClient } from "@/lib/billing/stripe";
+import { activateMembership } from "@/lib/membership/activate";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getStripePriceIdByPlan } from "@/lib/membership/plans";
+import { checkUpgradeEligibility } from "@/lib/membership/upgrade-gate";
 import { requireSameOriginForMutation } from "@/lib/security/csrf";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
@@ -68,6 +70,50 @@ export async function POST(request: Request) {
   const membership = await ensureCurrentMembership(auth.supabase, auth.userId);
   if (!membership) {
     return NextResponse.json({ success: false, error: "会员信息不存在" }, { status: 404 });
+  }
+
+  const { eligibility, context } = await checkUpgradeEligibility(
+    auth.supabase,
+    auth.userId,
+    parsed.data.plan,
+  );
+  if (!eligibility.allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: eligibility.code,
+        error: eligibility.message,
+        gate: {
+          currentPlan: context.membershipPlan,
+          nextPlan: context.nextPlan,
+          targetPlan: parsed.data.plan,
+          monthlyScore: context.monthlyScore,
+          monthlyTradeCount: context.monthlyTradeCount,
+          minTradesForScore: context.minTradesForScore,
+          requiredScore: eligibility.requiredScore,
+          missingScore: eligibility.missingScore,
+        },
+      },
+      { status: 403 },
+    );
+  }
+
+  // If user already has paid video subscription entitlement, allow upgrade without extra charge.
+  if (eligibility.freeByVideoSubscription) {
+    await activateMembership(auth.supabase, {
+      userId: auth.userId,
+      plan: parsed.data.plan,
+      period: parsed.data.period,
+      stripeSubscriptionId: membership.stripeSubscriptionId,
+      stripeCustomerId: membership.stripeCustomerId,
+      cancelAtPeriodEnd: membership.cancelAtPeriodEnd,
+    });
+    return NextResponse.json({
+      success: true,
+      sessionUrl: null,
+      freeUpgrade: true,
+      message: "已检测到视频订阅，已为你免费升级。",
+    });
   }
 
   try {

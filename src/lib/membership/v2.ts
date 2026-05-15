@@ -16,6 +16,7 @@ export type CurrentMembership = {
   stripeSubscriptionId: string | null;
   stripeCustomerId: string | null;
   billingCycle: "month" | "year" | null;
+  graceStartedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -76,7 +77,7 @@ export async function getCurrentMembership(
   const { data, error } = await supabase
     .from("user_memberships")
     .select(
-      "id,user_id,plan,status,trial_end,current_period_start,current_period_end,cancel_at_period_end,stripe_subscription_id,stripe_customer_id,billing_cycle,created_at,updated_at",
+      "id,user_id,plan,status,trial_end,current_period_start,current_period_end,cancel_at_period_end,stripe_subscription_id,stripe_customer_id,billing_cycle,grace_started_at,created_at,updated_at",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -109,6 +110,7 @@ export async function getCurrentMembership(
     stripeSubscriptionId: (data.stripe_subscription_id as string | null) ?? null,
     stripeCustomerId: (data.stripe_customer_id as string | null) ?? null,
     billingCycle: (data.billing_cycle as "month" | "year" | null) ?? null,
+    graceStartedAt: (data.grace_started_at as string | null) ?? null,
     createdAt: String(data.created_at),
     updatedAt: String(data.updated_at),
   };

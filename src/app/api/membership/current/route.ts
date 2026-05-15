@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { getUpgradePreview } from "@/lib/membership/upgrade-gate";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getMembershipSnapshot } from "@/lib/membership/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
@@ -40,6 +41,16 @@ export async function GET() {
     });
   }
 
+  let upgradePreview: Awaited<ReturnType<typeof getUpgradePreview>> | null = null;
+  try {
+    upgradePreview = await getUpgradePreview(auth.supabase, auth.userId);
+  } catch (error) {
+    console.warn("[membership/current] upgrade preview unavailable", {
+      userId: auth.userId,
+      error,
+    });
+  }
+
   const trialDaysLeft = membership.trialEnd
     ? Math.max(0, Math.ceil((new Date(membership.trialEnd).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : 0;
@@ -61,6 +72,7 @@ export async function GET() {
       createdAt: membership.createdAt,
       updatedAt: membership.updatedAt,
       trialDaysLeft,
+      upgradePreview,
     },
   });
 }

@@ -23,7 +23,7 @@ export function GoogleLoginButton({ nextPath }: Props) {
       return;
     }
     setBusy(true);
-    const redirectTo = new URL("/auth/callback", "https://tradelovin.com");
+    const redirectTo = new URL("/auth/callback", window.location.origin);
     if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
       redirectTo.searchParams.set("next", nextPath);
     } else {

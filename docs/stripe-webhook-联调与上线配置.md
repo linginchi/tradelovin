@@ -84,6 +84,11 @@ stripe trigger customer.subscription.deleted
 - webhook 重放不会重复发放权益（`webhook_events` 去重）
 - 取消订阅后 `cancel_at_period_end = true`
 - 订阅删除事件后自动降级到 `T0_paid`
+- 阶梯升级规则生效：仅允许按 `T0/T1/T2 -> 下一档` 升级，不允许越级购买
+- 升级门槛按 `sim + monthly`：`T1>=60`、`T2>=75`、`T3>=90`
+- 若月度分/交易笔数不达当前档位门槛：
+  - 首个账期仅记录 `grace_started_at`（缓冲期）
+  - 下个账期仍不达标则自动降档（无法匹配时自动设置 `cancel_at_period_end=true`）
 
 ---
 

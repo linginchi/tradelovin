@@ -70,6 +70,7 @@ export async function downgradeToT0Paid(
       status: "expired",
       cancel_at_period_end: false,
       stripe_subscription_id: null,
+      grace_started_at: null,
       current_period_start: nowIso,
       current_period_end: nowIso,
     })

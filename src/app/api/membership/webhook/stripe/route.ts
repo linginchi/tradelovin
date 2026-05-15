@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { getStripeClient, resolvePlanByPriceId } from "@/lib/billing/stripe";
 import { activateMembership, cycleToPeriod } from "@/lib/membership/activate";
 import { recordPaymentTransaction } from "@/lib/membership/payments";
+import { evaluatePlanGraceState } from "@/lib/membership/upgrade-gate";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -63,6 +64,92 @@ async function resolveUserIdFromSubscription(
     .eq("stripe_subscription_id", subscription.id)
     .maybeSingle();
   return (data?.user_id as string | undefined) ?? null;
+}
+
+function planToLowerPaidPlan(
+  plan: "T1" | "T2" | "T3" | null,
+): "T1" | "T2" | "T3" | null {
+  if (!plan || plan === "T1") return null;
+  if (plan === "T3") return "T2";
+  return "T1";
+}
+
+async function applyGraceOrDowngradeByTq(
+  srv: ReturnType<typeof getServiceSupabase>,
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+): Promise<void> {
+  if (!srv) return;
+  const userId = await resolveUserIdFromSubscription(subscription);
+  if (!userId) return;
+
+  const grace = await evaluatePlanGraceState(srv, userId);
+  if (grace.state === "none") {
+    await srv.from("user_memberships").update({ grace_started_at: null }).eq("user_id", userId);
+    return;
+  }
+
+  if (grace.state === "grace") {
+    await srv
+      .from("user_memberships")
+      .update({ grace_started_at: new Date().toISOString() })
+      .eq("user_id", userId);
+    return;
+  }
+
+  const currentPriceId = subscription.items.data[0]?.price?.id;
+  const resolved = currentPriceId ? resolvePlanByPriceId(currentPriceId) : null;
+  const currentPlan = resolved?.plan ?? null;
+  let targetPlan = grace.expectedPlan;
+  if (!targetPlan) {
+    targetPlan = planToLowerPaidPlan(currentPlan);
+  }
+  if (!resolved) return;
+  if (!targetPlan) {
+    await stripe.subscriptions.update(subscription.id, {
+      cancel_at_period_end: true,
+    });
+    await srv
+      .from("user_memberships")
+      .update({
+        cancel_at_period_end: true,
+      })
+      .eq("user_id", userId);
+    return;
+  }
+  if (targetPlan === currentPlan) return;
+
+  const priceMap = {
+    T1: {
+      month: process.env.PRICE_T1_MONTHLY ?? process.env.STRIPE_PRICE_T1_MONTHLY ?? "",
+      year: process.env.PRICE_T1_YEARLY ?? process.env.STRIPE_PRICE_T1_YEARLY ?? "",
+    },
+    T2: {
+      month: process.env.PRICE_T2_MONTHLY ?? process.env.STRIPE_PRICE_T2_MONTHLY ?? "",
+      year: process.env.PRICE_T2_YEARLY ?? process.env.STRIPE_PRICE_T2_YEARLY ?? "",
+    },
+    T3: {
+      month: process.env.PRICE_T3_MONTHLY ?? process.env.STRIPE_PRICE_T3_MONTHLY ?? "",
+      year: process.env.PRICE_T3_YEARLY ?? process.env.STRIPE_PRICE_T3_YEARLY ?? "",
+    },
+  } as const;
+
+  const nextPriceId = priceMap[targetPlan][resolved.cycle];
+  if (!nextPriceId) return;
+
+  await stripe.subscriptions.update(subscription.id, {
+    items: [{ id: subscription.items.data[0]?.id, price: nextPriceId }],
+    proration_behavior: "none",
+  });
+
+  await srv
+    .from("user_memberships")
+    .update({
+      plan: targetPlan,
+      grace_started_at: null,
+      billing_cycle: resolved.cycle,
+    })
+    .eq("user_id", userId);
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<void> {
@@ -195,6 +282,7 @@ export async function POST(request: Request) {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
           const userId = await resolveUserIdFromSubscription(sub);
           await handleSubscriptionUpdated(sub);
+          await applyGraceOrDowngradeByTq(getServiceSupabase(), stripe, sub);
           await recordPaymentTransaction(getServiceSupabase()!, {
             userId,
             orderId: invoice.id,
@@ -240,12 +328,17 @@ export async function POST(request: Request) {
         const sub = event.data.object as Stripe.Subscription;
         const userId = await resolveUserIdFromSubscription(sub);
         if (userId) {
+          const nowIso = new Date().toISOString();
           await getServiceSupabase()
             ?.from("user_memberships")
             .update({
+              plan: "T0_paid",
               status: "expired",
               cancel_at_period_end: false,
               stripe_subscription_id: null,
+              current_period_start: nowIso,
+              current_period_end: nowIso,
+              grace_started_at: null,
             })
             .eq("user_id", userId);
         }

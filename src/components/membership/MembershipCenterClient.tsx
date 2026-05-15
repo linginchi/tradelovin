@@ -18,6 +18,16 @@ type Membership = {
   trialDaysLeft: number;
   currentPeriodEnd: string;
   cancelAtPeriodEnd: boolean;
+  upgradePreview?: {
+    membershipPlan: Membership["plan"];
+    currentPaidPlan: PaidPlan | null;
+    nextPlan: PaidPlan | null;
+    monthlyScore: number;
+    monthlyTradeCount: number;
+    minTradesForScore: number;
+    allowedPlans: PaidPlan[];
+    planRequirements: Record<PaidPlan, { requiredScore: number; missingScore: number; unlocked: boolean }>;
+  } | null;
 };
 
 type PaidPlan = "T1" | "T2" | "T3";
@@ -86,10 +96,26 @@ export function MembershipCenterClient() {
       const json = (await res.json()) as {
         success?: boolean;
         sessionUrl?: string;
+        freeUpgrade?: boolean;
+        message?: string;
         error?: string;
+        code?: string;
+        gate?: {
+          requiredScore?: number;
+          missingScore?: number;
+        };
       };
       if (!res.ok || !json.success || !json.sessionUrl) {
-        const message = json.error ?? "发起支付失败，请稍后重试。";
+        if (res.ok && json.success && json.freeUpgrade) {
+          await load();
+          setError(json.message ?? "已免费升级成功。");
+          return;
+        }
+        const message =
+          json.error ??
+          (json.code === "score_not_enough" && json.gate
+            ? `升级分数不足，还差 ${json.gate.missingScore ?? 0} 分（目标 ${json.gate.requiredScore ?? "-"}）`
+            : "发起支付失败，请稍后重试。");
         console.error("[membership] create-checkout failed", {
           status: res.status,
           plan,
@@ -163,6 +189,25 @@ export function MembershipCenterClient() {
     [period],
   );
 
+  const upgradePreview = membership?.upgradePreview ?? null;
+  const allowedPlans = new Set(upgradePreview?.allowedPlans ?? []);
+
+  function getPlanDisabledReason(plan: PaidPlan): string {
+    if (!upgradePreview) return "";
+    if (upgradePreview.nextPlan !== plan) {
+      if (!upgradePreview.nextPlan) return "已达到最高等级";
+      return `当前仅可升级到 ${upgradePreview.nextPlan}`;
+    }
+    const req = upgradePreview.planRequirements[plan];
+    if (upgradePreview.monthlyTradeCount < upgradePreview.minTradesForScore) {
+      return `本月交易笔数不足（${upgradePreview.monthlyTradeCount}/${upgradePreview.minTradesForScore}）`;
+    }
+    if (!req.unlocked) {
+      return `TQ月度分不足，距离门槛还差 ${req.missingScore} 分`;
+    }
+    return "";
+  }
+
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
@@ -206,6 +251,23 @@ export function MembershipCenterClient() {
               <p className="text-xs text-muted-foreground">到期时间</p>
               <p className="text-sm font-semibold">{new Date(membership.currentPeriodEnd).toLocaleString()}</p>
             </div>
+            {upgradePreview ? (
+              <div className="rounded-xl border border-border/70 p-3 sm:col-span-2">
+                <p className="text-xs text-muted-foreground">升级进度（模拟盘月度 TQ）</p>
+                <p className="text-sm">
+                  当前分数 <span className="font-semibold">{upgradePreview.monthlyScore.toFixed(2)}</span>
+                  ，交易笔数{" "}
+                  <span className="font-semibold">
+                    {upgradePreview.monthlyTradeCount}/{upgradePreview.minTradesForScore}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {upgradePreview.nextPlan
+                    ? `下一档 ${upgradePreview.nextPlan} 门槛：${upgradePreview.planRequirements[upgradePreview.nextPlan].requiredScore}`
+                    : "已到最高档位"}
+                </p>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
@@ -235,9 +297,16 @@ export function MembershipCenterClient() {
               })()}
               <p className="text-sm text-muted-foreground">{row.price}</p>
               <p className="mt-1 text-sm">{row.rights}</p>
-              <Button className="mt-3" disabled={submitting} onClick={() => void subscribe(row.plan)}>
+              <Button
+                className="mt-3"
+                disabled={submitting || (Boolean(upgradePreview) && !allowedPlans.has(row.plan))}
+                onClick={() => void subscribe(row.plan)}
+              >
                 {submitting ? "处理中..." : `立即支付 ${getLocalizedLevelLabel(getDisplayLevel(row.plan), locale)}`}
               </Button>
+              {upgradePreview && !allowedPlans.has(row.plan) ? (
+                <p className="mt-2 text-xs text-muted-foreground">{getPlanDisabledReason(row.plan)}</p>
+              ) : null}
             </div>
           ))}
         </div>
@@ -251,11 +320,11 @@ export function MembershipCenterClient() {
       </section>
 
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
-        <h2 className="text-lg font-semibold">订阅管理</h2>
-        <p className="mt-2 text-sm text-muted-foreground">取消后将在当前计费周期结束时自动降级。</p>
+        <h2 className="text-lg font-semibold">续费管理</h2>
+        <p className="mt-2 text-sm text-muted-foreground">取消续费后将在当前计费周期结束时自动降级。</p>
         <div className="mt-3 flex flex-wrap gap-2">
           <Button variant="outline" disabled={submitting} onClick={() => void cancelSubscription()}>
-            取消订阅
+            取消续费
           </Button>
           <Button variant="outline" disabled={submitting} onClick={() => void resumeSubscription()}>
             恢复续费
