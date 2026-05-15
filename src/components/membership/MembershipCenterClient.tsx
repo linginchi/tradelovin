@@ -99,11 +99,6 @@ export function MembershipCenterClient() {
         freeUpgrade?: boolean;
         message?: string;
         error?: string;
-        code?: string;
-        gate?: {
-          requiredScore?: number;
-          missingScore?: number;
-        };
       };
       if (!res.ok || !json.success || !json.sessionUrl) {
         if (res.ok && json.success && json.freeUpgrade) {
@@ -111,11 +106,7 @@ export function MembershipCenterClient() {
           setError(json.message ?? "已免费升级成功。");
           return;
         }
-        const message =
-          json.error ??
-          (json.code === "score_not_enough" && json.gate
-            ? `升级分数不足，还差 ${json.gate.missingScore ?? 0} 分（目标 ${json.gate.requiredScore ?? "-"}）`
-            : "发起支付失败，请稍后重试。");
+        const message = json.error ?? "发起支付失败，请稍后重试。";
         console.error("[membership] create-checkout failed", {
           status: res.status,
           plan,

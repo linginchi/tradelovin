@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -5,7 +6,6 @@ import { getStripeClient } from "@/lib/billing/stripe";
 import { activateMembership } from "@/lib/membership/activate";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getStripePriceIdByPlan } from "@/lib/membership/plans";
-import { checkUpgradeEligibility } from "@/lib/membership/upgrade-gate";
 import { requireSameOriginForMutation } from "@/lib/security/csrf";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
@@ -49,6 +49,25 @@ function normalizeStripeErrorMessage(error: unknown): string {
   return "创建支付会话失败，请稍后重试";
 }
 
+async function hasPaidVideoSubscription(supabase: SupabaseClient, userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("course_registrations")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("status", "paid")
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("[membership/create-checkout] paid video check failed", {
+      userId,
+      error: error.message,
+    });
+    return false;
+  }
+  return Boolean(data?.id);
+}
+
 export async function POST(request: Request) {
   const csrf = requireSameOriginForMutation(request);
   if (csrf) return csrf;
@@ -72,34 +91,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "会员信息不存在" }, { status: 404 });
   }
 
-  const { eligibility, context } = await checkUpgradeEligibility(
-    auth.supabase,
-    auth.userId,
-    parsed.data.plan,
-  );
-  if (!eligibility.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        code: eligibility.code,
-        error: eligibility.message,
-        gate: {
-          currentPlan: context.membershipPlan,
-          nextPlan: context.nextPlan,
-          targetPlan: parsed.data.plan,
-          monthlyScore: context.monthlyScore,
-          monthlyTradeCount: context.monthlyTradeCount,
-          minTradesForScore: context.minTradesForScore,
-          requiredScore: eligibility.requiredScore,
-          missingScore: eligibility.missingScore,
-        },
-      },
-      { status: 403 },
-    );
-  }
-
   // If user already has paid video subscription entitlement, allow upgrade without extra charge.
-  if (eligibility.freeByVideoSubscription) {
+  if (await hasPaidVideoSubscription(auth.supabase, auth.userId)) {
     await activateMembership(auth.supabase, {
       userId: auth.userId,
       plan: parsed.data.plan,
