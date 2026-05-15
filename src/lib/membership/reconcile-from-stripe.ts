@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolvePlanByPriceId } from "@/lib/billing/stripe";
 import { activateMembership, cycleToPeriod } from "@/lib/membership/activate";
 import { getCurrentMembership } from "@/lib/membership/v2";
+import { getServiceSupabase } from "@/lib/supabase/service";
 
 type StripeCustomerList = {
   data?: Array<{ id: string }>;
@@ -107,7 +108,8 @@ export async function reconcileMembershipFromStripe(
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) return false;
 
-  const current = await getCurrentMembership(supabase, userId);
+  const writer = getServiceSupabase() ?? supabase;
+  const current = await getCurrentMembership(writer, userId);
   if (!current) return false;
   if (current.plan === "T1" || current.plan === "T2" || current.plan === "T3") return false;
 
@@ -130,7 +132,7 @@ export async function reconcileMembershipFromStripe(
     const candidate = findActivatableSubscription(subscriptions);
     if (!candidate) continue;
 
-    await activateMembership(supabase, {
+    await activateMembership(writer, {
       userId,
       plan: candidate.plan,
       period: candidate.period,
@@ -140,7 +142,7 @@ export async function reconcileMembershipFromStripe(
     });
 
     if (candidate.subscription.current_period_start && candidate.subscription.current_period_end) {
-      await supabase
+      const { error } = await writer
         .from("user_memberships")
         .update({
           current_period_start: new Date(candidate.subscription.current_period_start * 1000).toISOString(),
@@ -149,6 +151,9 @@ export async function reconcileMembershipFromStripe(
           cancel_at_period_end: Boolean(candidate.subscription.cancel_at_period_end),
         })
         .eq("user_id", userId);
+      if (error) {
+        throw new Error(`[reconcileMembershipFromStripe] update period failed: ${error.message}`);
+      }
     }
     return true;
   }

@@ -178,5 +178,8 @@ export async function syncLegacyMembershipAccount(
         : null,
   };
 
-  await supabase.from("membership_accounts").upsert(payload, { onConflict: "user_id" });
+  const { error } = await supabase.from("membership_accounts").upsert(payload, { onConflict: "user_id" });
+  if (error) {
+    throw new Error(`[syncLegacyMembershipAccount] upsert failed: ${error.message}`);
+  }
 }

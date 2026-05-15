@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { resolvePlanByPriceId } from "@/lib/billing/stripe";
 import { activateMembership, cycleToPeriod } from "@/lib/membership/activate";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireSameOriginForMutation } from "@/lib/security/csrf";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
@@ -96,7 +97,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "无法识别订阅档位" }, { status: 400 });
     }
 
-    await activateMembership(auth.supabase, {
+    const writer = getServiceSupabase() ?? auth.supabase;
+    await activateMembership(writer, {
       userId: auth.userId,
       plan: resolved.plan,
       period: cycleToPeriod(resolved.cycle),

@@ -44,7 +44,7 @@ export async function activateMembership(
   const periodStart = base.getTime() > now.getTime() ? base : now;
   const billingCycle: BillingCycle = input.period === "yearly" ? "year" : "month";
 
-  await supabase.from("user_memberships").upsert(
+  const { error: upsertError } = await supabase.from("user_memberships").upsert(
     {
       user_id: input.userId,
       plan: input.plan,
@@ -59,6 +59,9 @@ export async function activateMembership(
     },
     { onConflict: "user_id" },
   );
+  if (upsertError) {
+    throw new Error(`[activateMembership] upsert failed: ${upsertError.message}`);
+  }
 
   const current = await getCurrentMembership(supabase, input.userId);
   if (current) {
