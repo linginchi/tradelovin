@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getStripeClient } from "@/lib/billing/stripe";
 import { activateMembership } from "@/lib/membership/activate";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getStripePriceIdByPlan } from "@/lib/membership/plans";
@@ -48,6 +47,9 @@ function normalizeStripeErrorMessage(error: unknown): string {
       }
       return `支付配置缺失：缺少环境变量 ${missing}`;
     }
+    if (error.message === "stripe_checkout_session_timeout") {
+      return "Stripe响应超时，请稍后重试。";
+    }
     return error.message;
   }
   return "创建支付会话失败，请稍后重试";
@@ -81,6 +83,73 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: str
     return await Promise.race([promise, timeoutPromise]);
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+function getRequiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) throw new Error(`Missing required env: ${name}`);
+  return value;
+}
+
+async function createStripeCheckoutSession(input: {
+  secretKey: string;
+  priceId: string;
+  appUrl: string;
+  userId: string;
+  plan: "T1" | "T2" | "T3";
+  period: "monthly" | "yearly";
+  customerId?: string;
+  email?: string;
+  trialDaysLeft: number;
+}): Promise<string> {
+  const form = new URLSearchParams();
+  form.set("mode", "subscription");
+  form.set("line_items[0][price]", input.priceId);
+  form.set("line_items[0][quantity]", "1");
+  form.set("success_url", `${input.appUrl}/membership?session_id={CHECKOUT_SESSION_ID}`);
+  form.set("cancel_url", `${input.appUrl}/membership?canceled=true`);
+  form.set("client_reference_id", input.userId);
+  if (input.customerId) {
+    form.set("customer", input.customerId);
+  } else if (input.email) {
+    form.set("customer_email", input.email);
+  }
+  form.set("metadata[userId]", input.userId);
+  form.set("metadata[plan]", input.plan);
+  form.set("metadata[period]", input.period);
+  if (input.trialDaysLeft > 0) {
+    form.set("subscription_data[trial_period_days]", String(input.trialDaysLeft));
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: form.toString(),
+      signal: controller.signal,
+    });
+
+    const payload = (await response.json()) as { url?: string; error?: { message?: string } };
+    if (!response.ok) {
+      throw new Error(payload.error?.message ?? `stripe_checkout_failed_${response.status}`);
+    }
+    if (!payload.url) {
+      throw new Error("stripe_checkout_missing_url");
+    }
+    return payload.url;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("stripe_checkout_session_timeout");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -126,7 +195,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const stripe = getStripeClient();
+    const stripeSecretKey = getRequiredEnv("STRIPE_SECRET_KEY");
     const priceId = getStripePriceIdByPlan(parsed.data.plan, parsed.data.period);
     const appUrl = resolveAppUrl(request);
 
@@ -137,41 +206,19 @@ export async function POST(request: Request) {
       ? Math.floor((new Date(membership.trialEnd).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
       : 0;
 
-    const session = await withTimeout(
-      stripe.checkout.sessions.create({
-        mode: "subscription",
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${appUrl}/membership?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${appUrl}/membership?canceled=true`,
-        client_reference_id: auth.userId,
-        customer: membership.stripeCustomerId ?? undefined,
-        customer_email: membership.stripeCustomerId ? undefined : email,
-        metadata: {
-          userId: auth.userId,
-          plan: parsed.data.plan,
-          period: parsed.data.period,
-        },
-        subscription_data:
-          trialDaysLeft > 0
-            ? {
-                trial_period_days: trialDaysLeft,
-              }
-            : undefined,
-      }),
-      12000,
-      "stripe_checkout_session",
-    );
+    const sessionUrl = await createStripeCheckoutSession({
+      secretKey: stripeSecretKey,
+      priceId,
+      appUrl,
+      userId: auth.userId,
+      plan: parsed.data.plan,
+      period: parsed.data.period,
+      customerId: membership.stripeCustomerId ?? undefined,
+      email,
+      trialDaysLeft,
+    });
 
-    if (!session.url) {
-      console.error("[membership/create-checkout] stripe session missing url", {
-        plan: parsed.data.plan,
-        period: parsed.data.period,
-        userId: auth.userId,
-      });
-      return NextResponse.json({ success: false, error: "未能创建结算会话" }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, sessionUrl: session.url });
+    return NextResponse.json({ success: true, sessionUrl });
   } catch (error) {
     const message = normalizeStripeErrorMessage(error);
     console.error("[membership/create-checkout] failed", {
