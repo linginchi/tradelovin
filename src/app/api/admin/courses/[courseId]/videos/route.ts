@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { isMissingRelationError } from "@/lib/video/db";
 import { getVideoStorageMissingEnvNames, isVideoStorageConfigured, uploadVideoObject } from "@/lib/video/storage";
 
 export const runtime = "nodejs";
@@ -47,6 +48,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
     .order("created_at", { ascending: true });
 
   if (error) {
+    if (isMissingRelationError(error, "course_videos")) {
+      return NextResponse.json(
+        { error: "视频表尚未创建，请先执行数据库迁移（course_videos / user_video_progress）" },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
@@ -136,6 +143,12 @@ export async function POST(request: Request, { params }: RouteContext) {
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error, "course_videos")) {
+      return NextResponse.json(
+        { error: "视频表尚未创建，请先执行数据库迁移（course_videos / user_video_progress）" },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ video: data });

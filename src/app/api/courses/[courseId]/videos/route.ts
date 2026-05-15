@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
+import { isMissingRelationError } from "@/lib/video/db";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,14 @@ export async function GET(_request: Request, { params }: RouteContext) {
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (freeErr) {
+    if (isMissingRelationError(freeErr, "course_videos")) {
+      return NextResponse.json({
+        videos: [],
+        hasCourseAccess: false,
+        authed: false,
+        warning: "视频表尚未初始化，请先执行数据库迁移（course_videos）。",
+      });
+    }
     return NextResponse.json({ error: freeErr.message }, { status: 500 });
   }
 
@@ -74,6 +83,14 @@ export async function GET(_request: Request, { params }: RouteContext) {
     .order("created_at", { ascending: true });
 
   if (error) {
+    if (isMissingRelationError(error, "course_videos")) {
+      return NextResponse.json({
+        videos: freeVideos ?? [],
+        hasCourseAccess: false,
+        authed: true,
+        warning: "视频表尚未初始化，请先执行数据库迁移（course_videos）。",
+      });
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({

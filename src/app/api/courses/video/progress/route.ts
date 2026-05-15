@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
+import { isMissingRelationError } from "@/lib/video/db";
 
 export const runtime = "nodejs";
 
@@ -35,6 +36,11 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error, "user_video_progress")) {
+      return NextResponse.json(
+        { position: 0, completed: false, warning: "观看进度表未初始化，请先执行数据库迁移。" },
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({
@@ -76,6 +82,12 @@ export async function POST(request: Request) {
   );
 
   if (error) {
+    if (isMissingRelationError(error, "user_video_progress")) {
+      return NextResponse.json(
+        { success: false, error: "观看进度表未初始化，请先执行数据库迁移。" },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
   return NextResponse.json({ success: true });

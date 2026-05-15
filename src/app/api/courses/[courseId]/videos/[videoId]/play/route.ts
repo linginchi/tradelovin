@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
+import { isMissingRelationError } from "@/lib/video/db";
 
 export const runtime = "nodejs";
 
@@ -48,6 +49,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
     .eq("course_id", courseId)
     .maybeSingle();
   if (videoErr) {
+    if (isMissingRelationError(videoErr, "course_videos")) {
+      return NextResponse.json(
+        { error: "视频功能尚未初始化，请先执行数据库迁移（course_videos）。" },
+        { status: 503 },
+      );
+    }
     return NextResponse.json({ error: videoErr.message }, { status: 500 });
   }
   if (!video) {
