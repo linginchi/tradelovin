@@ -67,6 +67,17 @@ export default async function CjkztDashboardPage() {
 						</Link>
 					</CardContent>
 				</Card>
+				<Card className="border-border/80 bg-card/35 backdrop-blur-md">
+					<CardHeader>
+						<CardTitle className="text-base">邮件配置指南</CardTitle>
+						<CardDescription>查看 SPF / DKIM 设置步骤，提升邮件送达率。</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Link href={`${ADMIN_BASE_PATH}/mail-config-guide`} className={cn(buttonVariants({ size: "sm" }))}>
+							打开指南
+						</Link>
+					</CardContent>
+				</Card>
 			</div>
 		</main>
 	);

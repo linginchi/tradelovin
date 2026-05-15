@@ -11,7 +11,7 @@ import { LazyWhenVisible } from "@/components/LazyWhenVisible";
 import { DevTestQuickLoginCard } from "@/components/auth/DevTestQuickLoginCard";
 import { UpcomingCourseTeaser } from "@/components/home/UpcomingCourseTeaser";
 import { buttonVariants } from "@/components/ui/button";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 const HonorGraduatesGrid = dynamic(
@@ -36,6 +36,7 @@ function HonorGraduatesSkeleton() {
 
 export default function Home() {
 	const t = useTranslations("Home");
+	const router = useRouter();
 
 	const highlights = useMemo(
 		() => t.raw("highlights") as Array<{ title: string; desc: string; tag: string }>,
@@ -115,7 +116,8 @@ export default function Home() {
 								show: { opacity: 1, y: 0 },
 							}}
 							transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-							className="border-border/80 bg-card/40 hover:border-primary/25 relative rounded-xl border p-5 shadow-sm backdrop-blur-sm transition-colors"
+							className="border-border/80 bg-card/40 hover:border-primary/25 relative cursor-pointer rounded-xl border p-5 shadow-sm backdrop-blur-sm transition-colors"
+							onClick={() => router.push("/courses")}
 						>
 							<span className="text-primary mb-2 inline-block text-xs font-medium">
 								{item.tag}

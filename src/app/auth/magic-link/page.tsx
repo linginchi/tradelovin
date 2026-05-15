@@ -11,6 +11,9 @@ export default function MagicLinkPage() {
 		const qs = new URLSearchParams();
 		const token = searchParams.get("token");
 		const next = searchParams.get("next");
+		if (token) {
+			window.localStorage.setItem("last_magic_link_token", token);
+		}
 		if (token) qs.set("token", token);
 		if (next && next.startsWith("/") && !next.startsWith("//")) qs.set("next", next);
 		window.location.replace(`/api/auth/magic-link?${qs.toString()}`);

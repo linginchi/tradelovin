@@ -70,7 +70,7 @@ function isProtectedPath(pathname: string): boolean {
 function buildLoginRedirect(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	url.pathname = "/login";
-	url.searchParams.set("next", request.nextUrl.pathname);
+	url.searchParams.set("next", "/my-learning");
 	return NextResponse.redirect(url);
 }
 
@@ -81,6 +81,7 @@ function isHttpsOnlyHost(hostname: string): boolean {
 
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
 	if (!isProtectedPath(request.nextUrl.pathname)) return null;
+	console.log("[middleware enforceAuth] check", { pathname: request.nextUrl.pathname });
 
 	const url = readEnv("NEXT_PUBLIC_SUPABASE_URL");
 	const anon = readEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
@@ -102,8 +103,13 @@ async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
 		error,
 	} = await supabase.auth.getUser();
 	if (error || !user) {
+		console.warn("[middleware enforceAuth] redirect to login", {
+			pathname: request.nextUrl.pathname,
+			hasError: Boolean(error),
+		});
 		return buildLoginRedirect(request);
 	}
+	console.log("[middleware enforceAuth] pass", { pathname: request.nextUrl.pathname, userId: user.id });
 	return null;
 }
 

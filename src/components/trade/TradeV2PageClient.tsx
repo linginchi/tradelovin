@@ -1,11 +1,12 @@
 "use client";
 
-import { ArrowLeft, RefreshCcw, Signal, SignalHigh } from "lucide-react";
+import { ArrowLeft, HelpCircle, RefreshCcw, Signal, SignalHigh, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast, Toaster } from "sonner";
 
+import { FeedbackButton } from "@/components/common/FeedbackButton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PracticeButton } from "@/components/practice/PracticeButton";
+import { TradeGuideModal } from "@/components/trade/TradeGuideModal";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useMembershipCurrent } from "@/lib/membership/client";
 import {
@@ -198,6 +201,12 @@ export function TradeV2PageClient() {
 	const [resourceLoading, setResourceLoading] = useState(false);
 	const [nowTick, setNowTick] = useState(0);
 	const [autoLogoutNight, setAutoLogoutNight] = useState(false);
+	const [guideOpen, setGuideOpen] = useState(false);
+	const [guideDontShowAgain, setGuideDontShowAgain] = useState(false);
+	const [selectedBookKey, setSelectedBookKey] = useState("");
+	const [optimisticCancelledOrderIds, setOptimisticCancelledOrderIds] = useState<string[]>([]);
+	const [isTypingPrice, setIsTypingPrice] = useState(false);
+	const [draftPrice, setDraftPrice] = useState("");
 	const { expired: membershipExpired } = useMembershipCurrent(true);
 	const failureOnlyEvents = isFailedEventView(searchParams.get("eventView"));
 
@@ -346,16 +355,83 @@ export function TradeV2PageClient() {
 			void loadResources();
 			void loadRiskMessages();
 			void loadMonitorHub();
-		}, sourceMode === "fast" ? 2000 : 4000);
+		}, 5000);
 		return () => {
 			window.clearInterval(timer);
 		};
-	}, [loadMonitorHub, loadQuote, loadResources, loadRiskMessages, loadTradeData, resolvedSymbol, sourceMode]);
+	}, [loadMonitorHub, loadQuote, loadResources, loadRiskMessages, loadTradeData, resolvedSymbol]);
 
 	useEffect(() => {
 		const t = window.setInterval(() => setNowTick(Date.now()), 1000);
 		return () => window.clearInterval(t);
 	}, []);
+	useEffect(() => {
+		const shouldHide = window.localStorage.getItem("trade-v2-guide-hide") === "1";
+		setGuideDontShowAgain(shouldHide);
+		setGuideOpen(!shouldHide);
+	}, []);
+	useEffect(() => {
+		const timer = window.setTimeout(() => {
+			debouncedSearchSymbol(symbolInput);
+		}, 0);
+		return () => window.clearTimeout(timer);
+	}, [debouncedSearchSymbol, symbolInput]);
+	useEffect(() => {
+		if (!isTypingPrice) {
+			setDraftPrice(price);
+		}
+	}, [isTypingPrice, price]);
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null;
+			const isInputFocused = !!target?.closest("input, textarea, [contenteditable='true']");
+			if (event.key === "Escape") {
+				event.preventDefault();
+				const activeId = (document.activeElement as HTMLElement | null)?.id;
+				if (activeId === "orderPrice") {
+					setDraftPrice("");
+					setPrice("");
+					return;
+				}
+				if (activeId === "qty") {
+					setQty("");
+					return;
+				}
+				if (activeId === "symbolInput") {
+					clearSymbolSelection();
+					return;
+				}
+				setSelectedBookKey("");
+				return;
+			}
+			if (isInputFocused) return;
+			if (event.key === "b" || event.key === "B") {
+				event.preventDefault();
+				if (hasOrderInputs) {
+					debouncedPlaceOrder("buy");
+				} else {
+					document.getElementById("qty")?.focus();
+				}
+				return;
+			}
+			if (event.key === "s" || event.key === "S") {
+				event.preventDefault();
+				if (hasOrderInputs) {
+					debouncedPlaceOrder("sell");
+				} else {
+					document.getElementById("qty")?.focus();
+				}
+				return;
+			}
+			if (event.key === "c" || event.key === "C") {
+				event.preventDefault();
+				void forceClosePosition();
+				return;
+			}
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [clearSymbolSelection, debouncedPlaceOrder, forceClosePosition, hasOrderInputs]);
 	useEffect(() => {
 		if (!querySymbol) return;
 		if (querySymbol === resolvedSymbol && querySymbol === symbolInput) return;
@@ -492,10 +568,47 @@ export function TradeV2PageClient() {
 		const query = current.toString();
 		router.replace(query ? (`${pathname}?${query}` as never) : (pathname as never));
 	}, [failureOnlyEvents, pathname, router, searchParams]);
+	const debouncedSearchSymbol = useDebouncedCallback((rawSymbol: string) => {
+		const clean = normalizeCnSymbol(rawSymbol);
+		if (!isCanonicalCnSymbol(clean)) return;
+		setResolvedSymbol(clean);
+		updateSymbolInQuery(clean);
+		void loadQuote(clean);
+	}, 300);
+	const displayedOrders = useMemo(
+		() => orders.filter((o) => !optimisticCancelledOrderIds.includes(o.id)),
+		[optimisticCancelledOrderIds, orders],
+	);
+	const selectedPosition = useMemo(
+		() =>
+			positions.find((p) => p.symbol === resolvedSymbol && Number(p.available_qty) > 0) ??
+			positions.find((p) => Number(p.available_qty) > 0) ??
+			null,
+		[positions, resolvedSymbol],
+	);
+	const hasOrderInputs = useMemo(() => {
+		const px = Number(isTypingPrice ? draftPrice : price);
+		const q = Number(qty);
+		return Number.isFinite(px) && px > 0 && Number.isInteger(q) && q > 0;
+	}, [draftPrice, isTypingPrice, price, qty]);
+	const updatePriceFromBook = useCallback((bookKey: string, newPrice: number) => {
+		setSelectedBookKey(bookKey);
+		setIsTypingPrice(false);
+		setDraftPrice(String(newPrice));
+		setPrice(String(newPrice));
+	}, []);
+	const clearSymbolSelection = useCallback(() => {
+		setSymbolInput("");
+		setResolvedSymbol("");
+		setQuote(null);
+		setFetchError("");
+		setSelectedBookKey("");
+		updateSymbolInQuery("");
+	}, [updateSymbolInQuery]);
 
 	const handlePlaceOrder = useCallback(
 		async (side: "buy" | "sell") => {
-			const px = Number(price);
+			const px = Number(isTypingPrice ? draftPrice : price);
 			const q = Number(qty);
 			if (!Number.isFinite(px) || px <= 0) {
 				toast.error("价格必须大于 0");
@@ -549,11 +662,18 @@ export function TradeV2PageClient() {
 				setPlacing(false);
 			}
 		},
-		[accountType, loadQuote, loadResources, loadTradeData, positionMode, price, qty, resolvedSymbol]
+		[accountType, draftPrice, isTypingPrice, loadQuote, loadResources, loadTradeData, positionMode, price, qty, resolvedSymbol]
 	);
+	const debouncedPlaceOrder = useDebouncedCallback((side: "buy" | "sell") => {
+		void handlePlaceOrder(side);
+	}, 300);
+	const debouncedCommitPrice = useDebouncedCallback((value: string) => {
+		setPrice(value);
+	}, 300);
 
 	const cancelOrder = useCallback(
 		async (orderId: string) => {
+			setOptimisticCancelledOrderIds((prev) => [...prev, orderId]);
 			try {
 				const res = await fetch("/api/trade-v2/cancel", {
 					method: "POST",
@@ -563,6 +683,7 @@ export function TradeV2PageClient() {
 				});
 				const json = await parseJson<TradeV2CancelApiResponse>(res);
 				if (!json.success) {
+					setOptimisticCancelledOrderIds((prev) => prev.filter((id) => id !== orderId));
 					toast.error(json.error ?? "撤单失败");
 					return;
 				}
@@ -570,10 +691,108 @@ export function TradeV2PageClient() {
 				await loadTradeData();
 				await loadResources();
 			} catch (error) {
+				setOptimisticCancelledOrderIds((prev) => prev.filter((id) => id !== orderId));
 				toast.error(error instanceof Error ? error.message : "撤单失败");
+			} finally {
+				setOptimisticCancelledOrderIds((prev) => prev.filter((id) => id !== orderId));
 			}
 		},
 		[accountType, loadResources, loadTradeData]
+	);
+	const forceClosePosition = useCallback(async () => {
+		if (!selectedPosition) {
+			toast.error("当前无可平仓持仓");
+			return;
+		}
+		const closeSide = selectedPosition.position_type === "long" ? "sell" : "buy";
+		const closeQty = Math.max(0, Number(selectedPosition.available_qty));
+		if (!Number.isFinite(closeQty) || closeQty <= 0) {
+			toast.error("当前持仓可用数量为 0");
+			return;
+		}
+		const px = Number(quote?.price ?? price);
+		if (!Number.isFinite(px) || px <= 0) {
+			toast.error("请先确认价格");
+			return;
+		}
+		try {
+			setPlacing(true);
+			setResolvedSymbol(selectedPosition.symbol);
+			setSymbolInput(selectedPosition.symbol);
+			const res = await fetch("/api/trade-v2/order", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({
+					symbol: selectedPosition.symbol,
+					side: closeSide,
+					price: px,
+					quantity: closeQty,
+					accountType,
+					positionMode,
+				}),
+			});
+			const json = await parseJson<TradeV2OrderApiResponse>(res);
+			if (!json.success) {
+				toast.error(json.error ?? "平仓失败");
+				return;
+			}
+			toast.success(`已对 ${selectedPosition.symbol} 执行平仓`);
+			await loadTradeData();
+			await loadResources();
+			await loadQuote(selectedPosition.symbol);
+		} catch (error) {
+			toast.error(error instanceof Error ? error.message : "平仓失败");
+		} finally {
+			setPlacing(false);
+		}
+	}, [accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price, selectedPosition]);
+	const forceClosePositionByRow = useCallback(
+		async (position: PositionRow) => {
+			const closeSide = position.position_type === "long" ? "sell" : "buy";
+			const closeQty = Math.max(0, Number(position.available_qty));
+			if (!Number.isFinite(closeQty) || closeQty <= 0) {
+				toast.error("当前持仓可用数量为 0");
+				return;
+			}
+			const px = Number(quote?.price ?? price);
+			if (!Number.isFinite(px) || px <= 0) {
+				toast.error("请先确认价格");
+				return;
+			}
+			try {
+				setPlacing(true);
+				setResolvedSymbol(position.symbol);
+				setSymbolInput(position.symbol);
+				const res = await fetch("/api/trade-v2/order", {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					credentials: "include",
+					body: JSON.stringify({
+						symbol: position.symbol,
+						side: closeSide,
+						price: px,
+						quantity: closeQty,
+						accountType,
+						positionMode,
+					}),
+				});
+				const json = await parseJson<TradeV2OrderApiResponse>(res);
+				if (!json.success) {
+					toast.error(json.error ?? "平仓失败");
+					return;
+				}
+				toast.success(`已对 ${position.symbol} 执行平仓`);
+				await loadTradeData();
+				await loadResources();
+				await loadQuote(position.symbol);
+			} catch (error) {
+				toast.error(error instanceof Error ? error.message : "平仓失败");
+			} finally {
+				setPlacing(false);
+			}
+		},
+		[accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price],
 	);
 
 	const applyResource = useCallback(async (side: "long" | "short") => {
@@ -737,10 +956,24 @@ export function TradeV2PageClient() {
 		const el = document.getElementById(panelId);
 		el?.scrollIntoView({ behavior: "smooth", block: "start" });
 	};
+	const onGuideDontShowAgainChange = (checked: boolean) => {
+		setGuideDontShowAgain(checked);
+		if (checked) {
+			window.localStorage.setItem("trade-v2-guide-hide", "1");
+			return;
+		}
+		window.localStorage.removeItem("trade-v2-guide-hide");
+	};
 
 	return (
 		<div className="mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24">
 			<Toaster richColors />
+			<TradeGuideModal
+				open={guideOpen}
+				onOpenChange={setGuideOpen}
+				dontShowAgain={guideDontShowAgain}
+				onDontShowAgainChange={onGuideDontShowAgainChange}
+			/>
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex items-center gap-3">
 					<Link href="/trade-legacy">
@@ -756,6 +989,10 @@ export function TradeV2PageClient() {
 				</div>
 				<div className="flex items-center gap-2">
 					<PracticeButton />
+					<Button variant="outline" size="sm" onClick={() => setGuideOpen(true)}>
+						<HelpCircle className="mr-1 h-4 w-4" />
+						帮助
+					</Button>
 					<Link href={watchlistHref}>
 						<Button variant="outline" size="sm">
 							监控
@@ -939,13 +1176,31 @@ export function TradeV2PageClient() {
 							value={sourceMode}
 							onChange={(e) => setSourceMode(e.target.value === "fast" ? "fast" : "normal")}
 						>
-							<option value="normal">普通（4秒）</option>
-							<option value="fast">极速（2秒）</option>
+							<option value="normal">普通（5秒）</option>
+							<option value="fast">极速（5秒）</option>
 						</select>
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="symbolInput">标的代码</Label>
-						<Input id="symbolInput" value={symbolInput} onChange={(e) => setSymbolInput(e.target.value)} />
+						<div className="relative">
+							<Input
+								id="symbolInput"
+								value={symbolInput}
+								onChange={(e) => setSymbolInput(e.target.value)}
+							/>
+							{symbolInput ? (
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
+									aria-label="清空股票代码"
+									onClick={clearSymbolSelection}
+								>
+									<X className="h-4 w-4" />
+								</Button>
+							) : null}
+						</div>
 					</div>
 					<div className="flex items-end gap-2">
 						<Button
@@ -993,36 +1248,68 @@ export function TradeV2PageClient() {
 						{fetchError ? <p className="text-sm text-red-500">{fetchError}</p> : null}
 						<div className="grid grid-cols-2 gap-2">
 							<div className="rounded-md border p-3">
-								<p className="mb-2 text-xs font-medium">卖盘（点价可手动填入）</p>
+								<p className="mb-2 text-xs font-medium" title="点击卖盘价格可快速填入并准备买入">
+									卖盘（点价可手动填入）
+								</p>
 								<div className="space-y-1 text-xs">
 									{quote?.order_book?.asks?.map((ask) => (
-										<button
+										<div
 											key={`ask-${ask.level}`}
-											type="button"
-											className="flex w-full items-center justify-between rounded px-1 py-0.5 hover:bg-muted"
-											onClick={() => setPrice(String(ask.price))}
+											className={`flex w-full items-center justify-between rounded px-1 py-0.5 hover:bg-muted ${
+												selectedBookKey === `ask-${ask.level}` ? "bg-muted" : ""
+											}`}
+											title="点击价格可快速填入；点击卖量可挂单买入"
+											onClick={() => updatePriceFromBook(`ask-${ask.level}`, ask.price)}
 										>
 											<span>卖{ask.level}</span>
 											<span>{fmtMoney(ask.price)}</span>
-											<span className="text-muted-foreground">{ask.volume}</span>
-										</button>
+											<button
+												type="button"
+												className="text-muted-foreground underline-offset-2 hover:underline"
+												title="点击卖量可快速触发买入挂单"
+												onClick={(e) => {
+													e.stopPropagation();
+													setQty(String(ask.volume));
+													updatePriceFromBook(`ask-${ask.level}`, ask.price);
+													debouncedPlaceOrder("buy");
+												}}
+											>
+												{ask.volume}
+											</button>
+										</div>
 									)) ?? <span className="text-muted-foreground">暂无</span>}
 								</div>
 							</div>
 							<div className="rounded-md border p-3">
-								<p className="mb-2 text-xs font-medium">买盘（点价可手动填入）</p>
+								<p className="mb-2 text-xs font-medium" title="点击买盘价格可快速填入并准备卖出">
+									买盘（点价可手动填入）
+								</p>
 								<div className="space-y-1 text-xs">
 									{quote?.order_book?.bids?.map((bid) => (
-										<button
+										<div
 											key={`bid-${bid.level}`}
-											type="button"
-											className="flex w-full items-center justify-between rounded px-1 py-0.5 hover:bg-muted"
-											onClick={() => setPrice(String(bid.price))}
+											className={`flex w-full items-center justify-between rounded px-1 py-0.5 hover:bg-muted ${
+												selectedBookKey === `bid-${bid.level}` ? "bg-muted" : ""
+											}`}
+											title="点击价格可快速填入；点击买量可挂单卖出"
+											onClick={() => updatePriceFromBook(`bid-${bid.level}`, bid.price)}
 										>
 											<span>买{bid.level}</span>
 											<span>{fmtMoney(bid.price)}</span>
-											<span className="text-muted-foreground">{bid.volume}</span>
-										</button>
+											<button
+												type="button"
+												className="text-muted-foreground underline-offset-2 hover:underline"
+												title="点击买量可快速触发卖出挂单"
+												onClick={(e) => {
+													e.stopPropagation();
+													setQty(String(bid.volume));
+													updatePriceFromBook(`bid-${bid.level}`, bid.price);
+													debouncedPlaceOrder("sell");
+												}}
+											>
+												{bid.volume}
+											</button>
+										</div>
 									)) ?? <span className="text-muted-foreground">暂无</span>}
 								</div>
 							</div>
@@ -1050,20 +1337,38 @@ export function TradeV2PageClient() {
 						</div>
 						<div className="space-y-1.5">
 							<Label htmlFor="orderPrice">价格</Label>
-							<Input id="orderPrice" value={price} onChange={(e) => setPrice(e.target.value)} />
+							<Input
+								id="orderPrice"
+								type="number"
+								inputMode="decimal"
+								value={isTypingPrice ? draftPrice : price}
+								onFocus={() => setIsTypingPrice(true)}
+								onBlur={() => {
+									setIsTypingPrice(false);
+									setPrice(draftPrice);
+								}}
+								onChange={(e) => {
+									const value = e.target.value;
+									setDraftPrice(value);
+									debouncedCommitPrice(value);
+								}}
+							/>
 						</div>
 						<div className="space-y-1.5">
 							<Label htmlFor="qty">股数</Label>
 							<Input id="qty" value={qty} onChange={(e) => setQty(e.target.value)} />
 						</div>
 						<div className="grid grid-cols-2 gap-2">
-							<Button disabled={placing} onClick={() => void handlePlaceOrder("buy")}>
-								{positionMode === "short" ? "买入回补" : "买入"}
+							<Button disabled={placing} onClick={() => debouncedPlaceOrder("buy")}>
+								{positionMode === "short" ? "买入回补" : "买入"} (B)
 							</Button>
-							<Button disabled={placing} variant="destructive" onClick={() => void handlePlaceOrder("sell")}>
-								{positionMode === "short" ? "卖出开空" : "卖出"}
+							<Button disabled={placing} variant="destructive" onClick={() => debouncedPlaceOrder("sell")}>
+								{positionMode === "short" ? "卖出开空" : "卖出"} (S)
 							</Button>
 						</div>
+						<Button variant="outline" disabled={placing || !selectedPosition} onClick={() => void forceClosePosition()}>
+							平仓当前持仓 (C)
+						</Button>
 						<div id="panel-account" className="rounded-md border p-2 text-xs">
 							<p>账户：{account?.account_name ?? "—"}</p>
 							<p>可用：{account ? fmtMoney(account.available_balance) : "—"}</p>
@@ -1122,14 +1427,14 @@ export function TradeV2PageClient() {
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{orders.length === 0 ? (
+							{displayedOrders.length === 0 ? (
 								<TableRow>
 									<TableCell colSpan={10} className="text-center text-muted-foreground">
 										暂无委托
 									</TableCell>
 								</TableRow>
 							) : (
-								orders.map((o) => (
+								displayedOrders.map((o) => (
 									<TableRow key={o.id}>
 										{(() => {
 											const resultView = buildExecutionResultView({
@@ -1191,7 +1496,17 @@ export function TradeV2PageClient() {
 								</TableRow>
 							) : (
 								positions.map((p) => (
-									<TableRow key={p.id}>
+									<TableRow
+										key={p.id}
+										className={p.symbol === selectedPosition?.symbol ? "bg-muted/40" : ""}
+										onDoubleClick={() => {
+											setResolvedSymbol(p.symbol);
+											setSymbolInput(p.symbol);
+											setQty(String(p.available_qty));
+											void forceClosePositionByRow(p);
+										}}
+										title="双击可平仓该持仓"
+									>
 										<TableCell>{p.symbol}</TableCell>
 										<TableCell>{p.position_type}</TableCell>
 										<TableCell className="text-end">{p.quantity}</TableCell>
@@ -1372,6 +1687,7 @@ export function TradeV2PageClient() {
 					</div>
 				</TabsContent>
 			</Tabs>
+			<FeedbackButton defaultContext="trade-v2" />
 		</div>
 	);
 }

@@ -25,6 +25,7 @@ export type AuthUser = {
 export function useAuth() {
 	const [status, setStatus] = useState<AuthStatus>("loading");
 	const [user, setUser] = useState<AuthUser | null>(null);
+	const [silentRetryDone, setSilentRetryDone] = useState(false);
 
 	const refresh = useCallback(async () => {
 		try {
@@ -69,6 +70,20 @@ export function useAuth() {
 			if (event === "TOKEN_REFRESHED") {
 				console.info("[auth] token refreshed, session extended");
 			}
+			if (event === "SIGNED_OUT" && !silentRetryDone) {
+				const token = window.localStorage.getItem("last_magic_link_token");
+				if (token) {
+					console.warn("[auth] detected SIGNED_OUT, try one silent retry");
+					setSilentRetryDone(true);
+					void fetch(`/api/auth/magic-link?token=${encodeURIComponent(token)}&next=/my-learning`, {
+						credentials: "include",
+					})
+						.then(() => refresh())
+						.catch(() => {
+							// keep default flow: user stays signed out when retry fails
+						});
+				}
+			}
 			void refresh();
 		});
 
@@ -77,7 +92,7 @@ export function useAuth() {
 			window.clearInterval(timer);
 			authListener?.data.subscription.unsubscribe();
 		};
-	}, [refresh]);
+	}, [refresh, silentRetryDone]);
 
 	return useMemo(
 		() => ({

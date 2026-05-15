@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast, Toaster } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,6 @@ const RESEND_COOLDOWN_SECONDS = 60;
 export function EmailLinkLoginForm() {
 	const locale = useLocale();
 	const searchParams = useSearchParams();
-	const pathname = usePathname();
 	const t = useTranslations("MagicLogin");
 	const [busy, setBusy] = useState(false);
 	const [cooldownSeconds, setCooldownSeconds] = useState(0);
@@ -30,9 +29,6 @@ export function EmailLinkLoginForm() {
 		const nextParam = searchParams.get("next");
 		if (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")) {
 			return nextParam;
-		}
-		if (pathname && pathname.startsWith("/") && !pathname.startsWith("//")) {
-			return pathname;
 		}
 		return "/my-learning";
 	})();
@@ -56,6 +52,7 @@ export function EmailLinkLoginForm() {
 
 	const sendLink = async (values: FormValues) => {
 		if (cooldownSeconds > 0) return;
+		console.log("[login-page] send link clicked", { next: resolvedNextPath });
 		setBusy(true);
 		const res = await fetch("/api/auth/send-login-link", {
 			method: "POST",
@@ -80,7 +77,10 @@ export function EmailLinkLoginForm() {
 			return;
 		}
 		setCooldownSeconds(RESEND_COOLDOWN_SECONDS);
-		toast.success(t("sentSuccess"));
+		toast.success(t("sentSuccessWithHint"));
+	};
+	const handleResend = async () => {
+		await handleSubmit(sendLink)();
 	};
 
 	return (
@@ -109,10 +109,11 @@ export function EmailLinkLoginForm() {
 					)}
 				</Button>
 				<Button
-					type="submit"
+					type="button"
 					variant="outline"
 					disabled={busy || cooldownSeconds > 0}
 					className="min-w-28"
+					onClick={() => void handleResend()}
 				>
 					{cooldownSeconds > 0 ? t("resendDisabled") : t("resend")}
 				</Button>

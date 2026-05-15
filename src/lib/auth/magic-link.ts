@@ -11,7 +11,7 @@ import { getTradeUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 
 const TOKEN_BYTES = 32;
-export const MAGIC_LINK_EXPIRE_MINUTES = 15;
+export const MAGIC_LINK_EXPIRE_MINUTES = 30;
 export const MAGIC_LINK_SEND_LIMIT_PER_HOUR = 5;
 
 export function generateMagicLinkToken(): string {

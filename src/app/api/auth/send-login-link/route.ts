@@ -50,7 +50,8 @@ export async function POST(request: Request) {
 	const nextPath =
 		parsed.data.next && parsed.data.next.startsWith("/") && !parsed.data.next.startsWith("//")
 			? parsed.data.next
-			: null;
+			: "/my-learning";
+	console.log("[send-login-link] request", { emailMasked: `${email.slice(0, 2)}***`, nextPath });
 	const sentInLastHour = await countRecentMagicLinkSends(srv, email);
 	if (sentInLastHour >= MAGIC_LINK_SEND_LIMIT_PER_HOUR) {
 		return NextResponse.json(
@@ -89,7 +90,7 @@ export async function POST(request: Request) {
 		to: email,
 		subject: "您的豹仔乐园登录链接",
 		text: [
-			"点击以下链接登录（15分钟内有效）：",
+			"点击以下链接登录（30分钟内有效）：",
 			"",
 			loginUrl,
 			"",
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
 			"安全提示：豹仔乐园永远不会要求您输入密码。请确认发件人为 noreply@tradelovin.com。",
 		].join("\n"),
 		html: `
-			<p>点击以下链接登录（15分钟内有效）：</p>
+			<p>点击以下链接登录（30分钟内有效）：</p>
 			<p><a href="${loginUrl}">${loginUrl}</a></p>
 			<p>如果无法点击，请复制链接到浏览器打开。</p>
 			<p><strong>安全提示：</strong>豹仔乐园永远不会要求您输入密码。请确认发件人为 noreply@tradelovin.com。</p>
@@ -107,7 +108,13 @@ export async function POST(request: Request) {
 
 	if (sendErr) {
 		console.error("[send-login-link email]", sendErr);
-		return NextResponse.json({ success: false, error: "邮件发送失败" }, { status: 502 });
+		return NextResponse.json(
+			{
+				success: false,
+				error: "邮件发送失败。若未收到邮件，请检查垃圾邮件箱，并将 noreply@tradelovin.com 加入白名单。",
+			},
+			{ status: 502 },
+		);
 	}
 
 	return NextResponse.json({

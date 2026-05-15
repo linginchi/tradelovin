@@ -222,6 +222,7 @@
 		"passwordLoginFailed": "密码登录失败，请检查邮箱和密码；若尚未设置密码，请先使用邮箱链接登录后在“我的”页面设置密码。",
 		"busyVerify": "登录中…",
 		"sentSuccess": "登录链接已发送，请查收邮箱",
+		"sentSuccessWithHint": "登录链接已发送。若未收到邮件，请检查垃圾邮件箱，并将 noreply@tradelovin.com 加入白名单。",
 		"sendFailed": "发送失败，请稍后重试",
 		"invalidOrExpired": "链接无效或已过期，请重新发送登录链接。",
 		"noPasswordNote": "豹仔乐园不会要求您输入密码。",
