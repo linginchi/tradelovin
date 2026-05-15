@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { upsertBaseMembership } from "@/lib/membership/manage";
 import { TQ_POINTS_RULES } from "@/lib/membership/points";
+import { reconcileMembershipFromStripe } from "@/lib/membership/reconcile-from-stripe";
 import { getMembershipSnapshot } from "@/lib/membership/service";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -13,7 +14,20 @@ export async function GET() {
 	const auth = await requireTradeUser();
 	if (auth instanceof NextResponse) return auth;
 
-	const v2Membership = await ensureCurrentMembership(auth.supabase, auth.userId);
+	let v2Membership = await ensureCurrentMembership(auth.supabase, auth.userId);
+	if (v2Membership && (v2Membership.plan === "T0_trial" || v2Membership.plan === "T0_paid")) {
+		try {
+			const reconciled = await reconcileMembershipFromStripe(auth.supabase, auth.userId);
+			if (reconciled) {
+				v2Membership = await ensureCurrentMembership(auth.supabase, auth.userId);
+			}
+		} catch (error) {
+			console.warn("[membership/me] reconcile from stripe failed", {
+				userId: auth.userId,
+				error,
+			});
+		}
+	}
 	const { data: pointsRow } = await auth.supabase
 		.from("user_points")
 		.select("balance")

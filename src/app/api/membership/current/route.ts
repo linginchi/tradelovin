@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { reconcileMembershipFromStripe } from "@/lib/membership/reconcile-from-stripe";
 import { getUpgradePreview } from "@/lib/membership/upgrade-gate";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getMembershipSnapshot } from "@/lib/membership/service";
@@ -11,7 +12,20 @@ export async function GET() {
   const auth = await requireTradeUser();
   if (auth instanceof NextResponse) return auth;
 
-  const membership = await ensureCurrentMembership(auth.supabase, auth.userId);
+  let membership = await ensureCurrentMembership(auth.supabase, auth.userId);
+  if (membership && (membership.plan === "T0_trial" || membership.plan === "T0_paid")) {
+    try {
+      const reconciled = await reconcileMembershipFromStripe(auth.supabase, auth.userId);
+      if (reconciled) {
+        membership = await ensureCurrentMembership(auth.supabase, auth.userId);
+      }
+    } catch (error) {
+      console.warn("[membership/current] reconcile from stripe failed", {
+        userId: auth.userId,
+        error,
+      });
+    }
+  }
   if (!membership) {
     const legacy = await getMembershipSnapshot(auth.supabase, auth.userId);
     if (!legacy) {
