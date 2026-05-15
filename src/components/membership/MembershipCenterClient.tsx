@@ -42,7 +42,8 @@ export function MembershipCenterClient() {
   const locale = useLocale();
   const t = useTranslations("membership.level");
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingPlan, setSubmittingPlan] = useState<PaidPlan | null>(null);
+  const [managingBilling, setManagingBilling] = useState(false);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
   const [error, setError] = useState("");
   const [membership, setMembership] = useState<Membership | null>(null);
@@ -75,7 +76,7 @@ export function MembershipCenterClient() {
   }, []);
 
   async function subscribe(plan: PaidPlan) {
-    setSubmitting(true);
+    setSubmittingPlan(plan);
     setError("");
     try {
       const publishableKey =
@@ -87,12 +88,16 @@ export function MembershipCenterClient() {
         );
       }
 
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
       const res = await fetch("/api/membership/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ plan, period }),
+        signal: controller.signal,
       });
+      window.clearTimeout(timeoutId);
       const json = (await res.json()) as {
         success?: boolean;
         sessionUrl?: string;
@@ -119,18 +124,20 @@ export function MembershipCenterClient() {
       window.location.assign(json.sessionUrl);
     } catch (err) {
       const message =
-        err instanceof Error
-          ? err.message
-          : "发起支付失败，请稍后重试。";
+        err instanceof DOMException && err.name === "AbortError"
+          ? "请求超时，请重试。"
+          : err instanceof Error
+            ? err.message
+            : "发起支付失败，请稍后重试。";
       console.error("[membership] subscribe exception", { plan, period, err });
       setError(message);
     } finally {
-      setSubmitting(false);
+      setSubmittingPlan(null);
     }
   }
 
   async function cancelSubscription() {
-    setSubmitting(true);
+    setManagingBilling(true);
     setError("");
     try {
       const res = await fetch("/api/membership/cancel-subscription", {
@@ -146,12 +153,12 @@ export function MembershipCenterClient() {
     } catch {
       setError("取消失败");
     } finally {
-      setSubmitting(false);
+      setManagingBilling(false);
     }
   }
 
   async function resumeSubscription() {
-    setSubmitting(true);
+    setManagingBilling(true);
     setError("");
     try {
       const res = await fetch("/api/membership/resume-subscription", {
@@ -167,7 +174,7 @@ export function MembershipCenterClient() {
     } catch {
       setError("恢复失败");
     } finally {
-      setSubmitting(false);
+      setManagingBilling(false);
     }
   }
 
@@ -290,10 +297,12 @@ export function MembershipCenterClient() {
               <p className="mt-1 text-sm">{row.rights}</p>
               <Button
                 className="mt-3"
-                disabled={submitting || (Boolean(upgradePreview) && !allowedPlans.has(row.plan))}
+                disabled={Boolean(submittingPlan) || managingBilling || (Boolean(upgradePreview) && !allowedPlans.has(row.plan))}
                 onClick={() => void subscribe(row.plan)}
               >
-                {submitting ? "处理中..." : `立即支付 ${getLocalizedLevelLabel(getDisplayLevel(row.plan), locale)}`}
+                {submittingPlan === row.plan
+                  ? "处理中..."
+                  : `立即支付 ${getLocalizedLevelLabel(getDisplayLevel(row.plan), locale)}`}
               </Button>
               {upgradePreview && !allowedPlans.has(row.plan) ? (
                 <p className="mt-2 text-xs text-muted-foreground">{getPlanDisabledReason(row.plan)}</p>
@@ -314,10 +323,10 @@ export function MembershipCenterClient() {
         <h2 className="text-lg font-semibold">续费管理</h2>
         <p className="mt-2 text-sm text-muted-foreground">取消续费后将在当前计费周期结束时自动降级。</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button variant="outline" disabled={submitting} onClick={() => void cancelSubscription()}>
+          <Button variant="outline" disabled={managingBilling || Boolean(submittingPlan)} onClick={() => void cancelSubscription()}>
             取消续费
           </Button>
-          <Button variant="outline" disabled={submitting} onClick={() => void resumeSubscription()}>
+          <Button variant="outline" disabled={managingBilling || Boolean(submittingPlan)} onClick={() => void resumeSubscription()}>
             恢复续费
           </Button>
           <Link href="/points" className={buttonVariants({ variant: "secondary" })}>

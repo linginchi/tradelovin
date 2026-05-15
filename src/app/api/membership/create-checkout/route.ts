@@ -72,6 +72,18 @@ async function hasPaidVideoSubscription(supabase: SupabaseClient, userId: string
   return Boolean(data?.id);
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label}_timeout`)), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export async function POST(request: Request) {
   const csrf = requireSameOriginForMutation(request);
   if (csrf) return csrf;
@@ -118,33 +130,37 @@ export async function POST(request: Request) {
     const priceId = getStripePriceIdByPlan(parsed.data.plan, parsed.data.period);
     const appUrl = resolveAppUrl(request);
 
-    const userResp = await auth.supabase.auth.getUser();
+    const userResp = await withTimeout(auth.supabase.auth.getUser(), 8000, "supabase_get_user");
     const email = userResp.data.user?.email ?? undefined;
 
     const trialDaysLeft = membership.trialEnd
       ? Math.floor((new Date(membership.trialEnd).getTime() - Date.now()) / (24 * 60 * 60 * 1000))
       : 0;
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl}/membership?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/membership?canceled=true`,
-      client_reference_id: auth.userId,
-      customer: membership.stripeCustomerId ?? undefined,
-      customer_email: membership.stripeCustomerId ? undefined : email,
-      metadata: {
-        userId: auth.userId,
-        plan: parsed.data.plan,
-        period: parsed.data.period,
-      },
-      subscription_data:
-        trialDaysLeft > 0
-          ? {
-              trial_period_days: trialDaysLeft,
-            }
-          : undefined,
-    });
+    const session = await withTimeout(
+      stripe.checkout.sessions.create({
+        mode: "subscription",
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${appUrl}/membership?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${appUrl}/membership?canceled=true`,
+        client_reference_id: auth.userId,
+        customer: membership.stripeCustomerId ?? undefined,
+        customer_email: membership.stripeCustomerId ? undefined : email,
+        metadata: {
+          userId: auth.userId,
+          plan: parsed.data.plan,
+          period: parsed.data.period,
+        },
+        subscription_data:
+          trialDaysLeft > 0
+            ? {
+                trial_period_days: trialDaysLeft,
+              }
+            : undefined,
+      }),
+      12000,
+      "stripe_checkout_session",
+    );
 
     if (!session.url) {
       console.error("[membership/create-checkout] stripe session missing url", {
