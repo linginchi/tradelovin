@@ -1,9 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { GraduationCap, Info, LineChart, UserRound } from "lucide-react";
 
 import { Link, usePathname } from "@/i18n/navigation";
+import { useAuth } from "@/lib/auth/use-auth";
+import { useMembershipLevel } from "@/lib/membership/client";
 
 const ADMIN_PREFIX = "/cjkzt";
 import { cn } from "@/lib/utils";
@@ -13,6 +15,10 @@ const NAV_HREFS = ["/about", "/my-learning", "/trade", "/my-profile"] as const;
 export default function MobileBottomNav() {
 	const pathname = usePathname();
 	const t = useTranslations("Nav");
+	const locale = useLocale();
+	const { status } = useAuth();
+	const isAuthed = status === "authenticated";
+	const { level } = useMembershipLevel(locale, isAuthed);
 
 	if (pathname.includes(ADMIN_PREFIX)) {
 		return null;
@@ -36,6 +42,11 @@ export default function MobileBottomNav() {
 			aria-label={t("mainLabel")}
 		>
 			<div className="mx-auto flex max-w-lg flex-col gap-1 px-2 pt-2 lg:max-w-none">
+				{isAuthed ? (
+					<p className="px-2 text-[10px] text-muted-foreground lg:text-xs">
+						会员等级：{level.shortLabel}
+					</p>
+				) : null}
 				<ul className="flex items-stretch justify-around gap-1 py-1 lg:gap-2 lg:py-1">
 					{items.map(({ href, label, icon: Icon }) => {
 						const active = pathname === href || pathname.startsWith(`${href}/`);

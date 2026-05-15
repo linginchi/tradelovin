@@ -4,6 +4,11 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import {
+	getLevelByPlan,
+	getLocalizedLevelDescription,
+	getLocalizedLevelName,
+} from "@/lib/membership/level-mapping";
 
 type MembershipData = {
 	tier: "T1" | "T2" | "T3";
@@ -24,6 +29,7 @@ function formatDate(date: string | null, locale: string): string {
 
 export default function MyMembershipSection() {
 	const t = useTranslations("MyProfile");
+	const tLevel = useTranslations("membership.level");
 	const locale = useLocale();
 	const [loading, setLoading] = useState(true);
 	const [membership, setMembership] = useState<MembershipData | null>(null);
@@ -121,6 +127,16 @@ export default function MyMembershipSection() {
 
 			{!loading && membership ? (
 				<div className="mt-4 space-y-3 text-sm">
+					{(() => {
+						const level = getLevelByPlan(membership.plan ?? membership.tier);
+						return (
+							<div className="rounded-lg border border-border/60 p-3">
+								<p className="text-xs text-muted-foreground">{tLevel("currentLevel")}</p>
+								<p className="mt-1 font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+								<p className="mt-1 text-xs text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
+							</div>
+						);
+					})()}
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<p className="font-semibold">{t("membershipTierLabel")}</p>
 						<span className="bg-cyan-500/15 text-cyan-200 rounded-full px-2 py-0.5 text-xs font-semibold">

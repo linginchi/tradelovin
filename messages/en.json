@@ -32,7 +32,11 @@
 	},
 	"membership": {
 		"expiredBanner": "Trial ended, click to upgrade",
-		"expiredBannerAction": "Upgrade membership"
+		"expiredBannerAction": "Upgrade membership",
+		"level": {
+			"title": "Membership level",
+			"currentLevel": "Current level"
+		}
 	},
 	"Trade": {
 		"title": "Simulated Trading",

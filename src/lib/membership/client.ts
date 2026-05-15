@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+	getLevelByPlan,
+	getLocalizedLevelDescription,
+	getLocalizedLevelName,
+} from "@/lib/membership/level-mapping";
 
 export type MembershipPlan = "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
 
@@ -32,10 +37,7 @@ export function useMembershipCurrent(enabled = true) {
 	const [membership, setMembership] = useState<MembershipCurrent | null>(null);
 
 	useEffect(() => {
-		if (!enabled) {
-			setMembership(null);
-			return;
-		}
+		if (!enabled) return;
 
 		let cancelled = false;
 		const load = async () => {
@@ -62,6 +64,36 @@ export function useMembershipCurrent(enabled = true) {
 		};
 	}, [enabled]);
 
-	const expired = useMemo(() => isMembershipExpired(membership), [membership]);
-	return { membership, expired };
+	const effectiveMembership = useMemo(
+		() => (enabled ? membership : null),
+		[enabled, membership],
+	);
+	const expired = useMemo(
+		() => isMembershipExpired(effectiveMembership),
+		[effectiveMembership],
+	);
+	return { membership: effectiveMembership, expired };
+}
+
+export function useMembershipLevel(locale: string, enabled = true) {
+	const { membership, expired } = useMembershipCurrent(enabled);
+
+	const level = useMemo(() => {
+		const plan = membership?.plan ?? "T0_trial";
+		return getLevelByPlan(plan);
+	}, [membership?.plan]);
+
+	const levelDisplay = useMemo(
+		() => ({
+			code: level.code,
+			plan: level.plan,
+			name: getLocalizedLevelName(level, locale),
+			description: getLocalizedLevelDescription(level, locale),
+			label: `${level.code} · ${getLocalizedLevelName(level, locale)}`,
+			shortLabel: `${level.code} ${getLocalizedLevelName(level, locale)}`,
+		}),
+		[level, locale],
+	);
+
+	return { membership, expired, level: levelDisplay };
 }

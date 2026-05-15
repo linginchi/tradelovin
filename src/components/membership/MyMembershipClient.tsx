@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import {
+  getLevelByPlan,
+  getLocalizedLevelDescription,
+  getLocalizedLevelName,
+} from "@/lib/membership/level-mapping";
 
 type Membership = {
   plan: string;
@@ -19,6 +25,8 @@ type Transaction = {
 };
 
 export function MyMembershipClient() {
+  const locale = useLocale();
+  const t = useTranslations("membership.level");
   const [membership, setMembership] = useState<Membership | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState("");
@@ -50,6 +58,16 @@ export function MyMembershipClient() {
         <h1 className="text-2xl font-semibold">我的会员</h1>
         {membership ? (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {(() => {
+              const level = getLevelByPlan(membership.plan);
+              return (
+                <div className="rounded-xl border border-border/70 p-3 sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">{t("currentLevel")}</p>
+                  <p className="text-lg font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
+                </div>
+              );
+            })()}
             <div className="rounded-xl border border-border/70 p-3">
               <p className="text-xs text-muted-foreground">当前会员等级</p>
               <p className="text-lg font-semibold">{membership.plan}</p>

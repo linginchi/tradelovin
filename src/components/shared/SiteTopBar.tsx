@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth/use-auth";
 import { useMembershipCurrent } from "@/lib/membership/client";
+import { getLevelByPlan, getLocalizedLevelName } from "@/lib/membership/level-mapping";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -18,6 +19,7 @@ export function SiteTopBar({ className }: Props) {
 	const tHome = useTranslations("Home");
 	const tNav = useTranslations("Nav");
 	const tMembership = useTranslations("membership");
+	const locale = useLocale();
 	const router = useRouter();
 	const pathname = usePathname();
 	const { status, user, refresh } = useAuth();
@@ -26,7 +28,12 @@ export function SiteTopBar({ className }: Props) {
 	const isAuthed = status === "authenticated";
 	const nickname = user?.nickname ?? "";
 	const hasEnrollment = !!user?.hasEnrollment;
-	const { expired: membershipExpired } = useMembershipCurrent(isAuthed);
+	const { membership, expired: membershipExpired } = useMembershipCurrent(isAuthed);
+	const levelLabel = (() => {
+		if (!membership) return "";
+		const level = getLevelByPlan(membership.plan);
+		return `${level.code} ${getLocalizedLevelName(level, locale)}`;
+	})();
 
 	const onLogout = useCallback(async () => {
 		if (busyLogout) return;
@@ -77,7 +84,10 @@ export function SiteTopBar({ className }: Props) {
 					aria-label={tNav("mainLabel")}
 				>
 					{isAuthed && (
-						<span className="text-foreground/90 max-w-[8rem] truncate">{nickname || tNav("userFallback")}</span>
+						<span className="text-foreground/90 max-w-[10rem] truncate">
+							{nickname || tNav("userFallback")}
+							{levelLabel ? ` · ${levelLabel}` : ""}
+						</span>
 					)}
 					{isAuthed && (
 						<Link href="/courses" className="hover:text-foreground truncate transition-colors">

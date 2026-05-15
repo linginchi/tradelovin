@@ -32,7 +32,11 @@
 	},
 	"membership": {
 		"expiredBanner": "試用已結束，點擊升級會員",
-		"expiredBannerAction": "升級會員"
+		"expiredBannerAction": "升級會員",
+		"level": {
+			"title": "會員等級",
+			"currentLevel": "當前等級"
+		}
 	},
 	"Trade": {
 		"title": "豹仔樂園 · 模擬交易",

@@ -32,7 +32,11 @@
 	},
 	"membership": {
 		"expiredBanner": "试用已结束，点击升级会员",
-		"expiredBannerAction": "升级会员"
+		"expiredBannerAction": "升级会员",
+		"level": {
+			"title": "会员等级",
+			"currentLevel": "当前等级"
+		}
 	},
 	"Trade": {
 		"title": "豹仔乐园 · 模拟交易",

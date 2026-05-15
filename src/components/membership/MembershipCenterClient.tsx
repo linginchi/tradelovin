@@ -2,9 +2,15 @@
 
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
+import {
+  getLevelByPlan,
+  getLocalizedLevelDescription,
+  getLocalizedLevelName,
+} from "@/lib/membership/level-mapping";
 
 type Membership = {
   plan: "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
@@ -23,6 +29,8 @@ const PLAN_PRICE = {
 } as const;
 
 export function MembershipCenterClient() {
+  const locale = useLocale();
+  const t = useTranslations("membership.level");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [period, setPeriod] = useState<"monthly" | "yearly">("monthly");
@@ -170,6 +178,16 @@ export function MembershipCenterClient() {
         ) : null}
         {!loading && membership ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {(() => {
+              const level = getLevelByPlan(membership.plan);
+              return (
+                <div className="rounded-xl border border-border/70 p-3 sm:col-span-2">
+                  <p className="text-xs text-muted-foreground">{t("currentLevel")}</p>
+                  <p className="text-xl font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
+                </div>
+              );
+            })()}
             <div className="rounded-xl border border-border/70 p-3">
               <p className="text-xs text-muted-foreground">当前计划</p>
               <p className="text-xl font-semibold">{membership.plan}</p>
@@ -204,7 +222,15 @@ export function MembershipCenterClient() {
         <div className="mt-4 space-y-3">
           {planRows.map((row) => (
             <div key={row.plan} className="rounded-xl border border-border/70 p-3">
-              <p className="font-semibold">{row.plan}</p>
+              {(() => {
+                const level = getLevelByPlan(row.plan);
+                return (
+                  <>
+                    <p className="font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+                    <p className="text-xs text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
+                  </>
+                );
+              })()}
               <p className="text-sm text-muted-foreground">{row.price}</p>
               <p className="mt-1 text-sm">{row.rights}</p>
               <Button className="mt-3" disabled={submitting} onClick={() => void subscribe(row.plan)}>
