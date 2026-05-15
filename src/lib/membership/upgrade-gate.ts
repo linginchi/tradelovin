@@ -71,10 +71,11 @@ async function hasPaidVideoSubscription(
 export async function getMonthlyTqSummary(
   supabase: SupabaseClient,
   userId: string,
+  options?: { recalculateIfStale?: boolean },
 ): Promise<{ totalScore: number; tradeCount: number; minTradesForScore: number; eligibleByTrades: boolean }> {
   const service = getServiceSupabase();
   const reader = service ?? supabase;
-  if (service) {
+  if (service && options?.recalculateIfStale) {
     try {
       await ensureTqCalculated(service, { userId, environment: UPGRADE_TQ_ENV, period: UPGRADE_TQ_PERIOD });
     } catch (error) {
