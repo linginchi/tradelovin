@@ -8,7 +8,11 @@ import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 export async function GET(request: NextRequest) {
 	const url = request.nextUrl;
 	const code = url.searchParams.get("code");
-	const next = url.searchParams.get("next") ?? "/trade";
+	const rawNext = url.searchParams.get("next");
+	const next =
+		rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+			? rawNext
+			: "/my-learning";
 
 	if (code) {
 		try {

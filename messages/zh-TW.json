@@ -212,6 +212,13 @@
 		"googleLogin": "使用 Google 登入",
 		"googleLoggingIn": "Google 登入中…",
 		"googleLoginFailed": "Google 登入失敗，請稍後重試",
+		"emailLinkTab": "郵箱連結登入",
+		"passwordTab": "密碼登入",
+		"passwordLabel": "密碼",
+		"passwordRequired": "請輸入至少 8 位密碼",
+		"passwordLogin": "使用密碼登入",
+		"passwordLoggingIn": "登入中…",
+		"passwordLoginFailed": "密碼登入失敗，請檢查郵箱與密碼；若尚未設定密碼，請先使用郵箱連結登入，並於「我的」頁面設定密碼。",
 		"busyVerify": "登入中…",
 		"sentSuccess": "登入連結已發送，請查收郵箱",
 		"sendFailed": "發送失敗，請稍後重試",
@@ -517,7 +524,17 @@
 			}
 		],
 		"myCoursesLink": "學習與成績",
-		"courseCardScheduleCta": "查看課表"
+		"courseCardScheduleCta": "查看課表",
+		"passwordSectionTitle": "設定密碼",
+		"passwordSectionSubtitle": "設定後可使用郵箱 + 密碼登入。若此前僅使用郵箱連結登入，請先在此設定密碼。",
+		"newPasswordLabel": "新密碼",
+		"confirmPasswordLabel": "確認密碼",
+		"passwordSave": "儲存密碼",
+		"passwordUpdating": "儲存中…",
+		"passwordUpdated": "密碼已更新，可使用密碼登入。",
+		"passwordUpdateFailed": "設定密碼失敗，請稍後再試。",
+		"passwordMismatch": "兩次輸入的密碼不一致。",
+		"passwordRequired": "請輸入至少 8 位密碼"
 	},
 	"MyScores": {
 		"title": "我的成績",

@@ -212,6 +212,13 @@
 		"googleLogin": "Continue with Google",
 		"googleLoggingIn": "Connecting Google…",
 		"googleLoginFailed": "Google sign-in failed. Please try again.",
+		"emailLinkTab": "Email Link",
+		"passwordTab": "Password",
+		"passwordLabel": "Password",
+		"passwordRequired": "Please enter a password with at least 8 characters",
+		"passwordLogin": "Sign in with password",
+		"passwordLoggingIn": "Signing in…",
+		"passwordLoginFailed": "Password sign-in failed. Please check your email and password. If you have not set a password yet, sign in with email link first and set it on your profile page.",
 		"busyVerify": "Signing in…",
 		"sentSuccess": "Login link sent. Please check your inbox.",
 		"sendFailed": "Failed to send link. Please try again later.",
@@ -517,7 +524,17 @@
 			}
 		],
 		"myCoursesLink": "Learning & Scores",
-		"courseCardScheduleCta": "View schedule"
+		"courseCardScheduleCta": "View schedule",
+		"passwordSectionTitle": "Set Password",
+		"passwordSectionSubtitle": "After setting a password, you can sign in with email + password. If you previously used email links only, set your password here first.",
+		"newPasswordLabel": "New password",
+		"confirmPasswordLabel": "Confirm password",
+		"passwordSave": "Save password",
+		"passwordUpdating": "Saving…",
+		"passwordUpdated": "Password updated. You can now sign in with password.",
+		"passwordUpdateFailed": "Failed to update password. Please try again later.",
+		"passwordMismatch": "The two passwords do not match.",
+		"passwordRequired": "Please enter a password with at least 8 characters"
 	},
 	"MyScores": {
 		"title": "My scores",

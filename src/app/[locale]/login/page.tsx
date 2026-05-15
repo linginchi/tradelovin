@@ -1,7 +1,9 @@
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { EmailLinkLoginForm } from "@/components/auth/EmailLinkLoginForm";
+import { PasswordLoginForm } from "@/components/auth/PasswordLoginForm";
 import { buttonVariants } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +26,7 @@ export default async function LoginPage({ params }: Props) {
 	setRequestLocale(locale);
 
 	const tNav = await getTranslations("RegisterPage");
+	const t = await getTranslations("MagicLogin");
 
 	return (
 		<div className="relative flex min-h-full flex-1 flex-col">
@@ -33,7 +36,24 @@ export default async function LoginPage({ params }: Props) {
 				</Link>
 			</div>
 			<div className="flex flex-1 flex-col items-center px-4 py-8 md:py-14">
-				<EmailLinkLoginForm />
+				<div className="border-border/80 bg-card/40 mx-auto w-full max-w-lg space-y-6 rounded-xl border p-6 shadow-sm backdrop-blur-sm md:p-8">
+					<div className="space-y-1">
+						<h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
+						<p className="text-muted-foreground text-sm">{t("intro")}</p>
+					</div>
+					<Tabs defaultValue="email-link" className="w-full">
+						<TabsList className="grid w-full grid-cols-2">
+							<TabsTrigger value="email-link">{t("emailLinkTab")}</TabsTrigger>
+							<TabsTrigger value="password">{t("passwordTab")}</TabsTrigger>
+						</TabsList>
+						<TabsContent value="email-link">
+							<EmailLinkLoginForm />
+						</TabsContent>
+						<TabsContent value="password">
+							<PasswordLoginForm />
+						</TabsContent>
+					</Tabs>
+				</div>
 			</div>
 		</div>
 	);
