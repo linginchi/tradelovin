@@ -3,6 +3,7 @@
 import { Loader2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -41,6 +42,8 @@ const PLAN_PRICE = {
 export function MembershipCenterClient() {
   const locale = useLocale();
   const t = useTranslations("membership.level");
+  const searchParams = useSearchParams();
+  const checkoutSessionId = searchParams.get("session_id");
   const [loading, setLoading] = useState(true);
   const [submittingPlan, setSubmittingPlan] = useState<PaidPlan | null>(null);
   const [managingBilling, setManagingBilling] = useState(false);
@@ -74,6 +77,50 @@ export function MembershipCenterClient() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!checkoutSessionId) return;
+    let cancelled = false;
+
+    async function confirmCheckout() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/membership/confirm-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ sessionId: checkoutSessionId }),
+        });
+        const json = (await res.json()) as { success?: boolean; error?: string };
+        if (!res.ok || !json.success) {
+          if (!cancelled) {
+            setError(json.error ?? "支付已完成，但会员状态同步失败，请刷新后重试。");
+          }
+          return;
+        }
+        if (!cancelled) {
+          await load();
+          setError("");
+        }
+      } catch {
+        if (!cancelled) {
+          setError("支付已完成，但会员状态同步失败，请刷新后重试。");
+        }
+      } finally {
+        if (!cancelled) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete("session_id");
+          window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+          setLoading(false);
+        }
+      }
+    }
+
+    void confirmCheckout();
+    return () => {
+      cancelled = true;
+    };
+  }, [checkoutSessionId]);
 
   async function subscribe(plan: PaidPlan) {
     setSubmittingPlan(plan);
@@ -246,7 +293,7 @@ export function MembershipCenterClient() {
               <p className="text-xl font-semibold tabular-nums">{membership.trialDaysLeft}</p>
             </div>
             <div className="rounded-xl border border-border/70 p-3">
-              <p className="text-xs text-muted-foreground">到期时间</p>
+              <p className="text-xs text-muted-foreground">有效期至</p>
               <p className="text-sm font-semibold">{new Date(membership.currentPeriodEnd).toLocaleString()}</p>
             </div>
             {upgradePreview ? (
