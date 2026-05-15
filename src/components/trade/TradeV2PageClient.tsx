@@ -371,67 +371,10 @@ export function TradeV2PageClient() {
 		setGuideOpen(!shouldHide);
 	}, []);
 	useEffect(() => {
-		const timer = window.setTimeout(() => {
-			debouncedSearchSymbol(symbolInput);
-		}, 0);
-		return () => window.clearTimeout(timer);
-	}, [debouncedSearchSymbol, symbolInput]);
-	useEffect(() => {
 		if (!isTypingPrice) {
 			setDraftPrice(price);
 		}
 	}, [isTypingPrice, price]);
-	useEffect(() => {
-		const onKeyDown = (event: KeyboardEvent) => {
-			const target = event.target as HTMLElement | null;
-			const isInputFocused = !!target?.closest("input, textarea, [contenteditable='true']");
-			if (event.key === "Escape") {
-				event.preventDefault();
-				const activeId = (document.activeElement as HTMLElement | null)?.id;
-				if (activeId === "orderPrice") {
-					setDraftPrice("");
-					setPrice("");
-					return;
-				}
-				if (activeId === "qty") {
-					setQty("");
-					return;
-				}
-				if (activeId === "symbolInput") {
-					clearSymbolSelection();
-					return;
-				}
-				setSelectedBookKey("");
-				return;
-			}
-			if (isInputFocused) return;
-			if (event.key === "b" || event.key === "B") {
-				event.preventDefault();
-				if (hasOrderInputs) {
-					debouncedPlaceOrder("buy");
-				} else {
-					document.getElementById("qty")?.focus();
-				}
-				return;
-			}
-			if (event.key === "s" || event.key === "S") {
-				event.preventDefault();
-				if (hasOrderInputs) {
-					debouncedPlaceOrder("sell");
-				} else {
-					document.getElementById("qty")?.focus();
-				}
-				return;
-			}
-			if (event.key === "c" || event.key === "C") {
-				event.preventDefault();
-				void forceClosePosition();
-				return;
-			}
-		};
-		window.addEventListener("keydown", onKeyDown);
-		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [clearSymbolSelection, debouncedPlaceOrder, forceClosePosition, hasOrderInputs]);
 	useEffect(() => {
 		if (!querySymbol) return;
 		if (querySymbol === resolvedSymbol && querySymbol === symbolInput) return;
@@ -575,6 +518,12 @@ export function TradeV2PageClient() {
 		updateSymbolInQuery(clean);
 		void loadQuote(clean);
 	}, 300);
+	useEffect(() => {
+		const timer = window.setTimeout(() => {
+			debouncedSearchSymbol(symbolInput);
+		}, 0);
+		return () => window.clearTimeout(timer);
+	}, [debouncedSearchSymbol, symbolInput]);
 	const displayedOrders = useMemo(
 		() => orders.filter((o) => !optimisticCancelledOrderIds.includes(o.id)),
 		[optimisticCancelledOrderIds, orders],
@@ -605,7 +554,6 @@ export function TradeV2PageClient() {
 		setSelectedBookKey("");
 		updateSymbolInQuery("");
 	}, [updateSymbolInQuery]);
-
 	const handlePlaceOrder = useCallback(
 		async (side: "buy" | "sell") => {
 			const px = Number(isTypingPrice ? draftPrice : price);
@@ -794,6 +742,57 @@ export function TradeV2PageClient() {
 		},
 		[accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price],
 	);
+	useEffect(() => {
+		const onKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null;
+			const isInputFocused = !!target?.closest("input, textarea, [contenteditable='true']");
+			if (event.key === "Escape") {
+				event.preventDefault();
+				const activeId = (document.activeElement as HTMLElement | null)?.id;
+				if (activeId === "orderPrice") {
+					setDraftPrice("");
+					setPrice("");
+					return;
+				}
+				if (activeId === "qty") {
+					setQty("");
+					return;
+				}
+				if (activeId === "symbolInput") {
+					clearSymbolSelection();
+					return;
+				}
+				setSelectedBookKey("");
+				return;
+			}
+			if (isInputFocused) return;
+			if (event.key === "b" || event.key === "B") {
+				event.preventDefault();
+				if (hasOrderInputs) {
+					debouncedPlaceOrder("buy");
+				} else {
+					document.getElementById("qty")?.focus();
+				}
+				return;
+			}
+			if (event.key === "s" || event.key === "S") {
+				event.preventDefault();
+				if (hasOrderInputs) {
+					debouncedPlaceOrder("sell");
+				} else {
+					document.getElementById("qty")?.focus();
+				}
+				return;
+			}
+			if (event.key === "c" || event.key === "C") {
+				event.preventDefault();
+				void forceClosePosition();
+				return;
+			}
+		};
+		window.addEventListener("keydown", onKeyDown);
+		return () => window.removeEventListener("keydown", onKeyDown);
+	}, [clearSymbolSelection, debouncedPlaceOrder, forceClosePosition, hasOrderInputs]);
 
 	const applyResource = useCallback(async (side: "long" | "short") => {
 		const quantity = Number(qty);
