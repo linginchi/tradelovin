@@ -42,6 +42,17 @@ type CourseRow = {
 	capacity: number;
 };
 
+type VideoRow = {
+	id: string;
+	course_id: string;
+	title: string;
+	description: string | null;
+	duration: number | null;
+	sort_order: number;
+	is_free_preview: boolean;
+	created_at: string;
+};
+
 export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const t = useTranslations("Admin");
 	const [loading, setLoading] = useState(true);
@@ -56,6 +67,14 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const [allInstructors, setAllInstructors] = useState<InstructorRow[]>([]);
 	const [enrollments, setEnrollments] = useState<EnrollRow[]>([]);
 	const [saving, setSaving] = useState(false);
+	const [videos, setVideos] = useState<VideoRow[]>([]);
+	const [videoTitle, setVideoTitle] = useState("");
+	const [videoDesc, setVideoDesc] = useState("");
+	const [videoDuration, setVideoDuration] = useState("");
+	const [videoSort, setVideoSort] = useState("0");
+	const [videoFreePreview, setVideoFreePreview] = useState(false);
+	const [videoFile, setVideoFile] = useState<File | null>(null);
+	const [storageConfigured, setStorageConfigured] = useState(true);
 
 	const [sessDate, setSessDate] = useState("");
 	const [sessStart, setSessStart] = useState("");
@@ -92,14 +111,20 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			setInstructorId(data.instructor_id ?? "");
 			setEnrollments(data.enrollments ?? []);
 
-			const [insRes, rosterRes] = await Promise.all([
+			const [insRes, rosterRes, videoRes] = await Promise.all([
 				fetch("/api/admin/instructors", { credentials: "include" }),
 				fetch("/api/admin/roster", { credentials: "include" }),
+				fetch(`/api/admin/courses/${courseId}/videos`, { credentials: "include" }),
 			]);
 			const insJson = (await insRes.json()) as { instructors?: InstructorRow[] };
 			const rosterJson = (await rosterRes.json()) as { students?: RosterRow[] };
+			const videoJson = (await videoRes.json()) as { videos?: VideoRow[]; storageConfigured?: boolean };
 			if (insRes.ok) setAllInstructors(insJson.instructors ?? []);
 			if (rosterRes.ok) setRoster(rosterJson.students ?? []);
+			if (videoRes.ok) {
+				setVideos(videoJson.videos ?? []);
+				setStorageConfigured(videoJson.storageConfigured ?? true);
+			}
 		} catch {
 			setError(t("loadError"));
 		} finally {
@@ -213,6 +238,46 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			credentials: "include",
 		});
 		void load();
+	}
+
+	async function uploadVideo() {
+		if (!videoFile) {
+			setError("请先选择 MP4 文件");
+			return;
+		}
+		setSaving(true);
+		setError(null);
+		try {
+			const fd = new FormData();
+			fd.set("video", videoFile);
+			fd.set("title", videoTitle.trim() || videoFile.name);
+			fd.set("description", videoDesc.trim());
+			if (videoDuration.trim()) fd.set("duration", videoDuration.trim());
+			if (videoSort.trim()) fd.set("sort_order", videoSort.trim());
+			fd.set("is_free_preview", videoFreePreview ? "true" : "false");
+
+			const res = await fetch(`/api/admin/courses/${courseId}/videos`, {
+				method: "POST",
+				body: fd,
+				credentials: "include",
+			});
+			const js = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setError(js.error ?? "上传视频失败");
+				return;
+			}
+			setVideoTitle("");
+			setVideoDesc("");
+			setVideoDuration("");
+			setVideoSort("0");
+			setVideoFreePreview(false);
+			setVideoFile(null);
+			void load();
+		} catch {
+			setError("上传视频失败");
+		} finally {
+			setSaving(false);
+		}
 	}
 
 	function fmtTime(tstr: string) {
@@ -398,6 +463,98 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 								</Button>
 							</li>
 						))}
+					</ul>
+				</CardContent>
+			</Card>
+
+			<Card className="border-border/60 bg-card/35">
+				<CardHeader>
+					<CardTitle className="text-base">课程视频（MP4）</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{!storageConfigured ? (
+						<p className="text-sm text-amber-300">
+							视频存储未配置（请设置 VIDEO_STORAGE_PROVIDER/BUCKET/ENDPOINT/ACCESS_KEY/SECRET）。
+						</p>
+					) : null}
+					<div className="grid gap-3 sm:grid-cols-2">
+						<div className="space-y-2 sm:col-span-2">
+							<Label htmlFor="video-file">视频文件（MP4）</Label>
+							<Input
+								id="video-file"
+								type="file"
+								accept="video/mp4"
+								onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="video-title">标题</Label>
+							<Input
+								id="video-title"
+								value={videoTitle}
+								onChange={(e) => setVideoTitle(e.target.value)}
+								className="h-10"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="video-duration">时长（秒，可选）</Label>
+							<Input
+								id="video-duration"
+								type="number"
+								min={0}
+								value={videoDuration}
+								onChange={(e) => setVideoDuration(e.target.value)}
+								className="h-10"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="video-sort">排序</Label>
+							<Input
+								id="video-sort"
+								type="number"
+								min={0}
+								value={videoSort}
+								onChange={(e) => setVideoSort(e.target.value)}
+								className="h-10"
+							/>
+						</div>
+						<div className="flex items-center gap-2 self-end pb-2">
+							<input
+								id="video-free-preview"
+								type="checkbox"
+								checked={videoFreePreview}
+								onChange={(e) => setVideoFreePreview(e.target.checked)}
+							/>
+							<Label htmlFor="video-free-preview">免费预览</Label>
+						</div>
+						<div className="space-y-2 sm:col-span-2">
+							<Label htmlFor="video-desc">简介（可选）</Label>
+							<Textarea
+								id="video-desc"
+								value={videoDesc}
+								onChange={(e) => setVideoDesc(e.target.value)}
+								className="min-h-[72px]"
+							/>
+						</div>
+					</div>
+					<Button
+						type="button"
+						disabled={saving || !storageConfigured || !videoFile}
+						onClick={() => void uploadVideo()}
+					>
+						上传视频
+					</Button>
+					<ul className="space-y-2 text-sm">
+						{videos.map((v) => (
+							<li key={v.id} className="border-border/40 rounded-lg border px-3 py-2">
+								<div className="font-medium">{v.title}</div>
+								<div className="text-muted-foreground">
+									#{v.sort_order} · {v.duration ? `${v.duration}s` : "时长未设置"} ·{" "}
+									{v.is_free_preview ? "免费预览" : "付费可看"}
+								</div>
+							</li>
+						))}
+						{videos.length === 0 ? <li className="text-muted-foreground">暂无视频</li> : null}
 					</ul>
 				</CardContent>
 			</Card>

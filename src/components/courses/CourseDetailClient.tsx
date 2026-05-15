@@ -11,6 +11,15 @@ import { useAuth } from "@/lib/auth/use-auth";
 import type { CourseRow } from "@/components/courses/CoursesListClient";
 
 type Props = { courseId: string };
+type VideoRow = {
+	id: string;
+	course_id: string;
+	title: string;
+	description: string | null;
+	duration: number | null;
+	sort_order: number;
+	is_free_preview: boolean;
+};
 
 export function CourseDetailClient({ courseId }: Props) {
 	const t = useTranslations("CourseDetailPage");
@@ -19,6 +28,8 @@ export function CourseDetailClient({ courseId }: Props) {
 	const [applied, setApplied] = useState(false);
 	const [busy, setBusy] = useState(false);
 	const { isAuthed } = useAuth();
+	const [videos, setVideos] = useState<VideoRow[]>([]);
+	const [hasCourseAccess, setHasCourseAccess] = useState(false);
 
 	useEffect(() => {
 		let alive = true;
@@ -56,6 +67,25 @@ export function CourseDetailClient({ courseId }: Props) {
 			alive = false;
 		};
 	}, [courseId, isAuthed]);
+
+	useEffect(() => {
+		let alive = true;
+		async function run() {
+			const res = await fetch(`/api/courses/${courseId}/videos`, { credentials: "include" });
+			const js = (await res.json()) as {
+				videos?: VideoRow[];
+				hasCourseAccess?: boolean;
+			};
+			if (!alive) return;
+			if (!res.ok) return;
+			setVideos(js.videos ?? []);
+			setHasCourseAccess(Boolean(js.hasCourseAccess));
+		}
+		void run();
+		return () => {
+			alive = false;
+		};
+	}, [courseId]);
 
 	async function apply() {
 		setBusy(true);
@@ -113,6 +143,38 @@ export function CourseDetailClient({ courseId }: Props) {
 				) : (
 					<p className="text-muted-foreground text-sm">{t("loginToApply")}</p>
 				)}
+			</div>
+			<div className="space-y-2 border-t border-border/60 pt-4">
+				<h2 className="text-base font-semibold">教学视频</h2>
+				{videos.length === 0 ? (
+					<p className="text-muted-foreground text-sm">暂无视频</p>
+				) : (
+					<ul className="space-y-2">
+						{videos.map((video) => (
+							<li
+								key={video.id}
+								className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2"
+							>
+								<div>
+									<p className="text-sm font-medium">{video.title}</p>
+									<p className="text-muted-foreground text-xs">
+										{video.duration ? `${video.duration}s` : "时长未知"} ·{" "}
+										{video.is_free_preview ? "免费预览" : "付费视频"}
+									</p>
+								</div>
+								<Link
+									href={`/video-player?courseId=${encodeURIComponent(courseId)}&videoId=${encodeURIComponent(video.id)}`}
+									className="text-sm text-cyan-300 underline-offset-4 hover:underline"
+								>
+									播放
+								</Link>
+							</li>
+						))}
+					</ul>
+				)}
+				{!hasCourseAccess && videos.some((v) => !v.is_free_preview) ? (
+					<p className="text-muted-foreground text-xs">付费视频需课程审核通过后观看。</p>
+				) : null}
 			</div>
 		</div>
 	);
