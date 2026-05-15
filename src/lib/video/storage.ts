@@ -66,16 +66,10 @@ export function getVideoStorageMissingEnvNames(): string[] {
 }
 
 type AwsSdk = {
-  S3Client: new (...args: any[]) => {
-    send: (command: unknown) => Promise<unknown>;
-  };
+  S3Client: new (...args: any[]) => any;
   PutObjectCommand: new (...args: any[]) => unknown;
   GetObjectCommand: new (...args: any[]) => unknown;
-  getSignedUrl: (
-    client: unknown,
-    command: unknown,
-    options: { expiresIn: number },
-  ) => Promise<string>;
+  getSignedUrl: (...args: any[]) => Promise<string>;
 };
 
 async function loadAwsSdk(): Promise<AwsSdk> {
