@@ -42,7 +42,11 @@ function resolveAppUrl(request: Request): string {
 function normalizeStripeErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     if (error.message.includes("Missing required env")) {
-      return "支付配置缺失：请在 Stripe 后台配置价格并设置环境变量（例如 STRIPE_PRICE_T1_MONTHLY）";
+      const missing = error.message.replace("Missing required env:", "").trim();
+      if (missing.includes("STRIPE_SECRET_KEY")) {
+        return "支付配置缺失：未配置 STRIPE_SECRET_KEY（Cloudflare Worker Secret）";
+      }
+      return `支付配置缺失：缺少环境变量 ${missing}`;
     }
     return error.message;
   }
