@@ -16,7 +16,7 @@ function normalizeTime(t: string): string {
 	return t;
 }
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ courseId: string }> };
 
 export async function POST(req: Request, ctx: RouteContext) {
 	const gated = await requireAdminSession();
@@ -27,7 +27,7 @@ export async function POST(req: Request, ctx: RouteContext) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
 
-	const { id: courseId } = await ctx.params;
+	const { courseId } = await ctx.params;
 	if (!z.string().uuid().safeParse(courseId).success) {
 		return NextResponse.json({ error: "Invalid course id" }, { status: 400 });
 	}

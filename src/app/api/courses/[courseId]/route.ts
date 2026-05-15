@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { getServiceSupabase } from "@/lib/supabase/service";
 import { getAuthEmailByUserId } from "@/lib/auth/profile-resolve";
+import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ courseId: string }> };
 
 export async function GET(_req: Request, { params }: Params) {
-	const { id } = await params;
+	const { courseId } = await params;
 	const srv = getServiceSupabase();
 	if (!srv) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
@@ -24,14 +24,14 @@ export async function GET(_req: Request, { params }: Params) {
 	const withIdRes = await srv
 		.from("courses")
 		.select(withInstructorIdSelect)
-		.eq("id", id)
+		.eq("id", courseId)
 		.eq("is_active", true)
 		.maybeSingle();
 	if (withIdRes.error) {
 		const fallbackRes = await srv
 			.from("courses")
 			.select(baseSelect)
-			.eq("id", id)
+			.eq("id", courseId)
 			.eq("is_active", true)
 			.maybeSingle();
 		data = fallbackRes.data as Record<string, unknown> | null;

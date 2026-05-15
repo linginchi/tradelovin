@@ -15,7 +15,7 @@ const patchSchema = z
 	})
 	.strict();
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ courseId: string }> };
 
 export async function GET(_req: Request, ctx: RouteContext) {
 	const gated = await requireAdminSession();
@@ -26,12 +26,12 @@ export async function GET(_req: Request, ctx: RouteContext) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
 
-	const { id } = await ctx.params;
-	if (!z.string().uuid().safeParse(id).success) {
+	const { courseId } = await ctx.params;
+	if (!z.string().uuid().safeParse(courseId).success) {
 		return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 	}
 
-	const { data: course, error } = await supabase.from("courses").select("*").eq("id", id).maybeSingle();
+	const { data: course, error } = await supabase.from("courses").select("*").eq("id", courseId).maybeSingle();
 
 	if (error) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
@@ -43,7 +43,7 @@ export async function GET(_req: Request, ctx: RouteContext) {
 	const { data: sessions } = await supabase
 		.from("course_schedules")
 		.select("*")
-		.eq("course_id", id)
+		.eq("course_id", courseId)
 		.order("date", { ascending: true })
 		.order("start_time", { ascending: true });
 
@@ -66,7 +66,7 @@ export async function GET(_req: Request, ctx: RouteContext) {
 	const { data: enrollments } = await supabase
 		.from("student_courses")
 		.select("id, student_id")
-		.eq("course_id", id);
+		.eq("course_id", courseId);
 
 	const studIds = [...new Set((enrollments ?? []).map((e) => e.student_id as string))];
 	type StudRow = {
@@ -126,8 +126,8 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
 
-	const { id } = await ctx.params;
-	if (!z.string().uuid().safeParse(id).success) {
+	const { courseId } = await ctx.params;
+	if (!z.string().uuid().safeParse(courseId).success) {
 		return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 	}
 
@@ -149,7 +149,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 		if (updates[k] === undefined) delete updates[k];
 	});
 
-	const { data, error } = await supabase.from("courses").update(updates).eq("id", id).select().maybeSingle();
+	const { data, error } = await supabase.from("courses").update(updates).eq("id", courseId).select().maybeSingle();
 
 	if (error) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
@@ -170,12 +170,12 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
 		return NextResponse.json({ error: "Server misconfigured" }, { status: 503 });
 	}
 
-	const { id } = await ctx.params;
-	if (!z.string().uuid().safeParse(id).success) {
+	const { courseId } = await ctx.params;
+	if (!z.string().uuid().safeParse(courseId).success) {
 		return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 	}
 
-	const { error } = await supabase.from("courses").delete().eq("id", id);
+	const { error } = await supabase.from("courses").delete().eq("id", courseId);
 
 	if (error) {
 		return NextResponse.json({ error: error.message }, { status: 500 });
