@@ -73,9 +73,9 @@ function radarSvg(
 }
 
 function tierTitle(tier: MembershipTier): string {
-	if (tier === "T1") return "T1 基础版";
-	if (tier === "T2") return "T2 标准版";
-	return "T3 完整版";
+	if (tier === "T1") return "P1 · 雪豹";
+	if (tier === "T2") return "P2 · 云豹";
+	return "P3 · 金钱豹";
 }
 
 export function buildCertificateSvg(input: CertificateTemplateInput): string {

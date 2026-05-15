@@ -199,9 +199,9 @@ export function AdminTqConfigPanel() {
 					className="bg-background border-border rounded-md border px-2 py-1 text-sm md:col-span-2"
 				>
 					<option value="auto">证书等级：自动按会员</option>
-					<option value="T1">证书等级：T1</option>
-					<option value="T2">证书等级：T2</option>
-					<option value="T3">证书等级：T3</option>
+					<option value="T1">证书等级：P1 · 雪豹</option>
+					<option value="T2">证书等级：P2 · 云豹</option>
+					<option value="T3">证书等级：P3 · 金钱豹</option>
 				</select>
 			</div>
 			<section className="space-y-2">

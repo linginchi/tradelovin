@@ -7,7 +7,7 @@ import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth/use-auth";
 import { useMembershipCurrent } from "@/lib/membership/client";
-import { getLevelByPlan, getLocalizedLevelName } from "@/lib/membership/level-mapping";
+import { getDisplayLevel, getLocalizedLevelName } from "@/lib/membership/level-mapping";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -31,7 +31,7 @@ export function SiteTopBar({ className }: Props) {
 	const { membership, expired: membershipExpired } = useMembershipCurrent(isAuthed);
 	const levelLabel = (() => {
 		if (!membership) return "";
-		const level = getLevelByPlan(membership.plan);
+		const level = getDisplayLevel(membership.plan);
 		return `${level.code} ${getLocalizedLevelName(level, locale)}`;
 	})();
 

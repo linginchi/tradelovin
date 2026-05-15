@@ -31,9 +31,9 @@ export const REDEEM_RULES: Record<
   RedeemRewardType,
   { pointsCost: number; name: string; validityDays: number }
 > = {
-  membership_discount: { pointsCost: 200, name: "7天 T1 体验券", validityDays: 30 },
+  membership_discount: { pointsCost: 200, name: "7天 P1 · 雪豹体验券", validityDays: 30 },
   course_voucher: { pointsCost: 300, name: "课程 9 折券", validityDays: 30 },
-  t2_report_single_download: { pointsCost: 150, name: "T2 报告单次下载券", validityDays: 30 },
+  t2_report_single_download: { pointsCost: 150, name: "P2 · 云豹报告单次下载券", validityDays: 30 },
 };
 
 function dayRangeUtc8(now = new Date()) {

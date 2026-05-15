@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { getDisplayLevel } from "@/lib/membership/level-mapping";
 
 type MembershipRow = {
   id: string;
@@ -160,7 +161,12 @@ export function AdminGrowthPanel() {
               {memberships.slice(0, 100).map((row) => (
                 <tr key={row.id} className="border-b border-border/40">
                   <td className="py-2 font-mono text-xs">{row.user_id}</td>
-                  <td className="py-2">{row.plan}</td>
+                  <td className="py-2">
+                    {(() => {
+                      const level = getDisplayLevel(row.plan);
+                      return `${level.code} · ${level.nameZh}`;
+                    })()}
+                  </td>
                   <td className="py-2">{row.status}</td>
                   <td className="py-2">{new Date(row.current_period_end).toLocaleString()}</td>
                   <td className="py-2">{row.cancel_at_period_end ? "是" : "否"}</td>

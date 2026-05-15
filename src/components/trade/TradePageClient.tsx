@@ -491,7 +491,7 @@ export function TradePageClient() {
 					) : null}
 					{membershipHint?.plan === "T0_trial" ? (
 						<div className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-3 text-sm text-amber-100">
-							试用期还剩 {membershipHint.trialDaysLeft ?? 0} 天，升级会员可持续使用模拟交易和 TQ 评分。
+							P0 · 花豹试用期还剩 {membershipHint.trialDaysLeft ?? 0} 天，升级会员可持续使用模拟交易和 TQ 评分。
 							<Link href="/membership" className="ml-2 underline underline-offset-2">
 								立即升级
 							</Link>
@@ -499,7 +499,7 @@ export function TradePageClient() {
 					) : null}
 					{membershipHint?.plan === "T0_paid" ? (
 						<div className="rounded-xl border border-rose-400/40 bg-rose-400/10 p-3 text-sm text-rose-100">
-							您的 T0 试用已结束，请升级会员继续交易训练。
+							您的 P0 · 花豹试用已结束，请升级会员继续交易训练。
 							<Link href="/membership" className="ml-2 underline underline-offset-2">
 								去升级
 							</Link>

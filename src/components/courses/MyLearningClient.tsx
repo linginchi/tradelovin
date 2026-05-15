@@ -443,7 +443,12 @@ export default function MyLearningClient() {
 									下载图片
 								</a>
 								<span className="text-muted-foreground text-xs">
-									{tqCertificate.tier} · {new Date(tqCertificate.issuedAt).toLocaleString("zh-CN", { hour12: false })}
+									{tqCertificate.tier === "T1"
+										? "P1 · 雪豹"
+										: tqCertificate.tier === "T2"
+											? "P2 · 云豹"
+											: "P3 · 金钱豹"}{" "}
+									· {new Date(tqCertificate.issuedAt).toLocaleString("zh-CN", { hour12: false })}
 								</span>
 							</>
 						) : null}

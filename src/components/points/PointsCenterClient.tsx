@@ -29,9 +29,9 @@ type SummaryResponse = {
 };
 
 const REWARDS = [
-  { rewardType: "membership_discount", label: "7天 T1 体验券", points: 200 },
+  { rewardType: "membership_discount", label: "7天 P1 · 雪豹体验券", points: 200 },
   { rewardType: "course_voucher", label: "课程 9 折券", points: 300 },
-  { rewardType: "t2_report_single_download", label: "T2 报告单次下载券", points: 150 },
+  { rewardType: "t2_report_single_download", label: "P2 · 云豹报告单次下载券", points: 150 },
 ] as const;
 
 export function PointsCenterClient() {

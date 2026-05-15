@@ -35,7 +35,7 @@ function denyPayload(capability: MembershipCapability, snapshot: MembershipSnaps
 			status: 402,
 			body: {
 				success: false,
-				error: "T1试用已到期，请升级会员以继续模拟交易",
+				error: "P1 · 雪豹试用已到期，请升级会员以继续模拟交易",
 				code: "TRIAL_EXPIRED",
 			},
 		};

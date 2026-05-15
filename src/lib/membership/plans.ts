@@ -15,8 +15,8 @@ export const MEMBERSHIP_PLAN_PRICES: Record<PaidPlan, PlanPriceConfig> = {
 
 export const PLAN_RIGHTS: Record<PaidPlan, string[]> = {
   T1: ["模拟交易", "课程折扣", "训练建议"],
-  T2: ["T1 全部权益", "深度 TQ 报告", "交易证书"],
-  T3: ["T2 全部权益", "L2 行情", "高级策略能力"],
+  T2: ["P1 · 雪豹全部权益", "深度 TQ 报告", "交易证书"],
+  T3: ["P2 · 云豹全部权益", "L2 行情", "高级策略能力"],
 };
 
 export function toBillingCycle(period: MembershipPeriod): BillingCycle {

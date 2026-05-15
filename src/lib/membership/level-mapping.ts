@@ -51,6 +51,12 @@ export function getLevelByCode(code: string) {
 	return MEMBERSHIP_LEVELS.find((level) => level.code === code) || MEMBERSHIP_LEVELS[0];
 }
 
+export function getDisplayLevel(plan: string) {
+	// T0_trial / T0_paid both display as P0
+	const normalizedPlan = plan === "T0_paid" ? "T0_trial" : plan;
+	return getLevelByPlan(normalizedPlan);
+}
+
 export function getLocalizedLevelName(level: MembershipLevel, locale: string): string {
 	if (locale === "en") return level.nameEn;
 	if (locale === "zh-TW") return level.nameTw;
@@ -61,4 +67,8 @@ export function getLocalizedLevelDescription(level: MembershipLevel, locale: str
 	if (locale === "en") return level.descriptionEn;
 	if (locale === "zh-TW") return level.descriptionTw;
 	return level.descriptionZh;
+}
+
+export function getLocalizedLevelLabel(level: MembershipLevel, locale: string): string {
+	return `${level.code} · ${getLocalizedLevelName(level, locale)}`;
 }

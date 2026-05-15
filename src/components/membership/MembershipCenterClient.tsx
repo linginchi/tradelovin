@@ -7,9 +7,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
-  getLevelByPlan,
+  getDisplayLevel,
   getLocalizedLevelDescription,
-  getLocalizedLevelName,
+  getLocalizedLevelLabel,
 } from "@/lib/membership/level-mapping";
 
 type Membership = {
@@ -179,18 +179,20 @@ export function MembershipCenterClient() {
         {!loading && membership ? (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {(() => {
-              const level = getLevelByPlan(membership.plan);
+              const level = getDisplayLevel(membership.plan);
               return (
                 <div className="rounded-xl border border-border/70 p-3 sm:col-span-2">
                   <p className="text-xs text-muted-foreground">{t("currentLevel")}</p>
-                  <p className="text-xl font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+                  <p className="text-xl font-semibold">{getLocalizedLevelLabel(level, locale)}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
                 </div>
               );
             })()}
             <div className="rounded-xl border border-border/70 p-3">
               <p className="text-xs text-muted-foreground">当前计划</p>
-              <p className="text-xl font-semibold">{membership.plan}</p>
+              <p className="text-xl font-semibold">
+                {getLocalizedLevelLabel(getDisplayLevel(membership.plan), locale)}
+              </p>
             </div>
             <div className="rounded-xl border border-border/70 p-3">
               <p className="text-xs text-muted-foreground">状态</p>
@@ -223,10 +225,10 @@ export function MembershipCenterClient() {
           {planRows.map((row) => (
             <div key={row.plan} className="rounded-xl border border-border/70 p-3">
               {(() => {
-                const level = getLevelByPlan(row.plan);
+                const level = getDisplayLevel(row.plan);
                 return (
                   <>
-                    <p className="font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+                    <p className="font-semibold">{getLocalizedLevelLabel(level, locale)}</p>
                     <p className="text-xs text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
                   </>
                 );
@@ -234,7 +236,7 @@ export function MembershipCenterClient() {
               <p className="text-sm text-muted-foreground">{row.price}</p>
               <p className="mt-1 text-sm">{row.rights}</p>
               <Button className="mt-3" disabled={submitting} onClick={() => void subscribe(row.plan)}>
-                {submitting ? "处理中..." : `立即支付 ${row.plan}`}
+                {submitting ? "处理中..." : `立即支付 ${getLocalizedLevelLabel(getDisplayLevel(row.plan), locale)}`}
               </Button>
             </div>
           ))}

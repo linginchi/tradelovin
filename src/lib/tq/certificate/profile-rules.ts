@@ -90,7 +90,7 @@ export function buildTieredNarrative(
 	return {
 		tier,
 		label,
-		summary: `${baseSummary} T3 版本提供特征级解释与进阶训练建议。`,
+		summary: `${baseSummary} P3 版本提供特征级解释与进阶训练建议。`,
 		strengths: [...baseStrengths, `效率夏普评分 ${sharpeScore.toFixed(1)}，可用于评估收益质量。`],
 		risks: [...baseRisks, "当单周波动显著放大时，需降低仓位并收敛交易频率。"],
 		suggestions: [...baseSuggestions, advancedSuggestion],

@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-	getLevelByPlan,
+	getDisplayLevel,
 	getLocalizedLevelDescription,
+	getLocalizedLevelLabel,
 	getLocalizedLevelName,
 } from "@/lib/membership/level-mapping";
 
@@ -80,7 +81,7 @@ export function useMembershipLevel(locale: string, enabled = true) {
 
 	const level = useMemo(() => {
 		const plan = membership?.plan ?? "T0_trial";
-		return getLevelByPlan(plan);
+		return getDisplayLevel(plan);
 	}, [membership?.plan]);
 
 	const levelDisplay = useMemo(
@@ -89,7 +90,7 @@ export function useMembershipLevel(locale: string, enabled = true) {
 			plan: level.plan,
 			name: getLocalizedLevelName(level, locale),
 			description: getLocalizedLevelDescription(level, locale),
-			label: `${level.code} · ${getLocalizedLevelName(level, locale)}`,
+			label: getLocalizedLevelLabel(level, locale),
 			shortLabel: `${level.code} ${getLocalizedLevelName(level, locale)}`,
 		}),
 		[level, locale],

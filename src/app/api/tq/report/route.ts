@@ -116,7 +116,7 @@ export async function GET(request: Request) {
       ? legacy.tier === "T2" || legacy.tier === "T3"
       : false;
   if (!allowed) {
-    return NextResponse.json({ success: false, error: "仅 T2/T3 可下载深度报告" }, { status: 403 });
+    return NextResponse.json({ success: false, error: "仅 P2/P3 可下载深度报告" }, { status: 403 });
   }
 
   const url = new URL(request.url);

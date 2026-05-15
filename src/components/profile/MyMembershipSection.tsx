@@ -5,9 +5,9 @@ import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import {
-	getLevelByPlan,
+	getDisplayLevel,
 	getLocalizedLevelDescription,
-	getLocalizedLevelName,
+	getLocalizedLevelLabel,
 } from "@/lib/membership/level-mapping";
 
 type MembershipData = {
@@ -128,11 +128,11 @@ export default function MyMembershipSection() {
 			{!loading && membership ? (
 				<div className="mt-4 space-y-3 text-sm">
 					{(() => {
-						const level = getLevelByPlan(membership.plan ?? membership.tier);
+						const level = getDisplayLevel(membership.plan ?? membership.tier);
 						return (
 							<div className="rounded-lg border border-border/60 p-3">
 								<p className="text-xs text-muted-foreground">{tLevel("currentLevel")}</p>
-								<p className="mt-1 font-semibold">{level.code} · {getLocalizedLevelName(level, locale)}</p>
+								<p className="mt-1 font-semibold">{getLocalizedLevelLabel(level, locale)}</p>
 								<p className="mt-1 text-xs text-muted-foreground">{getLocalizedLevelDescription(level, locale)}</p>
 							</div>
 						);
@@ -140,7 +140,7 @@ export default function MyMembershipSection() {
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<p className="font-semibold">{t("membershipTierLabel")}</p>
 						<span className="bg-cyan-500/15 text-cyan-200 rounded-full px-2 py-0.5 text-xs font-semibold">
-							{membership.plan ?? membership.tier}
+							{getLocalizedLevelLabel(getDisplayLevel(membership.plan ?? membership.tier), locale)}
 						</span>
 					</div>
 					<p className="text-muted-foreground">
