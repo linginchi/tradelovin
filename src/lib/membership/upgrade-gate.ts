@@ -170,6 +170,7 @@ export async function getUpgradePreview(
   membershipPlan: string;
   currentPaidPlan: PaidPlan | null;
   nextPlan: PaidPlan | null;
+  freeByVideoSubscription: boolean;
   monthlyScore: number;
   monthlyTradeCount: number;
   minTradesForScore: number;
