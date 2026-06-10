@@ -134,21 +134,17 @@ npm run deploy:cloudflare
 
 ## 6. 静态资源前缀 `assetPrefix`（仅 Cloudflare 构建）
 
-[`next.config.ts`](next.config.ts) 仅在设置了 **`NEXT_ASSET_PREFIX`** 或 **`ASSET_PREFIX`**（二选一，无尾部斜杠）时才会启用 Next 的 `assetPrefix`。这样本地 `npm run dev` 会使用同源 `/_next/static`，避免页面「像纯 HTML、无 CSS」。
+[`next.config.ts`](next.config.ts) 仅在设置了 **`NEXT_ASSET_PREFIX`** 或 **`ASSET_PREFIX`**（二选一，无尾部斜杠）时才会启用 Next 的 `assetPrefix`。**不设置时（推荐）静态资源使用同源相对路径 `/_next/static`**，对所有入口都正确。
+
+> ⚠️ **多入口必读（含内地 `xeoaxis.com`）：** 本项目同时存在海外入口 `tradelovin.com` 与内地反代入口 `xeoaxis.com`。`assetPrefix` 一旦设成某个绝对域名（尤其 `*.workers.dev`），会把**所有入口**的 CSS/JS URL 钉死到该域名；内地用户浏览器再去直连 Cloudflare 加载静态资源时会被墙/超时，页面渲染成**无样式裸 HTML**。因此**必须留空 `NEXT_ASSET_PREFIX`**，让各入口走同源相对路径（`xeoaxis.com` 的 `/_next/static` 由内地 Nginx 反代回 Worker，已验证可用）。为防误配，`resolveAssetPrefix()` 现已**主动忽略任何 `*.workers.dev` 前缀**并打印告警。
 
 | 场景 | 是否设置 |
 | --- | --- |
 | 本地 `next dev` / `npm run build && npm start` | **不要** 设置 |
-| `npm run build:cloudflare` / `deploy:cloudflare` | **建议** 设为当前 Worker 对外 URL，例如 `https://tradelovin.mark-377.workers.dev`（以你账号实际域名为准）；若将来用独立 CDN，则设为该 CDN 源站前缀 |
+| `npm run build:cloudflare` / `deploy:cloudflare`（当前双入口生产） | **不要** 设置（使用相对路径）；切勿设为 `*.workers.dev` |
+| 将来「单入口 + 独立 CDN」 | 才设为该 **CDN 源站前缀**（非 workers.dev、非任一站点域名） |
 
-**本机发布 Workers 前（PowerShell 示例）：**
-
-```powershell
-$env:NEXT_ASSET_PREFIX = "https://tradelovin.mark-377.workers.dev"
-npm run deploy:cloudflare
-```
-
-**GitHub Actions：** 在仓库 **Settings → Secrets and variables → Actions → Variables** 中配置 **`NEXT_ASSET_PREFIX`**（与上面同源 URL 一致），工作流已将该变量注入 **`OpenNext` 构建步骤**。未配置时构建产物使用相对路径；若线上 Worker 强依赖绝对静态 URL，请务必配置该变量。
+**GitHub Actions：** 仓库 **Settings → Secrets and variables → Actions → Variables** 中的 **`NEXT_ASSET_PREFIX`** 在当前双入口架构下应**删除或留空**。工作流仍会注入该变量到 OpenNext 构建步骤，但留空即用相对路径；即使误填 `*.workers.dev`，构建侧也会自动忽略并回退相对路径。
 
 ---
 
@@ -331,3 +327,4 @@ chmod +x setup-hk-proxy.sh verify-mainland-proxy.sh
 
 - 该方案适合“先让内地同事可测”，不等同于内地合规落地托管。
 - 生产长期方案若需更稳定，建议评估“双入口架构”（内地入口 + 海外入口）与合规要求（备案/CDN）。
+- **静态资源前缀风险（务必）：** 双入口下 **必须留空 `NEXT_ASSET_PREFIX`**（见 §6）。若设为 `*.workers.dev` 或任一站点域名，内地入口（如 `xeoaxis.com`）会出现「HTML 正常返回但 CSS/JS 全部加载失败、页面裸露无样式」。Nginx 透明反代本身正常时无需重配服务器，应优先排查该构建期前缀。
