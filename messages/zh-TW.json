@@ -7,6 +7,7 @@
 	},
 	"Nav": {
 		"mainLabel": "主導航",
+		"menu": "選單",
 		"about": "關於我們",
 		"courses": "課程",
 		"myScores": "我的成績",
@@ -15,6 +16,12 @@
 		"career": "求職",
 		"myProfile": "我的",
 		"myLearning": "豹仔課堂",
+		"register": "註冊",
+		"login": "登入",
+		"support": "支援",
+		"community": "社區",
+		"independentTrader": "獨立交易員",
+		"comingSoon": "待建中",
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用戶"
@@ -129,39 +136,21 @@
 	},
 	"Home": {
 		"badge": "豹仔樂園 · 遊戲化交易學習",
-		"title": "豹仔樂園 — 挖掘你的交易天賦",
+		"title": "你負責交易 我負責保障",
 		"subtitle": "沒有什麼能夠阻擋你對大交易員的嚮往",
 		"ctaTrading": "模擬交易測試入口",
 		"ctaRegister": "註冊 / 開始交易",
+		"entries": {
+			"video": "訂閱影片",
+			"trade": "模擬交易",
+			"classroom": "豹仔課堂"
+		},
 		"hero": {
 			"classroomButton": "豹仔課堂"
 		},
-		"promoKicker": "核心亮點",
-		"promoTitle": "畢業後導師直接推薦求職",
-		"promoSubtitle": "導師、課程和考核標準均緊密結合自營交易機構和資管機構的招聘需求，合格者優先推薦。",
-		"promoPartners": "合作機構示例：待公佈",
-		"teaserKicker": "課程預告",
-		"teaserFallback": "更多精彩內容，敬請期待。",
 		"honorTitle": "畢業豹仔榮譽榜",
 		"honorSubtitle": "畢業學員的優秀出路與崗位（示例展示）",
 		"honorInitial": "豹",
-		"highlights": [
-			{
-				"title": "結構化課程",
-				"desc": "從基礎到進階的路徑設計，把複雜概念拆成可執行的小步練習。",
-				"tag": "體系化"
-			},
-			{
-				"title": "實戰演練",
-				"desc": "模擬盤與情境任務結合，在低風險環境裡反覆試錯、形成肌肉記憶。",
-				"tag": "可練習"
-			},
-			{
-				"title": "即時反饋",
-				"desc": "每一次操作都有清晰評分與提示，知道自己強在哪、下一步該練什麼。",
-				"tag": "可量化"
-			}
-		],
 		"honorGraduates": [
 			{
 				"name": "學員 · 青嵐",
@@ -196,6 +185,17 @@
 		],
 		"complianceTitle": "合規聲明",
 		"complianceDisclaimer": "本課程基於「小Q教練模擬交易系統」著作權技術開發，旨在透過遊戲化方式挖掘學員的交易天賦，提升交易認知與實操能力。本平台不涉及任何實盤證券交易，不提供投資建議，不推薦股票，不代客理財。所有模擬數據及教學案例僅供學習與訓練使用，使用者應自行承擔決策風險。本平台並非受監管金融機構，亦不從事任何受證券法規監管之業務。"
+	},
+	"Footer": {
+		"brand": "豹仔樂園",
+		"tagline": "遊戲化交易學習平台。你負責交易 我負責保障。",
+		"copyright": "© {year} 豹仔樂園 · 保留所有權利。",
+		"productTitle": "產品",
+		"resourcesTitle": "資源",
+		"aboutTitle": "關於",
+		"compliance": "合規聲明",
+		"privacy": "隱私政策",
+		"terms": "服務條款"
 	},
 	"RegisterPage": {
 		"back": "← 返回首頁"

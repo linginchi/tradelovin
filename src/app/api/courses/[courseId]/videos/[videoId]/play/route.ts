@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { isSuperUserById } from "@/lib/auth/super-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
@@ -66,9 +67,12 @@ export async function GET(_request: Request, { params }: RouteContext) {
     if (auth instanceof NextResponse) {
       return NextResponse.json({ error: "无权限观看，请先购买课程" }, { status: 403 });
     }
-    const allowed = await hasCourseAccess(srv, auth.userId, courseId);
-    if (!allowed) {
-      return NextResponse.json({ error: "无权限观看，请先购买课程" }, { status: 403 });
+    const isSuper = await isSuperUserById(srv, auth.userId);
+    if (!isSuper) {
+      const allowed = await hasCourseAccess(srv, auth.userId, courseId);
+      if (!allowed) {
+        return NextResponse.json({ error: "无权限观看，请先购买课程" }, { status: 403 });
+      }
     }
   }
 

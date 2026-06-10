@@ -7,6 +7,7 @@
 	},
 	"Nav": {
 		"mainLabel": "Main navigation",
+		"menu": "Menu",
 		"about": "About",
 		"courses": "Courses",
 		"myScores": "My Scores",
@@ -15,6 +16,12 @@
 		"career": "Careers",
 		"myProfile": "Profile",
 		"myLearning": "Leopard Classroom",
+		"register": "Sign up",
+		"login": "Log in",
+		"support": "Support",
+		"community": "Community",
+		"independentTrader": "Independent traders",
+		"comingSoon": "Coming soon",
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
 		"userFallback": "User"
@@ -129,39 +136,21 @@
 	},
 	"Home": {
 		"badge": "Baozi Paradise · Gamified Trading",
-		"title": "Tradelovin — Unlock your trading talent",
+		"title": "You trade. We've got you covered.",
 		"subtitle": "Nothing can stop your aspiration to become a great trader",
 		"ctaTrading": "Sim trading test entry",
 		"ctaRegister": "Register / Start trading",
+		"entries": {
+			"video": "Video courses",
+			"trade": "Simulated trading",
+			"classroom": "Leopard Classroom"
+		},
 		"hero": {
 			"classroomButton": "Leopard Classroom"
 		},
-		"promoKicker": "Core highlights",
-		"promoTitle": "Direct job referrals from mentors after graduation",
-		"promoSubtitle": "Mentors, curriculum, and assessment standards are closely aligned with the hiring needs of proprietary trading firms and asset management institutions. Qualified graduates receive priority referrals.",
-		"promoPartners": "Partner Institutions: To be announced",
-		"teaserKicker": "Coming soon",
-		"teaserFallback": "More great courses are on the way. Stay tuned.",
 		"honorTitle": "Alumni spotlight",
 		"honorSubtitle": "Sample outcomes and roles (demo content)",
 		"honorInitial": "T",
-		"highlights": [
-			{
-				"title": "Structured curriculum",
-				"desc": "A clear path from basics to advanced topics—big ideas broken into small, actionable steps.",
-				"tag": "Systematic"
-			},
-			{
-				"title": "Hands‑on drills",
-				"desc": "Simulations and scenario tasks so you can rehearse execution with limited risk.",
-				"tag": "Practice"
-			},
-			{
-				"title": "Instant feedback",
-				"desc": "Every action gets a clear score and guidance—know your strengths and what to train next.",
-				"tag": "Measurable"
-			}
-		],
 		"honorGraduates": [
 			{
 				"name": "Student · Qinglan",
@@ -196,6 +185,17 @@
 		],
 		"complianceTitle": "Compliance notice",
 		"complianceDisclaimer": "This course is developed based on the copyrighted technology of \"Coach Xiao Q Simulation Trading System\". It aims to uncover users' trading talents through gamification, improving trading cognition and practical skills. This platform does NOT involve any real securities trading, provide investment advice, recommend stocks, or manage assets on behalf of clients. All simulated data and teaching cases are for learning and training purposes only. Users bear their own decision-making risks. This platform is not a regulated financial institution and does not engage in any business regulated by securities laws."
+	},
+	"Footer": {
+		"brand": "Tradelovin",
+		"tagline": "Gamified trading education. You trade. We've got you covered.",
+		"copyright": "© {year} Tradelovin · All rights reserved.",
+		"productTitle": "Product",
+		"resourcesTitle": "Resources",
+		"aboutTitle": "About",
+		"compliance": "Compliance",
+		"privacy": "Privacy policy",
+		"terms": "Terms of use"
 	},
 	"RegisterPage": {
 		"back": "← Back to home"

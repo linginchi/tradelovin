@@ -150,12 +150,15 @@ export type TradeV2AccountSummary = {
 
 export type TradeV2AccountApiResponse = ApiResponse<TradeV2AccountSummary>;
 
+import type { QuickOrderPrefs } from "@/lib/trade-v2/quick-order-prefs";
+
 export type TradeV2UserTradePrefs = {
 	default_qty: number;
 	default_account_type: "normal" | "credit";
 	default_position_mode: "long" | "short";
 	default_source_mode: "normal" | "fast";
 	auto_logout_night: boolean;
+	quick_order_prefs?: QuickOrderPrefs;
 };
 
 export type TradeV2SettingsApiResponse = ApiResponse<TradeV2UserTradePrefs>;

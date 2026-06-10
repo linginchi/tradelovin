@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { isSuperUserById } from "@/lib/auth/super-user";
 import { upsertBaseMembership } from "@/lib/membership/manage";
 import { getMembershipSnapshot } from "@/lib/membership/service";
 import type { MembershipCapability, MembershipSnapshot } from "@/lib/membership/types";
@@ -9,6 +10,30 @@ import {
 } from "@/lib/trade-v2/api-types";
 import { canUseSimTrading, canUseTqReport, ensureCurrentMembership } from "@/lib/membership/v2";
 import { getServiceSupabase } from "@/lib/supabase/service";
+
+function buildSuperUserMembershipSnapshot(userId: string): MembershipSnapshot {
+	const now = new Date();
+	const farFuture = new Date(now.getTime() + 100 * 365 * 24 * 60 * 60 * 1000);
+	const iso = now.toISOString();
+	const endIso = farFuture.toISOString();
+	return {
+		userId,
+		tier: "T3",
+		status: "active",
+		trialStartAt: iso,
+		trialEndAt: endIso,
+		currentPeriodStart: iso,
+		currentPeriodEnd: endIso,
+		lastPaidAt: iso,
+		pointsBalance: 1_000_000,
+		effective: {
+			simTrading: true,
+			tqReport: true,
+			l2Market: true,
+			advancedOrderBundle: true,
+		},
+	};
+}
 
 export type MembershipGuardOk = { membership: MembershipSnapshot };
 
@@ -55,6 +80,11 @@ export async function requireMembershipCapability(
 	userId: string,
 	capability: MembershipCapability,
 ): Promise<MembershipGuardOk | NextResponse> {
+	const srv = getServiceSupabase();
+	if (srv && (await isSuperUserById(srv, userId))) {
+		return { membership: buildSuperUserMembershipSnapshot(userId) };
+	}
+
 	const v2Membership = await ensureCurrentMembership(supabase, userId);
 	if (v2Membership) {
 		const allowed =
@@ -115,6 +145,11 @@ export async function checkMembership(
   supabase: SupabaseClient,
   userId: string,
 ): Promise<true | NextResponse> {
+  const srv = getServiceSupabase();
+  if (srv && (await isSuperUserById(srv, userId))) {
+    return true;
+  }
+
   const membership = await ensureCurrentMembership(supabase, userId);
   if (!membership) {
     return NextResponse.json(

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 
+import {
+	buildSuperUserCurrentMembership,
+	isSuperUserById,
+} from "@/lib/auth/super-user";
 import { reconcileMembershipFromStripe } from "@/lib/membership/reconcile-from-stripe";
 import { getUpgradePreview } from "@/lib/membership/upgrade-gate";
 import { ensureCurrentMembership } from "@/lib/membership/v2";
 import { getMembershipSnapshot } from "@/lib/membership/service";
+import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
 
 export const runtime = "nodejs";
@@ -11,6 +16,31 @@ export const runtime = "nodejs";
 export async function GET() {
   const auth = await requireTradeUser();
   if (auth instanceof NextResponse) return auth;
+
+  const srv = getServiceSupabase();
+  if (srv && (await isSuperUserById(srv, auth.userId))) {
+    const membership = buildSuperUserCurrentMembership(auth.userId);
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: membership.id,
+        userId: membership.userId,
+        plan: membership.plan,
+        status: membership.status,
+        trialEnd: membership.trialEnd,
+        currentPeriodStart: membership.currentPeriodStart,
+        currentPeriodEnd: membership.currentPeriodEnd,
+        cancelAtPeriodEnd: membership.cancelAtPeriodEnd,
+        stripeSubscriptionId: membership.stripeSubscriptionId,
+        stripeCustomerId: membership.stripeCustomerId,
+        billingCycle: membership.billingCycle,
+        createdAt: membership.createdAt,
+        updatedAt: membership.updatedAt,
+        trialDaysLeft: 0,
+        upgradePreview: null,
+      },
+    });
+  }
 
   let membership = await ensureCurrentMembership(auth.supabase, auth.userId);
   if (membership && (membership.plan === "T0_trial" || membership.plan === "T0_paid")) {

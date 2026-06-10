@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { isSuperUserById } from "@/lib/auth/super-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { isMissingRelationError } from "@/lib/video/db";
@@ -66,7 +67,8 @@ export async function GET(_request: Request, { params }: RouteContext) {
     });
   }
 
-  const hasAccess = await checkCourseAccess(srv, auth.userId, courseId);
+  const isSuper = await isSuperUserById(srv, auth.userId);
+  const hasAccess = isSuper || (await checkCourseAccess(srv, auth.userId, courseId));
   if (!hasAccess) {
     return NextResponse.json({
       videos: freeVideos ?? [],

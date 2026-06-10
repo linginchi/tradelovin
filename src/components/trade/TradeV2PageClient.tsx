@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, HelpCircle, RefreshCcw, Signal, SignalHigh, X } from "lucide-react";
+import { HelpCircle, RefreshCcw, Signal, SignalHigh, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast, Toaster } from "sonner";
 
 import { FeedbackButton } from "@/components/common/FeedbackButton";
@@ -22,8 +22,16 @@ import { useMembershipCurrent } from "@/lib/membership/client";
 import {
 	isCanonicalCnSymbol,
 	normalizeCnSymbol,
+	shouldAutoSwitchCnSymbolInput,
+	stripExchangeSuffix,
 	SYMBOL_INPUT_HINT_MESSAGE,
 } from "@/lib/trade/symbol-normalizer";
+import {
+	DEFAULT_QUICK_ORDER_PREFS,
+	matchHotkey,
+	parseQuickOrderPrefs,
+	type QuickOrderPrefs,
+} from "@/lib/trade-v2/quick-order-prefs";
 import {
 	formatFailurePriorityTagByScore,
 	resolveFailurePriority,
@@ -177,8 +185,10 @@ export function TradeV2PageClient() {
 	const router = useRouter();
 	const querySymbolCandidate = normalizeCnSymbol(searchParams.get("symbol") ?? "");
 	const querySymbol = isCanonicalCnSymbol(querySymbolCandidate) ? querySymbolCandidate : "";
-	const defaultSymbol = querySymbol || "600519.SH";
-	const [symbolInput, setSymbolInput] = useState(defaultSymbol);
+	const defaultSymbol = querySymbol || "";
+	const [symbolInput, setSymbolInput] = useState(
+		defaultSymbol ? stripExchangeSuffix(defaultSymbol) : "",
+	);
 	const [resolvedSymbol, setResolvedSymbol] = useState(defaultSymbol);
 	const [quote, setQuote] = useState<TradeV2QuoteData | null>(null);
 	const [account, setAccount] = useState<AccountResp | null>(null);
@@ -207,6 +217,11 @@ export function TradeV2PageClient() {
 	const [optimisticCancelledOrderIds, setOptimisticCancelledOrderIds] = useState<string[]>([]);
 	const [isTypingPrice, setIsTypingPrice] = useState(false);
 	const [draftPrice, setDraftPrice] = useState("");
+	const [quickOrderPrefs, setQuickOrderPrefs] = useState<QuickOrderPrefs>(DEFAULT_QUICK_ORDER_PREFS);
+	const lastSyncedQueryRef = useRef(querySymbol);
+	const focusSymbolInput = useCallback(() => {
+		document.getElementById("symbolInput")?.focus();
+	}, []);
 	const { expired: membershipExpired } = useMembershipCurrent(true);
 	const failureOnlyEvents = isFailedEventView(searchParams.get("eventView"));
 
@@ -321,6 +336,7 @@ export function TradeV2PageClient() {
 		setPositionMode(json.data.default_position_mode);
 		setSourceMode(json.data.default_source_mode);
 		setAutoLogoutNight(json.data.auto_logout_night);
+		setQuickOrderPrefs(parseQuickOrderPrefs(json.data.quick_order_prefs));
 	}, []);
 
 	const loadAll = useCallback(async () => {
@@ -376,14 +392,18 @@ export function TradeV2PageClient() {
 		}
 	}, [isTypingPrice, price]);
 	useEffect(() => {
-		if (!querySymbol) return;
-		if (querySymbol === resolvedSymbol && querySymbol === symbolInput) return;
-		const timer = window.setTimeout(() => {
-			setResolvedSymbol(querySymbol);
-			setSymbolInput(querySymbol);
-		}, 0);
-		return () => window.clearTimeout(timer);
-	}, [querySymbol, resolvedSymbol, symbolInput]);
+		if (querySymbol === lastSyncedQueryRef.current) return;
+		lastSyncedQueryRef.current = querySymbol;
+		if (!querySymbol) {
+			setResolvedSymbol("");
+			setSymbolInput("");
+			setQuote(null);
+			setFetchError("");
+			return;
+		}
+		setResolvedSymbol(querySymbol);
+		setSymbolInput(stripExchangeSuffix(querySymbol));
+	}, [querySymbol]);
 
 	const marketSourceLabel = useMemo(() => {
 		if (!quote) return "—";
@@ -491,7 +511,7 @@ export function TradeV2PageClient() {
 		(symbol: string) => {
 			const current = new URLSearchParams(searchParams.toString());
 			const normalized = normalizeCnSymbol(symbol);
-			if (normalized) {
+			if (normalized && isCanonicalCnSymbol(normalized)) {
 				current.set("symbol", normalized);
 			} else {
 				current.delete("symbol");
@@ -511,7 +531,32 @@ export function TradeV2PageClient() {
 		const query = current.toString();
 		router.replace(query ? (`${pathname}?${query}` as never) : (pathname as never));
 	}, [failureOnlyEvents, pathname, router, searchParams]);
+	const clearSymbolSelection = useCallback(() => {
+		setSymbolInput("");
+		setResolvedSymbol("");
+		setQuote(null);
+		setFetchError("");
+		setSelectedBookKey("");
+		updateSymbolInQuery("");
+	}, [updateSymbolInQuery]);
+	const commitSymbolInput = useCallback(() => {
+		const trimmed = symbolInput.trim();
+		if (!trimmed) {
+			clearSymbolSelection();
+			return;
+		}
+		const clean = normalizeCnSymbol(trimmed);
+		if (!isCanonicalCnSymbol(clean)) {
+			toast.error(SYMBOL_INPUT_HINT_MESSAGE);
+			return;
+		}
+		setSymbolInput(stripExchangeSuffix(clean));
+		setResolvedSymbol(clean);
+		updateSymbolInQuery(clean);
+		void loadQuote(clean);
+	}, [clearSymbolSelection, loadQuote, symbolInput, updateSymbolInQuery]);
 	const debouncedSearchSymbol = useDebouncedCallback((rawSymbol: string) => {
+		if (!shouldAutoSwitchCnSymbolInput(rawSymbol)) return;
 		const clean = normalizeCnSymbol(rawSymbol);
 		if (!isCanonicalCnSymbol(clean)) return;
 		setResolvedSymbol(clean);
@@ -536,26 +581,24 @@ export function TradeV2PageClient() {
 		[positions, resolvedSymbol],
 	);
 	const hasOrderInputs = useMemo(() => {
+		if (!resolvedSymbol) return false;
 		const px = Number(isTypingPrice ? draftPrice : price);
 		const q = Number(qty);
 		return Number.isFinite(px) && px > 0 && Number.isInteger(q) && q > 0;
-	}, [draftPrice, isTypingPrice, price, qty]);
+	}, [draftPrice, isTypingPrice, price, qty, resolvedSymbol]);
 	const updatePriceFromBook = useCallback((bookKey: string, newPrice: number) => {
 		setSelectedBookKey(bookKey);
 		setIsTypingPrice(false);
 		setDraftPrice(String(newPrice));
 		setPrice(String(newPrice));
 	}, []);
-	const clearSymbolSelection = useCallback(() => {
-		setSymbolInput("");
-		setResolvedSymbol("");
-		setQuote(null);
-		setFetchError("");
-		setSelectedBookKey("");
-		updateSymbolInQuery("");
-	}, [updateSymbolInQuery]);
 	const handlePlaceOrder = useCallback(
 		async (side: "buy" | "sell") => {
+			if (!resolvedSymbol || !isCanonicalCnSymbol(resolvedSymbol)) {
+				toast.error("请先在顶部输入标的代码");
+				focusSymbolInput();
+				return;
+			}
 			const px = Number(isTypingPrice ? draftPrice : price);
 			const q = Number(qty);
 			if (!Number.isFinite(px) || px <= 0) {
@@ -610,7 +653,7 @@ export function TradeV2PageClient() {
 				setPlacing(false);
 			}
 		},
-		[accountType, draftPrice, isTypingPrice, loadQuote, loadResources, loadTradeData, positionMode, price, qty, resolvedSymbol]
+		[accountType, draftPrice, focusSymbolInput, isTypingPrice, loadQuote, loadResources, loadTradeData, positionMode, price, qty, resolvedSymbol]
 	);
 	const debouncedPlaceOrder = useDebouncedCallback((side: "buy" | "sell") => {
 		void handlePlaceOrder(side);
@@ -666,7 +709,7 @@ export function TradeV2PageClient() {
 		try {
 			setPlacing(true);
 			setResolvedSymbol(selectedPosition.symbol);
-			setSymbolInput(selectedPosition.symbol);
+			setSymbolInput(stripExchangeSuffix(selectedPosition.symbol));
 			const res = await fetch("/api/trade-v2/order", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
@@ -711,7 +754,7 @@ export function TradeV2PageClient() {
 			try {
 				setPlacing(true);
 				setResolvedSymbol(position.symbol);
-				setSymbolInput(position.symbol);
+				setSymbolInput(stripExchangeSuffix(position.symbol));
 				const res = await fetch("/api/trade-v2/order", {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
@@ -742,8 +785,19 @@ export function TradeV2PageClient() {
 		},
 		[accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price],
 	);
+	const adjustQty = useCallback((delta: number) => {
+		setQty((prev) => {
+			const current = Number(prev);
+			const base = Number.isInteger(current) && current > 0 ? current : 100;
+			return String(Math.max(100, base + delta));
+		});
+	}, []);
+	const applyQtyPreset = useCallback((preset: number) => {
+		setQty(String(preset));
+	}, []);
 	useEffect(() => {
 		const onKeyDown = (event: KeyboardEvent) => {
+			const hotkeys = quickOrderPrefs.hotkeys;
 			const target = event.target as HTMLElement | null;
 			const isInputFocused = !!target?.closest("input, textarea, [contenteditable='true']");
 			if (event.key === "Escape") {
@@ -766,7 +820,22 @@ export function TradeV2PageClient() {
 				return;
 			}
 			if (isInputFocused) return;
-			if (event.key === "b" || event.key === "B") {
+			if (matchHotkey(event, hotkeys.qtyUp)) {
+				event.preventDefault();
+				adjustQty(100);
+				return;
+			}
+			if (matchHotkey(event, hotkeys.qtyDown)) {
+				event.preventDefault();
+				adjustQty(-100);
+				return;
+			}
+			if (matchHotkey(event, hotkeys.qtyReset)) {
+				event.preventDefault();
+				setQty(String(Number(qty) || 100));
+				return;
+			}
+			if (matchHotkey(event, hotkeys.buy)) {
 				event.preventDefault();
 				if (hasOrderInputs) {
 					debouncedPlaceOrder("buy");
@@ -775,7 +844,7 @@ export function TradeV2PageClient() {
 				}
 				return;
 			}
-			if (event.key === "s" || event.key === "S") {
+			if (matchHotkey(event, hotkeys.sell)) {
 				event.preventDefault();
 				if (hasOrderInputs) {
 					debouncedPlaceOrder("sell");
@@ -784,15 +853,22 @@ export function TradeV2PageClient() {
 				}
 				return;
 			}
-			if (event.key === "c" || event.key === "C") {
+			if (matchHotkey(event, hotkeys.close)) {
 				event.preventDefault();
 				void forceClosePosition();
-				return;
 			}
 		};
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
-	}, [clearSymbolSelection, debouncedPlaceOrder, forceClosePosition, hasOrderInputs]);
+	}, [
+		adjustQty,
+		clearSymbolSelection,
+		debouncedPlaceOrder,
+		forceClosePosition,
+		hasOrderInputs,
+		qty,
+		quickOrderPrefs.hotkeys,
+	]);
 
 	const applyResource = useCallback(async (side: "long" | "short") => {
 		const quantity = Number(qty);
@@ -908,6 +984,7 @@ export function TradeV2PageClient() {
 					defaultPositionMode: positionMode,
 					defaultSourceMode: sourceMode,
 					autoLogoutNight,
+					quickOrderPrefs,
 				}),
 			});
 			const json = await parseJson<TradeV2SettingsApiResponse>(res);
@@ -919,7 +996,7 @@ export function TradeV2PageClient() {
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "保存设置失败");
 		}
-	}, [accountType, autoLogoutNight, positionMode, qty, sourceMode]);
+	}, [accountType, autoLogoutNight, positionMode, qty, quickOrderPrefs, sourceMode]);
 
 	const copyFailureDetail = useCallback(async (event: TriggerEvent) => {
 		const diagnostic = formatRiskDiagnostic(event);
@@ -941,16 +1018,19 @@ export function TradeV2PageClient() {
 					(closeCountdownMs % 60000) / 1000,
 				)}秒`;
 	const workbenchPanels = [
-		{ id: "panel-market-select", label: "行情选择" },
+		{ id: "panel-symbol-input", label: "标的输入" },
+		{ id: "panel-trade-settings", label: "交易设置" },
 		{ id: "panel-market", label: "行情" },
 		{ id: "panel-order", label: "下单" },
 		{ id: "panel-orders", label: "委托" },
 		{ id: "panel-positions", label: "仓位" },
+		{ id: "panel-trades", label: "成交" },
 		{ id: "panel-resources", label: "资源" },
 		{ id: "panel-settings", label: "设置" },
 		{ id: "panel-account", label: "账户" },
-		{ id: "panel-monitor", label: "监控" },
+		{ id: "panel-monitor", label: "监控总览" },
 	] as const;
+	const hasResolvedSymbol = Boolean(resolvedSymbol);
 	const jumpToPanel = (panelId: (typeof workbenchPanels)[number]["id"]) => {
 		const el = document.getElementById(panelId);
 		el?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -973,51 +1053,30 @@ export function TradeV2PageClient() {
 				dontShowAgain={guideDontShowAgain}
 				onDontShowAgainChange={onGuideDontShowAgainChange}
 			/>
-			<div className="flex items-center justify-between gap-3">
-				<div className="flex items-center gap-3">
-					<Link href="/trade-legacy">
-						<Button variant="ghost" size="icon" aria-label="返回旧版交易">
-							<ArrowLeft className="h-4 w-4" />
-						</Button>
-					</Link>
-					<div>
-						<p className="text-sm font-semibold sm:hidden">T+0 模拟交易 (已接入真实数据)</p>
-						<p className="hidden text-sm font-semibold sm:block">T+0 模拟交易 V2（P1）</p>
-						<p className="text-muted-foreground hidden text-xs sm:block">已接入下单/委托/成交/仓位真实数据链路</p>
-					</div>
-				</div>
-				<div className="flex items-center gap-2">
-					<PracticeButton />
-					<Button variant="outline" size="sm" onClick={() => setGuideOpen(true)}>
-						<HelpCircle className="mr-1 h-4 w-4" />
-						帮助
-					</Button>
-					<Link href={watchlistHref}>
-						<Button variant="outline" size="sm">
-							监控
-						</Button>
-					</Link>
-					<Link href={conditionsHref}>
-						<Button variant="outline" size="sm">
-							条件单
-						</Button>
-					</Link>
-					<Badge variant="secondary">Beta</Badge>
-				</div>
-			</div>
-			{membershipExpired ? (
-				<Link
-					href="/membership"
-					className="block rounded-xl border border-orange-300/40 bg-orange-500/12 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
-				>
-					{tMembership("expiredBanner")}
-				</Link>
-			) : null}
 
 			<Card className="sticky top-2 z-10">
 				<CardHeader className="pb-2">
-					<CardTitle className="text-base">Level2 工作台导航</CardTitle>
-					<CardDescription>移动端竖版可快速跳转到核心操作区</CardDescription>
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<CardTitle className="text-base">工作台导航</CardTitle>
+						<div className="flex flex-wrap items-center gap-2">
+							<PracticeButton />
+							<Button variant="outline" size="sm" onClick={() => setGuideOpen(true)}>
+								<HelpCircle className="mr-1 h-4 w-4" />
+								帮助
+							</Button>
+							<Link href={watchlistHref}>
+								<Button variant="outline" size="sm">
+									监控
+								</Button>
+							</Link>
+							<Link href={conditionsHref}>
+								<Button variant="outline" size="sm">
+									条件单
+								</Button>
+							</Link>
+							<Badge variant="secondary">Beta</Badge>
+						</div>
+					</div>
 				</CardHeader>
 				<CardContent className="overflow-x-auto pb-4">
 					<div className="flex min-w-max items-center gap-2">
@@ -1035,192 +1094,79 @@ export function TradeV2PageClient() {
 					</div>
 				</CardContent>
 			</Card>
+			{membershipExpired ? (
+				<Link
+					href="/membership"
+					className="block rounded-xl border border-orange-300/40 bg-orange-500/12 px-3 py-2 text-sm font-medium text-orange-200 transition-colors hover:bg-orange-500/20"
+				>
+					{tMembership("expiredBanner")}
+				</Link>
+			) : null}
 
-			<Card id="panel-monitor">
-				<CardHeader className="pb-3">
-					<CardTitle className="text-base">监控与条件单总览</CardTitle>
-					<CardDescription>主面板实时查看待触发/已触发与活跃状态</CardDescription>
-				</CardHeader>
-				<CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-					<div className="rounded-md border p-3">
-						<p className="text-muted-foreground text-xs">监控待触发</p>
-						<p className="mt-1 text-xl font-semibold">{watchPendingCount}</p>
-					</div>
-					<div className="rounded-md border p-3">
-						<p className="text-muted-foreground text-xs">监控已触发</p>
-						<p className="mt-1 text-xl font-semibold">{watchTriggeredCount}</p>
-					</div>
-					<div className="rounded-md border p-3">
-						<p className="text-muted-foreground text-xs">条件单活跃</p>
-						<p className="mt-1 text-xl font-semibold">{conditionActiveCount}</p>
-					</div>
-					<div className="rounded-md border p-3">
-						<p className="text-muted-foreground text-xs">条件单已触发</p>
-						<p className="mt-1 text-xl font-semibold">{conditionTriggeredCount}</p>
-					</div>
-				</CardContent>
-			</Card>
-			<Card>
-				<CardHeader className="pb-3">
-					<div className="flex items-center justify-between gap-2">
-						<div>
-							<CardTitle className="text-base">最近触发事件流</CardTitle>
-							<CardDescription>展示监控与条件单最近触发记录</CardDescription>
-						</div>
-						<Button
-							variant={failureOnlyEvents ? "default" : "outline"}
-							size="sm"
-							onClick={() => toggleFailureEventView()}
-						>
-							{failureOnlyEvents ? "显示全部事件" : "仅看失败事件"}
-						</Button>
-					</div>
-				</CardHeader>
-				<CardContent className="space-y-2">
-					<div className="flex items-center gap-2 text-xs">
-						<span className="rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-cyan-200">
-							当前模式：{failureOnlyEvents ? "失败事件" : "全部事件"}
-						</span>
-						{failureOnlyEvents ? (
-							<span className="text-muted-foreground">URL 已包含 `eventView=failed`，可直接分享复现</span>
-						) : null}
-					</div>
-					{displayTriggerEvents.length === 0 ? (
-						<p className="text-sm text-muted-foreground">
-							{failureOnlyEvents ? "暂无失败事件" : "暂无触发事件"}
-						</p>
-					) : (
-						displayTriggerEvents.map((event) => (
-							<div key={event.id} className="flex items-center justify-between rounded-md border p-2 text-xs">
-								<div className="min-w-0">
-									<p className="font-medium">
-										[
-										{event.kind === "watchlist"
-											? "监控"
-											: event.kind === "condition"
-											? "条件单"
-											: "失败"}
-										]{" "}
-										{event.symbol} - {event.title}
-									</p>
-									<p className="truncate text-muted-foreground">{event.detail}</p>
-									<p className="truncate text-muted-foreground">触发链路：{event.sourceTag}</p>
-								</div>
-								<div className="pl-3 text-right">
-									<p className="text-muted-foreground">{hkTime(event.time)}</p>
-									<Link href={event.href} className="text-cyan-300 underline underline-offset-4">
-										查看详情
-									</Link>
-									{event.kind === "risk_failure" && event.altHref ? (
-										<div>
-											<Link href={event.altHref} className="text-cyan-300 underline underline-offset-4">
-												查看监控侧
-											</Link>
-										</div>
-									) : null}
-									{event.kind === "risk_failure" ? (
-										<div>
-											<p className="mt-1 text-[11px] text-amber-300">
-												风险优先级：{formatFailurePriorityTagByScore(resolveEventFailureScore(event))}（score=
-												{resolveEventFailureScore(event)}）
-											</p>
-											<details className="mt-1 max-w-[28rem] rounded border border-border/60 px-1 py-0.5 text-left">
-												<summary className="cursor-pointer text-[11px] text-muted-foreground">
-													查看诊断串
-												</summary>
-												<p className="mt-1 break-all text-[11px] text-muted-foreground">
-													{formatRiskDiagnostic(event)}
-												</p>
-											</details>
-											<Button
-												variant="outline"
-												size="sm"
-												className="mt-1 h-6 px-2 text-[11px]"
-												onClick={() => void copyFailureDetail(event)}
-											>
-												复制诊断串
-											</Button>
-										</div>
-									) : null}
-								</div>
-							</div>
-						))
-					)}
-				</CardContent>
-			</Card>
-
-			<Card id="panel-market-select">
-				<CardHeader className="pb-3">
-					<CardTitle className="text-base">交易抬头</CardTitle>
-					<CardDescription>产品账户、行情源、标的选择</CardDescription>
-				</CardHeader>
-				<CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-					<div className="space-y-1.5">
-						<Label htmlFor="accountSwitch">账户类型</Label>
-						<select
-							id="accountSwitch"
-							className="bg-background w-full rounded-md border px-3 py-2 text-sm"
-							value={accountType}
-							onChange={(e) => setAccountType(e.target.value === "credit" ? "credit" : "normal")}
-						>
-							<option value="normal">普通账户</option>
-							<option value="credit">信用账户</option>
-						</select>
-					</div>
-					<div className="space-y-1.5">
-						<Label htmlFor="sourceMode">行情源</Label>
-						<select
-							id="sourceMode"
-							className="bg-background w-full rounded-md border px-3 py-2 text-sm"
-							value={sourceMode}
-							onChange={(e) => setSourceMode(e.target.value === "fast" ? "fast" : "normal")}
-						>
-							<option value="normal">普通（5秒）</option>
-							<option value="fast">极速（5秒）</option>
-						</select>
-					</div>
-					<div className="space-y-1.5">
-						<Label htmlFor="symbolInput">标的代码</Label>
-						<div className="relative">
-							<Input
-								id="symbolInput"
-								value={symbolInput}
-								onChange={(e) => setSymbolInput(e.target.value)}
-							/>
-							{symbolInput ? (
+			<Card id="panel-symbol-input" className="border-primary/20">
+				<CardContent className="space-y-2 pt-4">
+					<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+						<div className="min-w-0 flex-1 space-y-1.5">
+							<Label htmlFor="symbolInput" className="text-sm font-medium">
+								标的代码
+							</Label>
+							<div className="relative flex items-center gap-2">
+								<Input
+									id="symbolInput"
+									value={symbolInput}
+									placeholder="输入代码，如 600519 或 123"
+									className="min-h-11 pr-10 text-base"
+									autoComplete="off"
+									inputMode="numeric"
+									onChange={(e) => setSymbolInput(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") {
+											e.preventDefault();
+											commitSymbolInput();
+										}
+									}}
+									onBlur={() => commitSymbolInput()}
+								/>
+								{symbolInput ? (
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										className="absolute top-1/2 right-12 h-8 w-8 -translate-y-1/2"
+										aria-label="清空股票代码"
+										onMouseDown={(e) => e.preventDefault()}
+										onClick={clearSymbolSelection}
+									>
+										<X className="h-4 w-4" />
+									</Button>
+								) : null}
 								<Button
 									type="button"
-									variant="ghost"
+									variant="outline"
 									size="icon"
-									className="absolute top-1/2 right-1 h-7 w-7 -translate-y-1/2"
-									aria-label="清空股票代码"
-									onClick={clearSymbolSelection}
+									className="min-h-11 min-w-11 shrink-0"
+									aria-label="刷新数据"
+									onMouseDown={(e) => e.preventDefault()}
+									onClick={() => void loadAll()}
 								>
-									<X className="h-4 w-4" />
+									<RefreshCcw className="h-4 w-4" />
 								</Button>
-							) : null}
+							</div>
+							<p className="text-muted-foreground text-xs">
+								可省略前导 0，如 123 即 000123；6 位代码输入后自动切换
+							</p>
 						</div>
-					</div>
-					<div className="flex items-end gap-2">
-						<Button
-							className="flex-1"
-							onClick={() => {
-								const clean = normalizeCnSymbol(symbolInput);
-								if (!isCanonicalCnSymbol(clean)) {
-									toast.error(SYMBOL_INPUT_HINT_MESSAGE);
-									return;
-								}
-								setResolvedSymbol(clean);
-								setSymbolInput(clean);
-								void loadQuote(clean);
-								updateSymbolInQuery(clean);
-							}}
-						>
-							切换标的
-						</Button>
-						<Button variant="outline" size="icon" onClick={() => void loadAll()}>
-							<RefreshCcw className="h-4 w-4" />
-						</Button>
+						{hasResolvedSymbol ? (
+							<div className="sm:text-right">
+								<p className="text-sm font-medium">{quote?.symbol ?? resolvedSymbol}</p>
+								<p className="text-muted-foreground text-xs">{quote?.name ?? "加载中..."}</p>
+								<p className="mt-1 text-xl font-semibold">{quote ? fmtMoney(quote.price) : "--"}</p>
+							</div>
+						) : (
+							<p className="text-muted-foreground text-sm sm:max-w-xs sm:text-right">
+								输入标的代码后开始查看行情与下单
+							</p>
+						)}
 					</div>
 				</CardContent>
 			</Card>
@@ -1235,6 +1181,20 @@ export function TradeV2PageClient() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-3">
+						{!hasResolvedSymbol ? (
+							<div className="rounded-md border border-dashed p-6 text-center">
+								<p className="text-muted-foreground text-sm">请在顶部输入标的代码查看行情与盘口</p>
+								<Button
+									type="button"
+									variant="outline"
+									className="mt-3 min-h-11"
+									onClick={focusSymbolInput}
+								>
+									输入标的代码
+								</Button>
+							</div>
+						) : (
+							<>
 						<div className="rounded-md border p-3">
 							<p className="text-sm font-medium">{quote?.symbol ?? resolvedSymbol}</p>
 							<p className="text-muted-foreground text-xs">{quote?.name ?? "—"}</p>
@@ -1313,6 +1273,8 @@ export function TradeV2PageClient() {
 								</div>
 							</div>
 						</div>
+							</>
+						)}
 					</CardContent>
 				</Card>
 
@@ -1322,6 +1284,20 @@ export function TradeV2PageClient() {
 						<CardDescription>对手价可直接点盘口填充</CardDescription>
 					</CardHeader>
 					<CardContent className="space-y-3">
+						{!hasResolvedSymbol ? (
+							<div className="rounded-md border border-dashed p-6 text-center">
+								<p className="text-muted-foreground text-sm">请先在顶部输入标的代码后再下单</p>
+								<Button
+									type="button"
+									variant="outline"
+									className="mt-3 min-h-11"
+									onClick={focusSymbolInput}
+								>
+									输入标的代码
+								</Button>
+							</div>
+						) : null}
+						<div className={!hasResolvedSymbol ? "pointer-events-none opacity-50" : undefined}>
 						<div className="space-y-1.5">
 							<Label htmlFor="positionMode">交易模式</Label>
 							<select
@@ -1356,18 +1332,60 @@ export function TradeV2PageClient() {
 						<div className="space-y-1.5">
 							<Label htmlFor="qty">股数</Label>
 							<Input id="qty" value={qty} onChange={(e) => setQty(e.target.value)} />
+							<div className="flex flex-wrap gap-2 pt-1">
+								{quickOrderPrefs.qtyPresets.map((preset) => (
+									<Button
+										key={`qty-preset-${preset}`}
+										type="button"
+										variant="outline"
+										size="sm"
+										className="min-h-9 flex-1"
+										onClick={() => applyQtyPreset(preset)}
+									>
+										{preset}
+									</Button>
+								))}
+								<Button type="button" variant="outline" size="sm" className="min-h-9" onClick={() => adjustQty(100)}>
+									+100
+								</Button>
+								<Button type="button" variant="outline" size="sm" className="min-h-9" onClick={() => adjustQty(-100)}>
+									-100
+								</Button>
+							</div>
 						</div>
-						<div className="grid grid-cols-2 gap-2">
-							<Button disabled={placing} onClick={() => debouncedPlaceOrder("buy")}>
-								{positionMode === "short" ? "买入回补" : "买入"} (B)
+						<div className="grid grid-cols-2 gap-2 sm:hidden">
+							<Button disabled={placing || !hasResolvedSymbol} className="min-h-11" onClick={() => debouncedPlaceOrder("buy")}>
+								{positionMode === "short" ? "买入回补" : "买入"}
 							</Button>
-							<Button disabled={placing} variant="destructive" onClick={() => debouncedPlaceOrder("sell")}>
-								{positionMode === "short" ? "卖出开空" : "卖出"} (S)
+							<Button disabled={placing || !hasResolvedSymbol} variant="destructive" className="min-h-11" onClick={() => debouncedPlaceOrder("sell")}>
+								{positionMode === "short" ? "卖出开空" : "卖出"}
+							</Button>
+							<Button
+								variant="outline"
+								disabled={placing || !selectedPosition}
+								className="col-span-2 min-h-11"
+								onClick={() => void forceClosePosition()}
+							>
+								平仓
 							</Button>
 						</div>
-						<Button variant="outline" disabled={placing || !selectedPosition} onClick={() => void forceClosePosition()}>
-							平仓当前持仓 (C)
+						<div className="hidden grid-cols-2 gap-2 sm:grid">
+							<Button disabled={placing || !hasResolvedSymbol} onClick={() => debouncedPlaceOrder("buy")}>
+								{positionMode === "short" ? "买入回补" : "买入"} ({quickOrderPrefs.hotkeys.buy.toUpperCase()})
+							</Button>
+							<Button disabled={placing || !hasResolvedSymbol} variant="destructive" onClick={() => debouncedPlaceOrder("sell")}>
+								{positionMode === "short" ? "卖出开空" : "卖出"} ({quickOrderPrefs.hotkeys.sell.toUpperCase()})
+							</Button>
+						</div>
+						<Button
+							variant="outline"
+							disabled={placing || !selectedPosition}
+							className="hidden sm:inline-flex"
+							onClick={() => void forceClosePosition()}
+						>
+							平仓当前持仓 ({quickOrderPrefs.hotkeys.close.toUpperCase()})
 						</Button>
+						</div>
 						<div id="panel-account" className="rounded-md border p-2 text-xs">
 							<p>账户：{account?.account_name ?? "—"}</p>
 							<p>可用：{account ? fmtMoney(account.available_balance) : "—"}</p>
@@ -1401,15 +1419,45 @@ export function TradeV2PageClient() {
 				</Card>
 			</div>
 
-			<Tabs defaultValue="orders" className="w-full">
-				<TabsList className="grid w-full grid-cols-5">
-					<TabsTrigger value="orders">委托</TabsTrigger>
-					<TabsTrigger value="positions">仓位</TabsTrigger>
-					<TabsTrigger value="trades">成交</TabsTrigger>
-					<TabsTrigger value="resources">资源</TabsTrigger>
-					<TabsTrigger value="settings">设置</TabsTrigger>
-				</TabsList>
-				<TabsContent id="panel-orders" value="orders" className="rounded-md border p-3">
+			<Card id="panel-trade-settings">
+				<CardHeader className="pb-3">
+					<CardTitle className="text-base">交易设置</CardTitle>
+					<CardDescription>账户类型与行情源</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-3 sm:grid-cols-2">
+					<div className="space-y-1.5">
+						<Label htmlFor="accountSwitch">账户类型</Label>
+						<select
+							id="accountSwitch"
+							className="bg-background w-full rounded-md border px-3 py-2 text-sm"
+							value={accountType}
+							onChange={(e) => setAccountType(e.target.value === "credit" ? "credit" : "normal")}
+						>
+							<option value="normal">普通账户</option>
+							<option value="credit">信用账户</option>
+						</select>
+					</div>
+					<div className="space-y-1.5">
+						<Label htmlFor="sourceMode">行情源</Label>
+						<select
+							id="sourceMode"
+							className="bg-background w-full rounded-md border px-3 py-2 text-sm"
+							value={sourceMode}
+							onChange={(e) => setSourceMode(e.target.value === "fast" ? "fast" : "normal")}
+						>
+							<option value="normal">普通（5秒）</option>
+							<option value="fast">极速（5秒）</option>
+						</select>
+					</div>
+				</CardContent>
+			</Card>
+
+			<div className="grid gap-4 xl:grid-cols-3">
+				<Card id="panel-orders">
+					<CardHeader className="pb-2">
+						<CardTitle className="text-base">委托</CardTitle>
+					</CardHeader>
+					<CardContent className="overflow-x-auto p-3 pt-0">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -1474,8 +1522,13 @@ export function TradeV2PageClient() {
 							)}
 						</TableBody>
 					</Table>
-				</TabsContent>
-				<TabsContent id="panel-positions" value="positions" className="rounded-md border p-3">
+					</CardContent>
+				</Card>
+				<Card id="panel-positions">
+					<CardHeader className="pb-2">
+						<CardTitle className="text-base">仓位</CardTitle>
+					</CardHeader>
+					<CardContent className="overflow-x-auto p-3 pt-0">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -1500,7 +1553,7 @@ export function TradeV2PageClient() {
 										className={p.symbol === selectedPosition?.symbol ? "bg-muted/40" : ""}
 										onDoubleClick={() => {
 											setResolvedSymbol(p.symbol);
-											setSymbolInput(p.symbol);
+											setSymbolInput(stripExchangeSuffix(p.symbol));
 											setQty(String(p.available_qty));
 											void forceClosePositionByRow(p);
 										}}
@@ -1516,8 +1569,13 @@ export function TradeV2PageClient() {
 							)}
 						</TableBody>
 					</Table>
-				</TabsContent>
-				<TabsContent value="trades" className="rounded-md border p-3">
+					</CardContent>
+				</Card>
+				<Card id="panel-trades">
+					<CardHeader className="pb-2">
+						<CardTitle className="text-base">成交</CardTitle>
+					</CardHeader>
+					<CardContent className="overflow-x-auto p-3 pt-0">
 					<Table>
 						<TableHeader>
 							<TableRow>
@@ -1548,7 +1606,15 @@ export function TradeV2PageClient() {
 							)}
 						</TableBody>
 					</Table>
-				</TabsContent>
+					</CardContent>
+				</Card>
+			</div>
+
+			<Tabs defaultValue="resources" className="w-full">
+				<TabsList className="grid w-full grid-cols-2">
+					<TabsTrigger value="resources">资源</TabsTrigger>
+					<TabsTrigger value="settings">设置</TabsTrigger>
+				</TabsList>
 				<TabsContent id="panel-resources" value="resources" className="space-y-3 rounded-md border p-3">
 					<div className="flex flex-wrap items-center gap-2">
 						<Button variant="outline" onClick={() => void applyResource("long")}>
@@ -1673,6 +1739,57 @@ export function TradeV2PageClient() {
 							</select>
 						</div>
 					</div>
+					<div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+						{(["buy", "sell", "close", "qtyUp", "qtyDown", "qtyReset"] as const).map((key) => (
+							<div key={key} className="space-y-1.5">
+								<Label htmlFor={`hotkey-${key}`}>
+									{key === "buy"
+										? "买入快捷键"
+										: key === "sell"
+											? "卖出快捷键"
+											: key === "close"
+												? "平仓快捷键"
+												: key === "qtyUp"
+													? "股数 +100"
+													: key === "qtyDown"
+														? "股数 -100"
+														: "股数重置"}
+								</Label>
+								<Input
+									id={`hotkey-${key}`}
+									maxLength={1}
+									value={quickOrderPrefs.hotkeys[key]}
+									onChange={(e) =>
+										setQuickOrderPrefs((prev) => ({
+											...prev,
+											hotkeys: {
+												...prev.hotkeys,
+												[key]: e.target.value.slice(0, 1),
+											},
+										}))
+									}
+								/>
+							</div>
+						))}
+					</div>
+					<div className="space-y-1.5">
+						<Label htmlFor="settingQtyPresets">移动端股数预设（逗号分隔）</Label>
+						<Input
+							id="settingQtyPresets"
+							value={quickOrderPrefs.qtyPresets.join(",")}
+							onChange={(e) => {
+								const presets = e.target.value
+									.split(",")
+									.map((v) => Math.trunc(Number(v.trim())))
+									.filter((n) => Number.isInteger(n) && n > 0);
+								setQuickOrderPrefs((prev) => ({
+									...prev,
+									qtyPresets: presets.length > 0 ? presets.slice(0, 6) : prev.qtyPresets,
+								}));
+							}}
+							placeholder="100,500,1000"
+						/>
+					</div>
 					<label className="flex items-center gap-2 text-sm">
 						<input
 							type="checkbox"
@@ -1686,6 +1803,119 @@ export function TradeV2PageClient() {
 					</div>
 				</TabsContent>
 			</Tabs>
+
+			<Card id="panel-monitor">
+				<CardHeader className="pb-3">
+					<CardTitle className="text-base">监控与条件单总览</CardTitle>
+					<CardDescription>主面板实时查看待触发/已触发与活跃状态</CardDescription>
+				</CardHeader>
+				<CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+					<div className="rounded-md border p-3">
+						<p className="text-muted-foreground text-xs">监控待触发</p>
+						<p className="mt-1 text-xl font-semibold">{watchPendingCount}</p>
+					</div>
+					<div className="rounded-md border p-3">
+						<p className="text-muted-foreground text-xs">监控已触发</p>
+						<p className="mt-1 text-xl font-semibold">{watchTriggeredCount}</p>
+					</div>
+					<div className="rounded-md border p-3">
+						<p className="text-muted-foreground text-xs">条件单活跃</p>
+						<p className="mt-1 text-xl font-semibold">{conditionActiveCount}</p>
+					</div>
+					<div className="rounded-md border p-3">
+						<p className="text-muted-foreground text-xs">条件单已触发</p>
+						<p className="mt-1 text-xl font-semibold">{conditionTriggeredCount}</p>
+					</div>
+				</CardContent>
+			</Card>
+			<Card>
+				<CardHeader className="pb-3">
+					<div className="flex items-center justify-between gap-2">
+						<div>
+							<CardTitle className="text-base">最近触发事件流</CardTitle>
+							<CardDescription>展示监控与条件单最近触发记录</CardDescription>
+						</div>
+						<Button
+							variant={failureOnlyEvents ? "default" : "outline"}
+							size="sm"
+							onClick={() => toggleFailureEventView()}
+						>
+							{failureOnlyEvents ? "显示全部事件" : "仅看失败事件"}
+						</Button>
+					</div>
+				</CardHeader>
+				<CardContent className="space-y-2">
+					<div className="flex items-center gap-2 text-xs">
+						<span className="rounded-md border border-cyan-500/35 bg-cyan-500/10 px-2 py-1 text-cyan-200">
+							当前模式：{failureOnlyEvents ? "失败事件" : "全部事件"}
+						</span>
+						{failureOnlyEvents ? (
+							<span className="text-muted-foreground">URL 已包含 `eventView=failed`，可直接分享复现</span>
+						) : null}
+					</div>
+					{displayTriggerEvents.length === 0 ? (
+						<p className="text-sm text-muted-foreground">
+							{failureOnlyEvents ? "暂无失败事件" : "暂无触发事件"}
+						</p>
+					) : (
+						displayTriggerEvents.map((event) => (
+							<div key={event.id} className="flex items-center justify-between rounded-md border p-2 text-xs">
+								<div className="min-w-0">
+									<p className="font-medium">
+										[
+										{event.kind === "watchlist"
+											? "监控"
+											: event.kind === "condition"
+											? "条件单"
+											: "失败"}
+										]{" "}
+										{event.symbol} - {event.title}
+									</p>
+									<p className="truncate text-muted-foreground">{event.detail}</p>
+									<p className="truncate text-muted-foreground">触发链路：{event.sourceTag}</p>
+								</div>
+								<div className="pl-3 text-right">
+									<p className="text-muted-foreground">{hkTime(event.time)}</p>
+									<Link href={event.href} className="text-cyan-300 underline underline-offset-4">
+										查看详情
+									</Link>
+									{event.kind === "risk_failure" && event.altHref ? (
+										<div>
+											<Link href={event.altHref} className="text-cyan-300 underline underline-offset-4">
+												查看监控侧
+											</Link>
+										</div>
+									) : null}
+									{event.kind === "risk_failure" ? (
+										<div>
+											<p className="mt-1 text-[11px] text-amber-300">
+												风险优先级：{formatFailurePriorityTagByScore(resolveEventFailureScore(event))}（score=
+												{resolveEventFailureScore(event)}）
+											</p>
+											<details className="mt-1 max-w-[28rem] rounded border border-border/60 px-1 py-0.5 text-left">
+												<summary className="cursor-pointer text-[11px] text-muted-foreground">
+													查看诊断串
+												</summary>
+												<p className="mt-1 break-all text-[11px] text-muted-foreground">
+													{formatRiskDiagnostic(event)}
+												</p>
+											</details>
+											<Button
+												variant="outline"
+												size="sm"
+												className="mt-1 h-6 px-2 text-[11px]"
+												onClick={() => void copyFailureDetail(event)}
+											>
+												复制诊断串
+											</Button>
+										</div>
+									) : null}
+								</div>
+							</div>
+						))
+					)}
+				</CardContent>
+			</Card>
 			<FeedbackButton defaultContext="trade-v2" />
 		</div>
 	);
