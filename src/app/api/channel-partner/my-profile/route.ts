@@ -20,7 +20,20 @@ export async function GET() {
     .maybeSingle();
 
   if (!partner) {
-    return NextResponse.json({ success: true, isPartner: false });
+    return NextResponse.json({ success: true, isPartner: false, isPendingReview: false });
+  }
+
+  if (partner.status === "pending_review") {
+    return NextResponse.json({
+      success: true,
+      isPartner: false,
+      isPendingReview: true,
+      reviewInfo: {
+        platform: partner.platform,
+        socialUrl: (partner.payout_info as Record<string, unknown> | null)?.social_url ?? "",
+        submittedAt: partner.created_at,
+      },
+    });
   }
 
   // 获取该 KOL 的推广码

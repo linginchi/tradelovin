@@ -36,23 +36,20 @@ type ReferralRow = {
 };
 
 function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
-  const [mode, setMode] = useState<"invite" | "referral">("invite");
+  const [mode, setMode] = useState<"invite" | "self">("invite");
   const [code, setCode] = useState("");
-  const [refLink, setRefLink] = useState("");
+  const [socialUrl, setSocialUrl] = useState("");
+  const [platform, setPlatform] = useState("xiaohongshu");
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  async function handleSubmit() {
+  async function handleInviteSubmit() {
     setError("");
     setSubmitting(true);
     try {
-      const body: Record<string, unknown> =
-        mode === "invite"
-          ? { inviteCode: code }
-          : { referralLink: refLink };
+      const body: Record<string, unknown> = { inviteCode: code };
       if (name.trim()) body.channelName = name.trim();
-
       const res = await fetch("/api/channel-partner/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,6 +60,30 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
         onSuccess();
       } else {
         setError(json.error ?? "申请失败");
+      }
+    } catch {
+      setError("请求失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleSelfSubmit() {
+    setError("");
+    setSubmitting(true);
+    try {
+      const body: Record<string, unknown> = { socialUrl, platform };
+      if (name.trim()) body.channelName = name.trim();
+      const res = await fetch("/api/channel-partner/apply-self", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json: { success?: boolean; error?: string; message?: string } = await res.json();
+      if (json.success) {
+        onSuccess();
+      } else {
+        setError(json.error ?? "提交失败");
       }
     } catch {
       setError("请求失败，请稍后重试");
@@ -92,13 +113,13 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
         <button
           type="button"
           className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-            mode === "referral"
+            mode === "self"
               ? "bg-cyan-500/20 text-cyan-300"
               : "text-muted-foreground hover:text-foreground"
           }`}
-          onClick={() => setMode("referral")}
+          onClick={() => setMode("self")}
         >
-          申请邀请码
+          自荐申请
         </button>
       </div>
 
@@ -117,21 +138,42 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
             />
           </div>
         ) : (
-          <div>
-            <label className="mb-1.5 block text-sm text-muted-foreground">
-              推荐码或推荐链接
-            </label>
-            <input
-              type="text"
-              value={refLink}
-              onChange={(e) => setRefLink(e.target.value)}
-              placeholder="粘贴 KOL 推荐链接或推荐码"
-              className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              请粘贴朋友分享的推广链接或邀请码
-            </p>
-          </div>
+          <>
+            <div>
+              <label className="mb-1.5 block text-sm text-muted-foreground">
+                平台类型
+              </label>
+              <select
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+              >
+                <option value="xiaohongshu">小红书</option>
+                <option value="douyin">抖音</option>
+                <option value="weibo">微博</option>
+                <option value="bilibili">B站</option>
+                <option value="youtube">YouTube</option>
+                <option value="instagram">Instagram</option>
+                <option value="twitter">Twitter/X</option>
+                <option value="other">其他</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-muted-foreground">
+                社交平台链接（必填）
+              </label>
+              <input
+                type="text"
+                value={socialUrl}
+                onChange={(e) => setSocialUrl(e.target.value)}
+                placeholder="粘贴你的社交主页链接"
+                className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                填写你的社交平台主页链接，管理员将据此审核
+              </p>
+            </div>
+          </>
         )}
 
         <div>
@@ -151,9 +193,11 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
           className="w-full"
           disabled={
             submitting ||
-            (mode === "invite" ? !code.trim() : !refLink.trim())
+            (mode === "invite" ? !code.trim() : !socialUrl.trim())
           }
-          onClick={() => void handleSubmit()}
+          onClick={() =>
+            mode === "invite" ? void handleInviteSubmit() : void handleSelfSubmit()
+          }
         >
           {submitting ? (
             <>
@@ -174,10 +218,53 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
+function PendingReviewPanel({ reviewInfo }: { reviewInfo: { platform?: string; socialUrl?: string; submittedAt?: string } }) {
+  const platformNames: Record<string, string> = {
+    xiaohongshu: "小红书",
+    douyin: "抖音",
+    weibo: "微博",
+    bilibili: "B站",
+    youtube: "YouTube",
+    instagram: "Instagram",
+    twitter: "Twitter/X",
+    other: "其他",
+  };
+  return (
+    <div className="mx-auto max-w-md space-y-6 text-center">
+      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-amber-500/20">
+        <Loader2 className="size-8 animate-spin text-amber-400" />
+      </div>
+      <h1 className="text-xl font-semibold">审核中</h1>
+      <p className="text-sm text-muted-foreground">
+        您的KOL合作申请已提交，管理员正在审核您的社交平台信息，请耐心等待。
+      </p>
+      {reviewInfo.platform && (
+        <div className="rounded-xl border border-border/70 bg-card/35 p-4 text-left text-sm">
+          <p className="text-muted-foreground">
+            平台：{platformNames[reviewInfo.platform] ?? reviewInfo.platform}
+          </p>
+          {reviewInfo.socialUrl && (
+            <p className="mt-1 truncate text-muted-foreground">
+              链接：{reviewInfo.socialUrl}
+            </p>
+          )}
+          {reviewInfo.submittedAt && (
+            <p className="mt-1 text-muted-foreground">
+              提交时间：{new Date(reviewInfo.submittedAt).toLocaleDateString()}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function PartnerDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isPartner, setIsPartner] = useState(false);
+  const [isPendingReview, setIsPendingReview] = useState(false);
+  const [reviewInfo, setReviewInfo] = useState<{ platform?: string; socialUrl?: string; submittedAt?: string }>({});
   const [data, setData] = useState<PartnerData | null>(null);
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [inviteLink, setInviteLink] = useState("");
@@ -194,12 +281,22 @@ export function PartnerDashboardClient() {
       const profileJson: {
         success?: boolean;
         isPartner?: boolean;
+        isPendingReview?: boolean;
+        reviewInfo?: { platform?: string; socialUrl?: string; submittedAt?: string };
         data?: PartnerData & { referralCode?: string };
         error?: string;
       } = await profileRes.json();
 
+      if (profileJson.isPendingReview) {
+        setIsPartner(false);
+        setIsPendingReview(true);
+        setReviewInfo(profileJson.reviewInfo ?? {});
+        return;
+      }
+
       if (!profileJson.isPartner) {
         setIsPartner(false);
+        setIsPendingReview(false);
         return;
       }
 
@@ -253,6 +350,14 @@ export function PartnerDashboardClient() {
         <div className="flex items-center gap-2 text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> 加载中...
         </div>
+      </main>
+    );
+  }
+
+  if (isPendingReview) {
+    return (
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        <PendingReviewPanel reviewInfo={reviewInfo} />
       </main>
     );
   }

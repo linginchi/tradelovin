@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 
 const generateSchema = z.object({
   count: z.number().int().min(1).max(20).default(1),
+  targetUserId: z.string().uuid().optional(),
 });
 
 function randomInviteCode(): string {
@@ -67,6 +68,8 @@ export async function POST(request: Request) {
       code,
       created_by: gated.session.email,
       status: "active",
+      target_user_id: parsed.data.targetUserId ?? null,
+      notes: parsed.data.targetUserId ? `定向邀请: ${parsed.data.targetUserId}` : null,
     })),
   );
 

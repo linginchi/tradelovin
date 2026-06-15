@@ -80,6 +80,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "邀请码无效或已使用" }, { status: 400 });
     }
 
+    // 如果邀请码指定了 target_user_id，校验当前用户是否匹配
+    if (inviteRow.target_user_id && inviteRow.target_user_id !== auth.userId) {
+      return NextResponse.json({ success: false, error: "该邀请码与您的账号不匹配" }, { status: 403 });
+    }
+
     // 标记邀请码已使用
     await srv
       .from("kol_invite_codes")

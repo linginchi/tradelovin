@@ -17,6 +17,7 @@ type PartnerRow = {
   studentCount: number;
   monthEstimate: number;
   created_at: string;
+  payout_info?: Record<string, unknown> | null;
 };
 
 function InviteCodeDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -95,8 +96,10 @@ export function AdminChannelPartnersPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rows, setRows] = useState<PartnerRow[]>([]);
+  const [pendingRows, setPendingRows] = useState<Partial<PartnerRow>[]>([]);
   const [search, setSearch] = useState("");
   const [showInviteDialog, setShowInviteDialog] = useState(false);
+  const [tab, setTab] = useState<"active" | "pending">("active");
 
   async function load() {
     setLoading(true);
@@ -112,9 +115,35 @@ export function AdminChannelPartnersPanel() {
     }
   }
 
+  async function loadPending() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/channel-partners/pending");
+      const json: { success?: boolean; error?: string; data?: { rows: Partial<PartnerRow>[] } } = await res.json();
+      if (json.success && json.data) setPendingRows(json.data.rows);
+      else setError(json.error ?? "加载失败");
+    } catch {
+      setError("加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function approveSelf(id: string) {
+    const res = await fetch(`/api/admin/channel-partners/${id}/approve`, { method: "POST" });
+    const json: { success?: boolean } = await res.json();
+    if (json.success) void loadPending();
+  }
+
+  async function rejectSelf(id: string) {
+    const res = await fetch(`/api/admin/channel-partners/${id}/reject`, { method: "POST" });
+    const json: { success?: boolean } = await res.json();
+    if (json.success) void loadPending();
+  }
+
   useEffect(() => {
-    void load();
-  }, []);
+    void (tab === "active" ? load() : loadPending());
+  }, [tab]);
 
   const filtered = rows.filter((r) =>
     r.channel_name.toLowerCase().includes(search.toLowerCase()),
@@ -129,6 +158,25 @@ export function AdminChannelPartnersPanel() {
         </Button>
       </div>
 
+      <div className="flex gap-2 border-b border-border/60 pb-2">
+        <button
+          type="button"
+          className={`text-sm font-medium ${tab === "active" ? "text-cyan-300" : "text-muted-foreground"}`}
+          onClick={() => setTab("active")}
+        >
+          已开通 KOL
+        </button>
+        <button
+          type="button"
+          className={`text-sm font-medium ${tab === "pending" ? "text-cyan-300" : "text-muted-foreground"}`}
+          onClick={() => setTab("pending")}
+        >
+          待审核 ({pendingRows.length})
+        </button>
+      </div>
+
+      {tab === "active" && (
+      <>
       <div className="relative">
         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -206,6 +254,73 @@ export function AdminChannelPartnersPanel() {
           </table>
         </div>
       )}
+      </>
+      )}
+
+      {tab === "pending" &&
+        (loading ? (
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> 加载中...
+          </div>
+        ) : error ? (
+          <p className="text-amber-300">{error}</p>
+        ) : pendingRows.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">暂无待审核申请</p>
+        ) : (
+          <div className="rounded-xl border border-border/70">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 text-left text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">名称</th>
+                  <th className="px-4 py-3 font-medium">平台</th>
+                  <th className="px-4 py-3 font-medium">社交链接</th>
+                  <th className="px-4 py-3 font-medium">申请时间</th>
+                  <th className="px-4 py-3 font-medium">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingRows.map((r) => {
+                  const payoutInfo = r.payout_info as Record<string, unknown> | null;
+                  const socialUrl = String(payoutInfo?.social_url ?? "—");
+                  return (
+                    <tr key={r.id} className="border-b border-border/40">
+                      <td className="px-4 py-3 font-medium">{String(r.channel_name ?? "")}</td>
+                      <td className="px-4 py-3">{String(r.platform ?? "—")}</td>
+                      <td className="px-4 py-3">
+                        {socialUrl !== "—" ? (
+                          <a
+                            href={socialUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-400 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            查看主页
+                          </a>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex gap-2">
+                          <Button size="sm" onClick={() => r.id && void approveSelf(r.id)}>
+                            通过
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => r.id && void rejectSelf(r.id)}>
+                            驳回
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ))}
     </div>
   );
 }
