@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS public.kol_invite_codes (
 
 ALTER TABLE public.kol_invite_codes ENABLE ROW LEVEL SECURITY;
 
--- 管理员可查看全部邀请码
+-- 管理员可查看全部邀请码（幂等：先删后建）
+DROP POLICY IF EXISTS kol_invite_codes_admin_select ON public.kol_invite_codes;
 CREATE POLICY kol_invite_codes_admin_select ON public.kol_invite_codes
   FOR SELECT TO authenticated
   USING (EXISTS (
