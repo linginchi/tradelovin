@@ -54,21 +54,24 @@ export function PartnerDashboardClient() {
         fetch("/api/channel-partner/my-commissions", { credentials: "include" }),
       ]);
 
-      const profileJson = await profileRes.json();
+      const profileJson: { success?: boolean; data?: PartnerData; error?: string } =
+        await profileRes.json();
       if (!profileRes.ok || !profileJson.success) {
         setError(profileJson.error ?? "加载失败");
         return;
       }
-      setData(profileJson.data);
+      setData(profileJson.data!);
       setInviteLink(
-        `${window.location.origin}/register?ref=${profileJson.data.partner.id}`,
+        `${window.location.origin}/register?ref=${profileJson.data!.partner.id}`,
       );
 
-      const referralJson = await referralRes.json();
-      if (referralJson.success) setReferrals(referralJson.data.rows);
+      const referralJson: { success?: boolean; data?: { rows: ReferralRow[] } } =
+        await referralRes.json();
+      if (referralJson.success) setReferrals(referralJson.data?.rows ?? []);
 
-      const commissionJson = await commissionRes.json();
-      if (commissionJson.success) setPayouts(commissionJson.data.payouts ?? []);
+      const commissionJson: { success?: boolean; data?: { payouts: Array<Record<string, unknown>> } } =
+        await commissionRes.json();
+      if (commissionJson.success) setPayouts(commissionJson.data?.payouts ?? []);
     } catch {
       setError("加载失败");
     } finally {

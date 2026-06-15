@@ -39,8 +39,15 @@ export function AdminCommissionPayoutsPanel() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/commission-payouts");
-      const json = await res.json();
-      if (json.success) {
+      const json: {
+        success?: boolean;
+        error?: string;
+        data?: {
+          rows: PayoutRow[];
+          monthStats: MonthStat[];
+        };
+      } = await res.json();
+      if (json.success && json.data) {
         setRows(json.data.rows);
         setMonthStats(json.data.monthStats);
         if (json.data.monthStats.length > 0) {
@@ -63,7 +70,7 @@ export function AdminCommissionPayoutsPanel() {
       `/api/admin/commission-payouts/${payoutId}/approve`,
       { method: "POST" },
     );
-    const json = await res.json();
+    const json: { success?: boolean } = await res.json();
     if (json.success) void load();
   }
 
@@ -71,7 +78,7 @@ export function AdminCommissionPayoutsPanel() {
     const res = await fetch(`/api/admin/commission-payouts/${payoutId}/pay`, {
       method: "POST",
     });
-    const json = await res.json();
+    const json: { success?: boolean } = await res.json();
     if (json.success) void load();
   }
 

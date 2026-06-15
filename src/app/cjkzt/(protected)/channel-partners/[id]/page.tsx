@@ -21,12 +21,15 @@ export default function AdminChannelPartnerDetailPage() {
         fetch(`/api/admin/channel-partners/${id}/referrals`),
         fetch(`/api/admin/channel-partners/${id}/commissions`),
       ]);
-      const detailJson = await detailRes.json();
-      if (detailJson.success) setPartner(detailJson.data.partner);
-      const refJson = await refRes.json();
-      if (refJson.success) setReferrals(refJson.data.rows);
-      const commJson = await commRes.json();
-      if (commJson.success) setPayouts(commJson.data.payouts);
+      const detailJson: { success?: boolean; data?: { partner: Record<string, unknown> } } =
+        await detailRes.json();
+      if (detailJson.success && detailJson.data) setPartner(detailJson.data.partner);
+      const refJson: { success?: boolean; data?: { rows: Array<Record<string, unknown>> } } =
+        await refRes.json();
+      if (refJson.success && refJson.data) setReferrals(refJson.data.rows);
+      const commJson: { success?: boolean; data?: { payouts: Array<Record<string, unknown>> } } =
+        await commRes.json();
+      if (commJson.success && commJson.data) setPayouts(commJson.data.payouts);
       setLoading(false);
     }
     void load();

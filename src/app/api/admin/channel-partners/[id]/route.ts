@@ -13,7 +13,7 @@ const updateSchema = z.object({
   commissionRate: z.number().min(0).max(1).optional(),
   contactEmail: z.string().email().optional().or(z.literal("")).optional(),
   status: z.enum(["active", "paused", "terminated"]).optional(),
-  payoutInfo: z.record(z.unknown()).optional(),
+  payoutInfo: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET(

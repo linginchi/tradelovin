@@ -23,7 +23,7 @@ const bodySchema = z.object({
     "student_convert_email",
     "student_convert_xiaohongshu",
   ]),
-  variables: z.record(z.string().or(z.number())),
+  variables: z.record(z.string(), z.string().or(z.number())),
 });
 
 export async function POST(request: Request) {

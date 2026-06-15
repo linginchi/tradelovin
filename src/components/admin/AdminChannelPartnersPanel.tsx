@@ -28,8 +28,8 @@ export function AdminChannelPartnersPanel() {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/channel-partners");
-      const json = await res.json();
-      if (json.success) setRows(json.data.rows);
+      const json: { success?: boolean; error?: string; data?: { rows: PartnerRow[] } } = await res.json();
+      if (json.success && json.data) setRows(json.data.rows);
       else setError(json.error ?? "加载失败");
     } catch {
       setError("加载失败");
