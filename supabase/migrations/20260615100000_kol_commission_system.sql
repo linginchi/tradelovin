@@ -95,15 +95,15 @@ CREATE POLICY channel_partners_own_select ON public.channel_partners
 
 CREATE POLICY channel_partners_admin_select ON public.channel_partners
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid()));
+  USING (EXISTS (SELECT 1 FROM public.admins WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())));
 
 CREATE POLICY channel_partners_admin_insert ON public.channel_partners
   FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid()));
+  WITH CHECK (EXISTS (SELECT 1 FROM public.admins WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())));
 
 CREATE POLICY channel_partners_admin_update ON public.channel_partners
   FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid()));
+  USING (EXISTS (SELECT 1 FROM public.admins WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())));
 
 -- commission_records: KOL 查自己的；管理员查全部
 CREATE POLICY commission_records_own_select ON public.commission_records
@@ -112,7 +112,7 @@ CREATE POLICY commission_records_own_select ON public.commission_records
 
 CREATE POLICY commission_records_admin_select ON public.commission_records
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid()));
+  USING (EXISTS (SELECT 1 FROM public.admins WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())));
 
 -- commission_payouts: KOL 查自己的；管理员查全部
 CREATE POLICY commission_payouts_own_select ON public.commission_payouts
@@ -121,11 +121,11 @@ CREATE POLICY commission_payouts_own_select ON public.commission_payouts
 
 CREATE POLICY commission_payouts_admin_select ON public.commission_payouts
   FOR SELECT TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid()));
+  USING (EXISTS (SELECT 1 FROM public.admins WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())));
 
 CREATE POLICY commission_payouts_admin_update ON public.commission_payouts
   FOR UPDATE TO authenticated
-  USING (EXISTS (SELECT 1 FROM public.admins WHERE user_id = auth.uid()));
+  USING (EXISTS (SELECT 1 FROM public.admins WHERE email = (SELECT email FROM auth.users WHERE id = auth.uid())));
 
 -- ============================================================
 -- 6. 辅助函数：增加 channel_partners.total_earned
