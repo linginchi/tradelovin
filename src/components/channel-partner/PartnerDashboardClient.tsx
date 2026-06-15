@@ -35,43 +35,203 @@ type ReferralRow = {
   completedAt: string | null;
 };
 
+function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
+  const [mode, setMode] = useState<"invite" | "referral">("invite");
+  const [code, setCode] = useState("");
+  const [refLink, setRefLink] = useState("");
+  const [name, setName] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit() {
+    setError("");
+    setSubmitting(true);
+    try {
+      const body: Record<string, unknown> =
+        mode === "invite"
+          ? { inviteCode: code }
+          : { referralLink: refLink };
+      if (name.trim()) body.channelName = name.trim();
+
+      const res = await fetch("/api/channel-partner/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      const json: { success?: boolean; error?: string } = await res.json();
+      if (json.success) {
+        onSuccess();
+      } else {
+        setError(json.error ?? "申请失败");
+      }
+    } catch {
+      setError("请求失败，请稍后重试");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-md space-y-6">
+      <h1 className="text-center text-2xl font-semibold">
+        成为KOL/渠道合作伙伴
+      </h1>
+
+      <div className="flex rounded-xl border border-border/70 bg-card/35 p-1">
+        <button
+          type="button"
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            mode === "invite"
+              ? "bg-cyan-500/20 text-cyan-300"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => setMode("invite")}
+        >
+          我有邀请码
+        </button>
+        <button
+          type="button"
+          className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+            mode === "referral"
+              ? "bg-cyan-500/20 text-cyan-300"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          onClick={() => setMode("referral")}
+        >
+          申请邀请码
+        </button>
+      </div>
+
+      <div className="space-y-4">
+        {mode === "invite" ? (
+          <div>
+            <label className="mb-1.5 block text-sm text-muted-foreground">
+              邀请码
+            </label>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="请输入邀请码"
+              className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+            />
+          </div>
+        ) : (
+          <div>
+            <label className="mb-1.5 block text-sm text-muted-foreground">
+              推荐码或推荐链接
+            </label>
+            <input
+              type="text"
+              value={refLink}
+              onChange={(e) => setRefLink(e.target.value)}
+              placeholder="粘贴 KOL 推荐链接或推荐码"
+              className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              请粘贴朋友分享的推广链接或邀请码
+            </p>
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1.5 block text-sm text-muted-foreground">
+            渠道名称（选填）
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="个人或渠道名称"
+            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+          />
+        </div>
+
+        <Button
+          className="w-full"
+          disabled={
+            submitting ||
+            (mode === "invite" ? !code.trim() : !refLink.trim())
+          }
+          onClick={() => void handleSubmit()}
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" /> 提交中...
+            </>
+          ) : (
+            "提交申请"
+          )}
+        </Button>
+
+        {error && (
+          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
+            {error}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function PartnerDashboardClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isPartner, setIsPartner] = useState(false);
   const [data, setData] = useState<PartnerData | null>(null);
   const [referrals, setReferrals] = useState<ReferralRow[]>([]);
   const [inviteLink, setInviteLink] = useState("");
   const [tab, setTab] = useState<"referrals" | "payouts">("referrals");
   const [payouts, setPayouts] = useState<Array<Record<string, unknown>>>([]);
 
-  async function loadAll() {
+  async function loadProfile() {
     setLoading(true);
     setError("");
     try {
-      const [profileRes, referralRes, commissionRes] = await Promise.all([
-        fetch("/api/channel-partner/my-profile", { credentials: "include" }),
-        fetch("/api/channel-partner/my-referrals", { credentials: "include" }),
-        fetch("/api/channel-partner/my-commissions", { credentials: "include" }),
-      ]);
+      const profileRes = await fetch("/api/channel-partner/my-profile", {
+        credentials: "include",
+      });
+      const profileJson: {
+        success?: boolean;
+        isPartner?: boolean;
+        data?: PartnerData & { referralCode?: string };
+        error?: string;
+      } = await profileRes.json();
 
-      const profileJson: { success?: boolean; data?: PartnerData; error?: string } =
-        await profileRes.json();
-      if (!profileRes.ok || !profileJson.success) {
-        setError(profileJson.error ?? "加载失败");
+      if (!profileJson.isPartner) {
+        setIsPartner(false);
         return;
       }
+
+      setIsPartner(true);
       setData(profileJson.data!);
-      setInviteLink(
-        `${window.location.origin}/register?ref=${profileJson.data!.partner.id}`,
+      if (profileJson.data?.referralCode) {
+        setInviteLink(
+          `${window.location.origin}/register?ref=${profileJson.data.referralCode}`,
+        );
+      }
+
+      const referralRes = await fetch(
+        "/api/channel-partner/my-referrals",
+        { credentials: "include" },
       );
 
-      const referralJson: { success?: boolean; data?: { rows: ReferralRow[] } } =
-        await referralRes.json();
-      if (referralJson.success) setReferrals(referralJson.data?.rows ?? []);
+      const referralJson: {
+        success?: boolean;
+        data?: { rows: ReferralRow[] };
+      } = await referralRes.json();
+      if (referralJson.success)
+        setReferrals(referralJson.data?.rows ?? []);
 
-      const commissionJson: { success?: boolean; data?: { payouts: Array<Record<string, unknown>> } } =
-        await commissionRes.json();
-      if (commissionJson.success) setPayouts(commissionJson.data?.payouts ?? []);
+      const commissionRes = await fetch("/api/channel-partner/my-commissions", {
+        credentials: "include",
+      });
+      const commissionJson: {
+        success?: boolean;
+        data?: { payouts: Array<Record<string, unknown>> };
+      } = await commissionRes.json();
+      if (commissionJson.success)
+        setPayouts(commissionJson.data?.payouts ?? []);
     } catch {
       setError("加载失败");
     } finally {
@@ -80,7 +240,7 @@ export function PartnerDashboardClient() {
   }
 
   useEffect(() => {
-    void loadAll();
+    void loadProfile();
   }, []);
 
   async function copyLink() {
@@ -97,7 +257,15 @@ export function PartnerDashboardClient() {
     );
   }
 
-  if (error || !data) {
+  if (!isPartner) {
+    return (
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        <ApplyPanel onSuccess={() => void loadProfile()} />
+      </main>
+    );
+  }
+
+  if (!data) {
     return (
       <main className="mx-auto max-w-5xl px-4 py-8">
         <p className="text-amber-300">{error ?? "数据加载失败"}</p>
@@ -107,7 +275,6 @@ export function PartnerDashboardClient() {
 
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
-      {/* 顶部：KOL 信息 */}
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
         <h1 className="text-2xl font-semibold">
           {data.partner.channelName} 推广看板
@@ -119,7 +286,6 @@ export function PartnerDashboardClient() {
         </p>
       </section>
 
-      {/* 推广链接 */}
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Share2 className="size-4" /> 我的推广链接
@@ -134,7 +300,6 @@ export function PartnerDashboardClient() {
         </div>
       </section>
 
-      {/* 数据概览 */}
       <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
           {
@@ -170,7 +335,6 @@ export function PartnerDashboardClient() {
         ))}
       </section>
 
-      {/* 引入学员 / 结算记录 Tabs */}
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
         <div className="flex gap-4 border-b border-border/60 pb-3">
           <button

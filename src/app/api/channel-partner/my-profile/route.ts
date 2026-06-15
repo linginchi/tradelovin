@@ -20,8 +20,20 @@ export async function GET() {
     .maybeSingle();
 
   if (!partner) {
-    return NextResponse.json({ success: false, error: "您不是渠道合作伙伴" }, { status: 403 });
+    return NextResponse.json({ success: true, isPartner: false });
   }
+
+  // 获取该 KOL 的推广码
+  let referralCode = "";
+  const { data: refRow } = await srv
+    .from("referrals")
+    .select("code")
+    .eq("referrer_id", auth.userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (refRow?.code) referralCode = String(refRow.code);
 
   // 本月预估佣金（pending + locked 且未入月结的记录）
   const { data: pendingCommissions } = await srv
@@ -47,6 +59,7 @@ export async function GET() {
 
   return NextResponse.json({
     success: true,
+    isPartner: true,
     data: {
       partner: {
         id: partner.id,
@@ -58,6 +71,7 @@ export async function GET() {
         payoutInfo: partner.payout_info,
       },
       stats,
+      referralCode,
     },
   });
 }

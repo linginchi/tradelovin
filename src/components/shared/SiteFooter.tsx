@@ -29,6 +29,7 @@ export function SiteFooter() {
 				{ label: tNav("support") },
 				{ label: tNav("community") },
 				{ label: tNav("independentTrader") },
+				{ label: tNav("kolPartner"), href: "/partner-dashboard" },
 			],
 		},
 		{

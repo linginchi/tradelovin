@@ -25,7 +25,7 @@
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用戶",
-		"partnerDashboard": "推廣看板"
+		"kolPartner": "KOL/渠道合作夥伴"
 	},
 	"LanguageSwitcher": {
 		"label": "語言",

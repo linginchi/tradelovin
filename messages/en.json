@@ -25,7 +25,7 @@
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
 		"userFallback": "User",
-		"partnerDashboard": "Referral Dashboard"
+		"kolPartner": "KOL/Channel Partner"
 	},
 	"LanguageSwitcher": {
 		"label": "Language",
