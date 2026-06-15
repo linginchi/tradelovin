@@ -734,6 +734,8 @@
 		"navCourseTeaser": "预告卡片",
 		"navInstructors": "讲师",
 		"navFees": "收费通知",
+		"navChannelPartners": "渠道管理",
+		"navCommissionPayouts": "分佣月结",
 		"courseTeaserPageTitle": "首页预告卡片",
 		"courseTeaserPageSubtitle": "编辑首页静态预告文案；关闭「在首页显示」后访客将看到默认占位文案。",
 		"courseTeaserLabelContent": "预告正文（纯文本）",
@@ -858,5 +860,21 @@
 		"invalidCode": "验证码无效或已过期。",
 		"quickLogin": "一键登录（测试）",
 		"quickLoginHint": "需云端已开启固定管理员验证码；等价于引导超级管理员的受控登录流程。"
+	},
+	"Partner": {
+		"dashboard": "推广看板",
+		"inviteLink": "我的推广链接",
+		"copyLink": "复制链接",
+		"monthEstimate": "本月预估",
+		"totalEarned": "累计应得",
+		"totalPaid": "累计已结算",
+		"pendingAmount": "待审核",
+		"referrals": "引入学员",
+		"payouts": "结算记录",
+		"noReferrals": "暂无引入学员",
+		"noPayouts": "暂无结算记录",
+		"tuition": "学费",
+		"commission": "佣金",
+		"statusActive": "正常"
 	}
 }

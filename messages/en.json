@@ -733,6 +733,8 @@
 		"navCourseTeaser": "Home teaser",
 		"navInstructors": "Faculty",
 		"navFees": "Fees",
+		"navChannelPartners": "Channel Partners",
+		"navCommissionPayouts": "Commission Payouts",
 		"courseTeaserPageTitle": "Homepage teaser card",
 		"courseTeaserPageSubtitle": "Edit the static teaser text on the home page. If disabled, visitors see a default placeholder.",
 		"courseTeaserLabelContent": "Teaser text (plain text)",
@@ -857,5 +859,21 @@
 		"invalidCode": "Invalid or expired code.",
 		"quickLogin": "Quick login (test)",
 		"quickLoginHint": "Requires fixed admin OTP to be enabled on the server (bootstrap super-admin flow)."
+	},
+	"Partner": {
+		"dashboard": "Partner Dashboard",
+		"inviteLink": "My Referral Link",
+		"copyLink": "Copy Link",
+		"monthEstimate": "This Month",
+		"totalEarned": "Total Earned",
+		"totalPaid": "Total Paid",
+		"pendingAmount": "Pending Review",
+		"referrals": "Referred Students",
+		"payouts": "Payout History",
+		"noReferrals": "No referred students yet",
+		"noPayouts": "No payout records yet",
+		"tuition": "Tuition",
+		"commission": "Commission",
+		"statusActive": "Active"
 	}
 }

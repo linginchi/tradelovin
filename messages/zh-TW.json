@@ -733,6 +733,8 @@
 		"navCourseTeaser": "預告卡片",
 		"navInstructors": "講師",
 		"navFees": "收費通知",
+		"navChannelPartners": "渠道管理",
+		"navCommissionPayouts": "分傭月結",
 		"courseTeaserPageTitle": "首頁預告卡片",
 		"courseTeaserPageSubtitle": "編輯首頁靜態預告文案；關閉「在首頁顯示」後訪客將看到預設占位文案。",
 		"courseTeaserLabelContent": "預告正文（純文字）",
@@ -857,5 +859,21 @@
 		"invalidCode": "驗證碼無效或已過期。",
 		"quickLogin": "一鍵登錄（測試）",
 		"quickLoginHint": "需雲端已開啟固定管理員驗證碼；等同於引導超級管理員的受控登錄流程。"
+	},
+	"Partner": {
+		"dashboard": "推廣看板",
+		"inviteLink": "我的推廣鏈接",
+		"copyLink": "複製鏈接",
+		"monthEstimate": "本月預估",
+		"totalEarned": "累計應得",
+		"totalPaid": "累計已結算",
+		"pendingAmount": "待審核",
+		"referrals": "引入學員",
+		"payouts": "結算記錄",
+		"noReferrals": "暫無引入學員",
+		"noPayouts": "暫無結算記錄",
+		"tuition": "學費",
+		"commission": "佣金",
+		"statusActive": "正常"
 	}
 }
