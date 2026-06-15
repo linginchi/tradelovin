@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.commission_records (
   partner_id UUID NOT NULL REFERENCES channel_partners(id) ON DELETE CASCADE,
   referral_id UUID REFERENCES referrals(id) ON DELETE SET NULL,
   student_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  payment_transaction_id UUID REFERENCES payment_transactions(id) ON DELETE SET NULL,
+  payment_transaction_id TEXT,
   tuition_amount DECIMAL(12,2) NOT NULL,
   commission_rate DECIMAL(5,4) NOT NULL,
   commission_amount DECIMAL(12,2) NOT NULL,
