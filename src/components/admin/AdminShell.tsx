@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import {
 	BookOpen,
 	Briefcase,
+	CircleDollarSign,
 	ClipboardList,
 	Crown,
 	LayoutDashboard,
@@ -75,6 +76,8 @@ export function AdminShell({ role, email, children }: Props) {
 		{ href: `${ADMIN_BASE_PATH}/membership`, label: "会员管理", icon: Crown },
 		{ href: `${ADMIN_BASE_PATH}/points`, label: "积分管理", icon: WalletCards },
 		{ href: `${ADMIN_BASE_PATH}/referrals`, label: "推荐统计", icon: Percent },
+		{ href: `${ADMIN_BASE_PATH}/channel-partners`, label: "渠道管理", icon: UserPlus },
+		{ href: `${ADMIN_BASE_PATH}/commission-payouts`, label: "分佣月结", icon: CircleDollarSign },
 		{ href: `${ADMIN_BASE_PATH}/billing`, label: "支付记录", icon: Mail },
 	);
 
