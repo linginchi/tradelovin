@@ -81,13 +81,29 @@ export async function attachRefereeByCode(
   if (row.referrer_id === input.refereeId) return;
   if (row.referee_id && row.referee_id !== row.referrer_id) return;
 
+  // 检查 referrer 是否为 channel_partner（KOL）
+  let partnerId: string | null = null;
+  const { data: partnerRow } = await supabase
+    .from("channel_partners")
+    .select("id")
+    .eq("user_id", row.referrer_id)
+    .maybeSingle();
+  if (partnerRow?.id) {
+    partnerId = String(partnerRow.id);
+  }
+
+  const updateFields: Record<string, unknown> = {
+    referee_id: input.refereeId,
+    status: "completed_auth",
+    completed_at: new Date().toISOString(),
+  };
+  if (partnerId) {
+    updateFields.partner_id = partnerId;
+  }
+
   await supabase
     .from("referrals")
-    .update({
-      referee_id: input.refereeId,
-      status: "completed_auth",
-      completed_at: new Date().toISOString(),
-    })
+    .update(updateFields)
     .eq("id", row.id);
 
   await earnPoints(supabase, {
