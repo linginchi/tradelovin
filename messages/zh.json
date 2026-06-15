@@ -24,7 +24,8 @@
 		"comingSoon": "待建中",
 		"logout": "退出",
 		"loggingOut": "退出中...",
-		"userFallback": "用户"
+		"userFallback": "用户",
+		"partnerDashboard": "推廣看板"
 	},
 	"LanguageSwitcher": {
 		"label": "语言",

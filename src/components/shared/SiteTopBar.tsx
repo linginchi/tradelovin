@@ -132,6 +132,12 @@ export function SiteTopBar({ className }: Props) {
 								{nickname || tNav("userFallback")}
 								{levelLabel ? ` · ${levelLabel}` : ""}
 							</Link>
+							<Link
+								href="/partner-dashboard"
+								className="text-muted-foreground hover:text-foreground transition-colors"
+							>
+								{tNav("partnerDashboard")}
+							</Link>
 							<button
 								type="button"
 								onClick={() => void onLogout()}
@@ -233,6 +239,13 @@ export function SiteTopBar({ className }: Props) {
 											className="text-foreground hover:bg-white/5 rounded-lg px-3 py-2.5 text-sm transition-colors"
 										>
 											{tNav("myProfile")}
+										</Link>
+										<Link
+											href="/partner-dashboard"
+											onClick={() => setMenuOpen(false)}
+											className="text-foreground hover:bg-white/5 rounded-lg px-3 py-2.5 text-sm transition-colors"
+										>
+											{tNav("partnerDashboard")}
 										</Link>
 										<Link
 											href="/courses"

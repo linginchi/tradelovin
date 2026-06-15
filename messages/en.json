@@ -24,7 +24,8 @@
 		"comingSoon": "Coming soon",
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
-		"userFallback": "User"
+		"userFallback": "User",
+		"partnerDashboard": "Referral Dashboard"
 	},
 	"LanguageSwitcher": {
 		"label": "Language",
