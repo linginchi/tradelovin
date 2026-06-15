@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { createCommissionRecord } from "@/lib/commission/service";
 import { settleReferralOnFirstPayment } from "@/lib/referral/service";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -9,6 +10,7 @@ export const runtime = "nodejs";
 const bodySchema = z.object({
   refereeId: z.string().uuid(),
   paymentId: z.string().optional(),
+  amount: z.number().nonnegative().optional(),
 });
 
 export async function POST(request: Request) {
@@ -36,6 +38,15 @@ export async function POST(request: Request) {
     refereeId: parsed.data.refereeId,
     paymentId: parsed.data.paymentId,
   });
+
+  // 创建分佣记录（如果该学员由 KOL 引入）
+  if (parsed.data.amount && parsed.data.amount > 0) {
+    await createCommissionRecord(srv, {
+      refereeId: parsed.data.refereeId,
+      paymentTransactionId: parsed.data.paymentId ?? "",
+      tuitionAmount: parsed.data.amount,
+    });
+  }
 
   return NextResponse.json({ success: true });
 }
