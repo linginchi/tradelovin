@@ -91,7 +91,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
   return NextResponse.json({
     playUrl,
     expiresIn: 15 * 60,
-    viewCount: typeof viewCount === "number" ? viewCount : undefined,
+    viewCount: viewCount == null ? undefined : Number(viewCount),
     warning: viewErr ? "观看计数器尚未初始化，请先执行数据库迁移。" : undefined,
   });
 }
