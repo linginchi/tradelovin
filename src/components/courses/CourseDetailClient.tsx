@@ -19,6 +19,7 @@ type VideoRow = {
 	duration: number | null;
 	sort_order: number;
 	is_free_preview: boolean;
+	view_count: number | null;
 };
 
 export function CourseDetailClient({ courseId }: Props) {
@@ -105,6 +106,10 @@ export function CourseDetailClient({ courseId }: Props) {
 		setApplied(true);
 	}
 
+	function formatViewCount(count: number | null | undefined) {
+		return `${Number(count ?? 0).toLocaleString()} 次观看`;
+	}
+
 	if (course === undefined) {
 		return (
 			<div className="flex justify-center py-16">
@@ -159,7 +164,7 @@ export function CourseDetailClient({ courseId }: Props) {
 									<p className="text-sm font-medium">{video.title}</p>
 									<p className="text-muted-foreground text-xs">
 										{video.duration ? `${video.duration}s` : "时长未知"} ·{" "}
-										{video.is_free_preview ? "免费预览" : "付费视频"}
+										{video.is_free_preview ? "免费预览" : "付费视频"} · {formatViewCount(video.view_count)}
 									</p>
 								</div>
 								<Link
