@@ -41,7 +41,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const { data: freeVideos, error: freeErr } = await srv
     .from("course_videos")
-    .select("id, course_id, title, description, duration, sort_order, is_free_preview")
+    .select("id, course_id, title, description, duration, sort_order, is_free_preview, view_count")
     .eq("course_id", courseId)
     .eq("is_free_preview", true)
     .order("sort_order", { ascending: true })
@@ -79,7 +79,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const { data: allVideos, error } = await srv
     .from("course_videos")
-    .select("id, course_id, title, description, duration, sort_order, is_free_preview")
+    .select("id, course_id, title, description, duration, sort_order, is_free_preview, view_count")
     .eq("course_id", courseId)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });

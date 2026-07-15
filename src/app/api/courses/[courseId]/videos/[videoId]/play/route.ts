@@ -5,7 +5,7 @@ import { isSuperUserById } from "@/lib/auth/super-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
-import { isMissingRelationError } from "@/lib/video/db";
+import { isMissingRelationError, isMissingVideoViewCounterError } from "@/lib/video/db";
 
 export const runtime = "nodejs";
 
@@ -80,5 +80,18 @@ export async function GET(_request: Request, { params }: RouteContext) {
   if (!playUrl) {
     return NextResponse.json({ error: "播放地址生成失败" }, { status: 500 });
   }
-  return NextResponse.json({ playUrl, expiresIn: 15 * 60 });
+
+  const { data: viewCount, error: viewErr } = await srv.rpc("increment_course_video_view_count", {
+    p_video_id: videoId,
+  });
+  if (viewErr && !isMissingVideoViewCounterError(viewErr)) {
+    return NextResponse.json({ error: viewErr.message }, { status: 500 });
+  }
+
+  return NextResponse.json({
+    playUrl,
+    expiresIn: 15 * 60,
+    viewCount: typeof viewCount === "number" ? viewCount : undefined,
+    warning: viewErr ? "观看计数器尚未初始化，请先执行数据库迁移。" : undefined,
+  });
 }
