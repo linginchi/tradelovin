@@ -10,6 +10,7 @@ const postSchema = z.object({
 	mode: z.enum(["online", "offline"]),
 	capacity: z.number().int().positive().max(10000),
 	instructor_id: z.string().uuid().nullable().optional(),
+	topic_id: z.string().uuid().nullable().optional(),
 	cover_image: z.string().max(2048).nullable().optional(),
 	instructor_label: z.string().max(200).nullable().optional(),
 	start_date: z.string().max(32).nullable().optional(),
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
 		capacity: parsed.data.capacity,
 	};
 	if (parsed.data.instructor_id) insert.instructor_id = parsed.data.instructor_id;
+	if (parsed.data.topic_id !== undefined) insert.topic_id = parsed.data.topic_id;
 	if (parsed.data.cover_image !== undefined) insert.cover_image = parsed.data.cover_image?.trim() || null;
 	if (parsed.data.instructor_label !== undefined) {
 		insert.instructor_label = parsed.data.instructor_label?.trim() || null;

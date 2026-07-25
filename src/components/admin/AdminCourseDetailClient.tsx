@@ -40,6 +40,15 @@ type CourseRow = {
 	description: string | null;
 	mode: string;
 	capacity: number;
+	topic_id?: string | null;
+};
+
+type TopicRow = {
+	id: string;
+	title: string;
+	description: string | null;
+	sort_order: number;
+	is_active: boolean;
 };
 
 type VideoRow = {
@@ -63,6 +72,9 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const [mode, setMode] = useState<"online" | "offline">("online");
 	const [capacity, setCapacity] = useState(30);
 	const [instructorId, setInstructorId] = useState<string>("");
+	const [topicId, setTopicId] = useState<string>("");
+	const [topics, setTopics] = useState<TopicRow[]>([]);
+	const [topicsUnavailable, setTopicsUnavailable] = useState(false);
 	const [sessions, setSessions] = useState<SessionRow[]>([]);
 	const [allInstructors, setAllInstructors] = useState<InstructorRow[]>([]);
 	const [enrollments, setEnrollments] = useState<EnrollRow[]>([]);
@@ -106,25 +118,30 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 				setDescription(data.course.description ?? "");
 				setMode(data.course.mode as "online" | "offline");
 				setCapacity(data.course.capacity);
+				setTopicId(data.course.topic_id ?? "");
 			}
 			setSessions(data.sessions ?? []);
 			setInstructorId(data.instructor_id ?? "");
 			setEnrollments(data.enrollments ?? []);
 
-			const [insRes, rosterRes, videoRes] = await Promise.all([
+			const [insRes, rosterRes, videoRes, topicRes] = await Promise.all([
 				fetch("/api/admin/instructors", { credentials: "include" }),
 				fetch("/api/admin/roster", { credentials: "include" }),
 				fetch(`/api/admin/courses/${courseId}/videos`, { credentials: "include" }),
+				fetch("/api/admin/course-topics", { credentials: "include" }),
 			]);
 			const insJson = (await insRes.json()) as { instructors?: InstructorRow[] };
 			const rosterJson = (await rosterRes.json()) as { students?: RosterRow[] };
 			const videoJson = (await videoRes.json()) as { videos?: VideoRow[]; storageConfigured?: boolean };
+			const topicJson = (await topicRes.json()) as { topics?: TopicRow[] };
 			if (insRes.ok) setAllInstructors(insJson.instructors ?? []);
 			if (rosterRes.ok) setRoster(rosterJson.students ?? []);
 			if (videoRes.ok) {
 				setVideos(videoJson.videos ?? []);
 				setStorageConfigured(videoJson.storageConfigured ?? true);
 			}
+			setTopicsUnavailable(!topicRes.ok);
+			setTopics(topicRes.ok ? (topicJson.topics ?? []) : []);
 		} catch {
 			setError(t("loadError"));
 		} finally {
@@ -143,17 +160,22 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		setSaving(true);
 		setError(null);
 		try {
+			const payload: Record<string, unknown> = {
+				title: title.trim(),
+				description: description.trim() || null,
+				mode,
+				capacity,
+				instructor_id: instructorId ? instructorId : null,
+			};
+			// Topic binding is only sent when the topics API answered; otherwise the
+			// existing binding is left untouched instead of reporting a fake success.
+			if (!topicsUnavailable) payload.topic_id = topicId ? topicId : null;
+
 			const res = await fetch(`/api/admin/courses/${courseId}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({
-					title: title.trim(),
-					description: description.trim() || null,
-					mode,
-					capacity,
-					instructor_id: instructorId ? instructorId : null,
-				}),
+				body: JSON.stringify(payload),
 			});
 			const data = (await res.json()) as { error?: string };
 			if (!res.ok) {
@@ -284,6 +306,12 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		return tstr?.length >= 5 ? tstr.slice(0, 5) : tstr;
 	}
 
+	const activeTopics = topics.filter((topic) => topic.is_active);
+	const boundTopic = topicId ? (topics.find((topic) => topic.id === topicId) ?? null) : null;
+	// A topic that was disabled after being bound stays listed so it can be cleared.
+	const topicOptions = boundTopic && !boundTopic.is_active ? [...activeTopics, boundTopic] : activeTopics;
+	const boundTopicMissing = Boolean(topicId) && !boundTopic && !topicsUnavailable;
+
 	if (loading && !course) {
 		return <p className="text-muted-foreground text-sm">...</p>;
 	}
@@ -362,6 +390,27 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 									</option>
 								))}
 							</select>
+						</div>
+						<div className="space-y-2 sm:col-span-2">
+							<Label htmlFor="cd-topic">{t("courseTopicField")}</Label>
+							<select
+								id="cd-topic"
+								value={topicId}
+								disabled={topicsUnavailable}
+								onChange={(e) => setTopicId(e.target.value)}
+								className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm disabled:opacity-60 dark:bg-input/30"
+							>
+								<option value="">{t("courseTopicNone")}</option>
+								{topicOptions.map((topic) => (
+									<option key={topic.id} value={topic.id}>
+										{topic.is_active ? topic.title : `${topic.title}（${t("courseTopicInactive")}）`}
+									</option>
+								))}
+								{boundTopicMissing ? <option value={topicId}>{t("courseTopicMissing")}</option> : null}
+							</select>
+							{topicsUnavailable ? (
+								<p className="text-sm text-amber-300">{t("courseTopicUnavailable")}</p>
+							) : null}
 						</div>
 					</div>
 					<Button type="button" disabled={saving} onClick={() => void saveCourse()}>

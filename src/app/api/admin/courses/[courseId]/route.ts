@@ -12,6 +12,7 @@ const patchSchema = z
 		mode: z.enum(["online", "offline"]).optional(),
 		capacity: z.number().int().positive().max(10000).optional(),
 		instructor_id: z.string().uuid().nullable().optional(),
+		topic_id: z.string().uuid().nullable().optional(),
 	})
 	.strict();
 
