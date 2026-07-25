@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getAuthEmailsByUserIds } from "@/lib/auth/profile-resolve";
+import { assertActiveCourseTopic } from "@/lib/courses/assert-active-topic";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const patchSchema = z
@@ -149,6 +150,13 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 	Object.keys(updates).forEach((k) => {
 		if (updates[k] === undefined) delete updates[k];
 	});
+
+	// Non-null topic_id must be an existing active topic. Omitting the field keeps
+	// the current binding (including a later-disabled topic); null clears it.
+	if (parsed.data.topic_id !== undefined && parsed.data.topic_id !== null) {
+		const topicGate = await assertActiveCourseTopic(supabase, parsed.data.topic_id);
+		if (topicGate) return topicGate;
+	}
 
 	const { data, error } = await supabase.from("courses").update(updates).eq("id", courseId).select().maybeSingle();
 

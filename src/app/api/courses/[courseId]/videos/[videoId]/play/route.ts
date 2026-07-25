@@ -10,6 +10,9 @@ import { isMissingRelationError } from "@/lib/video/db";
 
 export const runtime = "nodejs";
 
+/** Product limit for unauthorized free-preview viewers in the normal player UI. */
+const FREE_PREVIEW_MAX_SECONDS = 10;
+
 type RouteContext = {
   params: Promise<{ courseId: string; videoId: string }>;
 };
@@ -21,6 +24,11 @@ type VideoRow = {
   course_id: string;
   storage_key: string;
   is_free_preview: boolean;
+};
+
+type PreviewPolicy = {
+  limited: boolean;
+  maxSeconds: number | null;
 };
 
 async function hasCourseAccess(
@@ -97,6 +105,34 @@ async function authorizeViewer(
   return { viewerId };
 }
 
+/**
+ * Server-authoritative free-preview limit. Entitled / super viewers and
+ * non-preview videos are never limited; guests and logged-in users without
+ * course access are capped at FREE_PREVIEW_MAX_SECONDS for free-preview only.
+ */
+async function resolvePreviewPolicy(
+  srv: ServiceClient,
+  video: VideoRow,
+  courseId: string,
+  viewerId: string | null,
+): Promise<PreviewPolicy> {
+  if (!video.is_free_preview) {
+    return { limited: false, maxSeconds: null };
+  }
+  if (!viewerId) {
+    return { limited: true, maxSeconds: FREE_PREVIEW_MAX_SECONDS };
+  }
+  const isSuper = await isSuperUserById(srv, viewerId);
+  if (isSuper) {
+    return { limited: false, maxSeconds: null };
+  }
+  const allowed = await hasCourseAccess(srv, viewerId, courseId);
+  if (allowed) {
+    return { limited: false, maxSeconds: null };
+  }
+  return { limited: true, maxSeconds: FREE_PREVIEW_MAX_SECONDS };
+}
+
 function parseIds(courseId: string, videoId: string): NextResponse | null {
   if (!z.string().uuid().safeParse(courseId).success || !z.string().uuid().safeParse(videoId).success) {
     return NextResponse.json({ error: "参数无效" }, { status: 400 });
@@ -125,11 +161,13 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const viewer = await authorizeViewer(srv, video, courseId);
   if (viewer instanceof NextResponse) return viewer;
 
+  const preview = await resolvePreviewPolicy(srv, video, courseId, viewer.viewerId);
+
   const playUrl = await createSignedVideoUrl(String(video.storage_key), 15 * 60);
   if (!playUrl) {
     return NextResponse.json({ error: "播放地址生成失败" }, { status: 500 });
   }
-  return NextResponse.json({ playUrl, expiresIn: 15 * 60 });
+  return NextResponse.json({ playUrl, expiresIn: 15 * 60, preview });
 }
 
 /**

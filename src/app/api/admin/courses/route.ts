@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
+import { assertActiveCourseTopic } from "@/lib/courses/assert-active-topic";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 const postSchema = z.object({
@@ -98,7 +99,13 @@ export async function POST(req: Request) {
 		capacity: parsed.data.capacity,
 	};
 	if (parsed.data.instructor_id) insert.instructor_id = parsed.data.instructor_id;
-	if (parsed.data.topic_id !== undefined) insert.topic_id = parsed.data.topic_id;
+	if (parsed.data.topic_id !== undefined) {
+		if (parsed.data.topic_id !== null) {
+			const topicGate = await assertActiveCourseTopic(supabase, parsed.data.topic_id);
+			if (topicGate) return topicGate;
+		}
+		insert.topic_id = parsed.data.topic_id;
+	}
 	if (parsed.data.cover_image !== undefined) insert.cover_image = parsed.data.cover_image?.trim() || null;
 	if (parsed.data.instructor_label !== undefined) {
 		insert.instructor_label = parsed.data.instructor_label?.trim() || null;

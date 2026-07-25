@@ -271,6 +271,10 @@
 		"loginToApply": "登录后报名",
 		"loadError": "加载失败"
 	},
+	"VideoPlayerPage": {
+		"previewEnded": "免费预览已结束。取得课程权限后可观看完整视频。",
+		"previewCta": "查看课程"
+	},
 	"MyCoursesPage": {
 		"metaTitle": "我的课程",
 		"title": "我的课程",

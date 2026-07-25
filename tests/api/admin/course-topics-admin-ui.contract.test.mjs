@@ -69,12 +69,37 @@ test("courses panel manages topics through the admin course-topics API", async (
 test("course write APIs accept a nullable uuid topic binding", async () => {
 	const collection = await read("src/app/api/admin/courses/route.ts");
 	assert.match(collection, /topic_id: z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/);
-	assert.match(collection, /if \(parsed\.data\.topic_id !== undefined\) insert\.topic_id = parsed\.data\.topic_id;/);
+	assert.match(collection, /assertActiveCourseTopic/);
+	assert.match(collection, /if \(parsed\.data\.topic_id !== undefined\) \{/);
+	assert.match(collection, /insert\.topic_id = parsed\.data\.topic_id;/);
 
 	const item = await read("src/app/api/admin/courses/[courseId]/route.ts");
 	assert.match(item, /topic_id: z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/);
+	assert.match(item, /assertActiveCourseTopic/);
 	// The strict patch schema spreads parsed data, so an explicit null clears the column.
 	assert.match(item, /const updates: Record<string, unknown> = \{ \.\.\.parsed\.data \};/);
+	// Omitting topic_id leaves the existing binding untouched (including inactive).
+	assert.match(
+		item,
+		/if \(parsed\.data\.topic_id !== undefined && parsed\.data\.topic_id !== null\)/,
+	);
+});
+
+test("non-null topic bindings require an existing active topic", async () => {
+	const helper = await read("src/lib/courses/assert-active-topic.ts");
+	assert.match(helper, /export async function assertActiveCourseTopic/);
+	assert.match(helper, /\.from\("course_topics"\)/);
+	assert.match(helper, /\.select\("id, is_active"\)/);
+	assert.match(helper, /error: "Topic not found"/);
+	assert.match(helper, /error: "Topic is inactive"/);
+	assert.match(helper, /status: 400/);
+	assert.match(helper, /!data\.is_active/);
+
+	const collection = await read("src/app/api/admin/courses/route.ts");
+	const item = await read("src/app/api/admin/courses/[courseId]/route.ts");
+	// null clears without calling the active-topic gate.
+	assert.match(collection, /if \(parsed\.data\.topic_id !== null\) \{\s*const topicGate = await assertActiveCourseTopic/);
+	assert.match(item, /parsed\.data\.topic_id !== null\) \{\s*const topicGate = await assertActiveCourseTopic/);
 });
 
 test("course topic keys exist in every locale without touching label strings", async () => {

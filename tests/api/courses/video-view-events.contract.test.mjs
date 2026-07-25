@@ -197,3 +197,55 @@ test("player reports a view only on the browser play event", async () => {
 	assert.match(reporter, /viewReportStateRef\.current = "done"/);
 	assert.ok(!/setInterval\([^\)]*reportViewOnPlay/.test(source), "no polling retry loop");
 });
+
+test("preview policy is server-authored and only limits unauthorized free-preview viewers", async () => {
+	const source = await read(PLAY_ROUTE);
+
+	assert.match(source, /const FREE_PREVIEW_MAX_SECONDS = 10;/);
+	assert.match(source, /async function resolvePreviewPolicy/);
+	assert.match(source, /if \(!video\.is_free_preview\) \{\s*return \{ limited: false, maxSeconds: null \};/);
+	assert.match(source, /if \(!viewerId\) \{\s*return \{ limited: true, maxSeconds: FREE_PREVIEW_MAX_SECONDS \};/);
+	assert.match(source, /const isSuper = await isSuperUserById\(srv, viewerId\);/);
+	assert.match(source, /const allowed = await hasCourseAccess\(srv, viewerId, courseId\);/);
+	assert.match(source, /return \{ limited: true, maxSeconds: FREE_PREVIEW_MAX_SECONDS \};/);
+
+	const getStart = source.indexOf("export async function GET");
+	const postStart = source.indexOf("export async function POST");
+	const getBody = source.slice(getStart, postStart);
+	assert.match(getBody, /const preview = await resolvePreviewPolicy/);
+	assert.match(getBody, /preview \}/);
+	assert.ok(!getBody.includes("recordVideoView"), "GET still must not count views");
+});
+
+test("player enforces the server preview policy with pause and seek guards", async () => {
+	const source = await read(PLAYER);
+	const messagesEn = JSON.parse(await read("messages/en.json"));
+	const messagesZh = JSON.parse(await read("messages/zh.json"));
+	const messagesZhTW = JSON.parse(await read("messages/zh-TW.json"));
+
+	assert.match(source, /useTranslations\("VideoPlayerPage"\)/);
+	assert.match(source, /playJson\.preview\?\.limited/);
+	assert.match(source, /previewRef\.current = policy/);
+	assert.match(source, /function enforcePreviewLimit/);
+	assert.match(source, /onTimeUpdate=\{\(\) => \{/);
+	assert.match(source, /onSeeking=\{\(\) => \{/);
+	assert.match(source, /onSeeked=\{\(\) => \{/);
+	assert.match(source, /el\.pause\(\)/);
+	assert.match(source, /setPreviewEnded\(true\)/);
+	assert.match(source, /t\("previewEnded"\)/);
+
+	// Client must not invent a limit from the query string.
+	assert.ok(!/search\.get\(["']maxSeconds["']\)/.test(source));
+	assert.ok(!/search\.get\(["']preview["']\)/.test(source));
+	assert.ok(!/FREE_PREVIEW_MAX_SECONDS/.test(source), "client must not hardcode the cap constant");
+
+	for (const [name, messages] of [
+		["en", messagesEn],
+		["zh", messagesZh],
+		["zh-TW", messagesZhTW],
+	]) {
+		assert.equal(typeof messages.VideoPlayerPage?.previewEnded, "string", `${name} missing previewEnded`);
+		assert.equal(typeof messages.VideoPlayerPage?.previewCta, "string", `${name} missing previewCta`);
+		assert.ok(messages.VideoPlayerPage.previewEnded.trim().length > 0);
+	}
+});

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -13,7 +14,19 @@ type ProgressResponse = {
   completed?: boolean;
 };
 
+type PreviewPolicy = {
+  limited: boolean;
+  maxSeconds: number | null;
+};
+
+type PlayResponse = {
+  playUrl?: string;
+  error?: string;
+  preview?: PreviewPolicy;
+};
+
 export function VideoPlayerClient() {
+  const t = useTranslations("VideoPlayerPage");
   const search = useSearchParams();
   const courseId = search.get("courseId") ?? "";
   const videoId = search.get("videoId") ?? "";
@@ -21,15 +34,35 @@ export function VideoPlayerClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playUrl, setPlayUrl] = useState<string>("");
+  const [preview, setPreview] = useState<PreviewPolicy>({ limited: false, maxSeconds: null });
+  const [previewEnded, setPreviewEnded] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<number | null>(null);
   // One POST attempt per loaded video: real play starts counting; failures stay silent.
   const viewReportStateRef = useRef<"idle" | "pending" | "done">("idle");
+  const previewRef = useRef<PreviewPolicy>({ limited: false, maxSeconds: null });
 
   const playApi = useMemo(() => {
     if (!courseId || !videoId) return "";
     return `/api/courses/${encodeURIComponent(courseId)}/videos/${encodeURIComponent(videoId)}/play`;
   }, [courseId, videoId]);
+
+  function previewCapSeconds(): number | null {
+    const policy = previewRef.current;
+    if (!policy.limited) return null;
+    const max = Number(policy.maxSeconds);
+    return Number.isFinite(max) && max > 0 ? max : null;
+  }
+
+  function enforcePreviewLimit(el: HTMLVideoElement) {
+    const max = previewCapSeconds();
+    if (max == null) return;
+    if (el.currentTime >= max - 0.05) {
+      el.pause();
+      el.currentTime = max;
+      setPreviewEnded(true);
+    }
+  }
 
   async function reportViewOnPlay() {
     if (!playApi || viewReportStateRef.current !== "idle") return;
@@ -54,6 +87,8 @@ export function VideoPlayerClient() {
   async function reportProgress(forceCompleted = false) {
     const el = videoRef.current;
     if (!el || !videoId) return;
+    // Preview-limited viewers do not persist progress past the free window.
+    if (previewCapSeconds() != null) return;
     const position = Math.max(0, Math.floor(el.currentTime || 0));
     await fetch("/api/courses/video/progress", {
       method: "POST",
@@ -70,6 +105,8 @@ export function VideoPlayerClient() {
   useEffect(() => {
     let alive = true;
     viewReportStateRef.current = "idle";
+    previewRef.current = { limited: false, maxSeconds: null };
+
     async function run() {
       if (!playApi || !videoId) {
         setError("参数错误");
@@ -78,14 +115,14 @@ export function VideoPlayerClient() {
       }
 
       try {
-        // GET only issues a signed URL; counting waits for the browser play event.
+        // GET only issues a signed URL + server preview policy; counting waits for onPlay.
         const [playRes, progressRes] = await Promise.all([
           fetch(playApi, { credentials: "include" }),
           fetch(`/api/courses/video/progress?videoId=${encodeURIComponent(videoId)}`, {
             credentials: "include",
           }),
         ]);
-        const playJson = (await playRes.json()) as { playUrl?: string; error?: string };
+        const playJson = (await playRes.json()) as PlayResponse;
         const progressJson = (await progressRes.json()) as ProgressResponse;
         if (!alive) return;
 
@@ -95,6 +132,16 @@ export function VideoPlayerClient() {
           return;
         }
 
+        const policy: PreviewPolicy = {
+          limited: Boolean(playJson.preview?.limited),
+          maxSeconds:
+            playJson.preview?.limited && playJson.preview.maxSeconds != null
+              ? Number(playJson.preview.maxSeconds)
+              : null,
+        };
+        previewRef.current = policy;
+        setPreviewEnded(false);
+        setPreview(policy);
         setPlayUrl(playJson.playUrl);
         setLoading(false);
 
@@ -102,9 +149,13 @@ export function VideoPlayerClient() {
           const el = videoRef.current;
           if (!el) return;
           const saved = Number(progressJson.position ?? 0);
-          if (saved > 0 && Number.isFinite(saved)) {
-            el.currentTime = saved;
+          if (!(saved > 0 && Number.isFinite(saved))) return;
+          const max = policy.limited ? Number(policy.maxSeconds) : null;
+          if (max != null && Number.isFinite(max)) {
+            el.currentTime = Math.min(saved, Math.max(0, max - 0.05));
+            return;
           }
+          el.currentTime = saved;
         }, 300);
       } catch {
         if (!alive) return;
@@ -123,13 +174,15 @@ export function VideoPlayerClient() {
 
   useEffect(() => {
     if (!playUrl) return;
+    // Progress autosave stays for entitled viewers only.
+    if (preview.limited) return;
     timerRef.current = window.setInterval(() => {
       void reportProgress(false);
     }, 10_000);
     return () => {
       if (timerRef.current) window.clearInterval(timerRef.current);
     };
-  }, [playUrl]);
+  }, [playUrl, preview.limited]);
 
   if (loading) {
     return (
@@ -161,10 +214,43 @@ export function VideoPlayerClient() {
         onPlay={() => {
           void reportViewOnPlay();
         }}
+        onTimeUpdate={() => {
+          const el = videoRef.current;
+          if (!el) return;
+          enforcePreviewLimit(el);
+        }}
+        onSeeking={() => {
+          const el = videoRef.current;
+          const max = previewCapSeconds();
+          if (!el || max == null) return;
+          if (el.currentTime > max) {
+            el.currentTime = max;
+            el.pause();
+            setPreviewEnded(true);
+          }
+        }}
+        onSeeked={() => {
+          const el = videoRef.current;
+          const max = previewCapSeconds();
+          if (!el || max == null) return;
+          if (el.currentTime > max) {
+            el.currentTime = max;
+            el.pause();
+            setPreviewEnded(true);
+          }
+        }}
         onEnded={() => {
           void reportProgress(true);
         }}
       />
+      {previewEnded ? (
+        <div className="space-y-3 rounded-xl border border-amber-400/40 bg-amber-500/10 p-4">
+          <p className="text-sm text-amber-200">{t("previewEnded")}</p>
+          <Link href="/courses" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            {t("previewCta")}
+          </Link>
+        </div>
+      ) : null}
       <p className="text-muted-foreground text-xs">
         播放地址为临时签名 URL（15 分钟有效）。系统会每 10 秒自动保存观看进度。
       </p>

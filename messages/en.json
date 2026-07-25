@@ -274,6 +274,10 @@
 		"loginToApply": "Sign in to apply",
 		"loadError": "Could not load course"
 	},
+	"VideoPlayerPage": {
+		"previewEnded": "Free preview has ended. Enroll in this course to watch the full video.",
+		"previewCta": "View courses"
+	},
 	"MyCoursesPage": {
 		"metaTitle": "My courses",
 		"title": "My courses",

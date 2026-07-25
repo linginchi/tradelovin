@@ -274,6 +274,10 @@
 		"loginToApply": "登錄後報名",
 		"loadError": "加載失敗"
 	},
+	"VideoPlayerPage": {
+		"previewEnded": "免費預覽已結束。取得課程權限後可觀看完整影片。",
+		"previewCta": "查看課程"
+	},
 	"MyCoursesPage": {
 		"metaTitle": "我的課程",
 		"title": "我的課程",
