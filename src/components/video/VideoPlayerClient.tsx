@@ -23,11 +23,33 @@ export function VideoPlayerClient() {
   const [playUrl, setPlayUrl] = useState<string>("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<number | null>(null);
+  // One POST attempt per loaded video: real play starts counting; failures stay silent.
+  const viewReportStateRef = useRef<"idle" | "pending" | "done">("idle");
 
   const playApi = useMemo(() => {
     if (!courseId || !videoId) return "";
     return `/api/courses/${encodeURIComponent(courseId)}/videos/${encodeURIComponent(videoId)}/play`;
   }, [courseId, videoId]);
+
+  async function reportViewOnPlay() {
+    if (!playApi || viewReportStateRef.current !== "idle") return;
+    viewReportStateRef.current = "pending";
+    try {
+      const res = await fetch(playApi, { method: "POST", credentials: "include" });
+      // Guests and already-counted windows return { counted: false }; never surface that.
+      if (!res.ok) {
+        try {
+          await res.json();
+        } catch {
+          /* ignore non-JSON error bodies */
+        }
+      }
+    } catch {
+      // Counting must never interrupt playback.
+    } finally {
+      viewReportStateRef.current = "done";
+    }
+  }
 
   async function reportProgress(forceCompleted = false) {
     const el = videoRef.current;
@@ -47,6 +69,7 @@ export function VideoPlayerClient() {
 
   useEffect(() => {
     let alive = true;
+    viewReportStateRef.current = "idle";
     async function run() {
       if (!playApi || !videoId) {
         setError("参数错误");
@@ -55,6 +78,7 @@ export function VideoPlayerClient() {
       }
 
       try {
+        // GET only issues a signed URL; counting waits for the browser play event.
         const [playRes, progressRes] = await Promise.all([
           fetch(playApi, { credentials: "include" }),
           fetch(`/api/courses/video/progress?videoId=${encodeURIComponent(videoId)}`, {
@@ -134,6 +158,9 @@ export function VideoPlayerClient() {
         playsInline
         className="w-full rounded-xl border border-border/60 bg-black"
         src={playUrl}
+        onPlay={() => {
+          void reportViewOnPlay();
+        }}
         onEnded={() => {
           void reportProgress(true);
         }}
