@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import {
+	BarChart3,
 	BookOpen,
 	Briefcase,
 	CircleDollarSign,

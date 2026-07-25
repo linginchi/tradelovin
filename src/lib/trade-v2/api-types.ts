@@ -129,6 +129,32 @@ export type TradeV2QuoteData = {
 	lot_size: number;
 	limit_band_ratio: number;
 	market_mode: "l1";
+	prev_close?: number;
+	open?: number;
+	high?: number;
+	low?: number;
+	/** 涨跌额（现价 - 昨收） */
+	change?: number;
+	/** 涨跌幅（%） */
+	change_pct?: number;
+	/** 成交量（股） */
+	volume?: number;
+	/** 成交额（元） */
+	amount?: number;
+	/** 总市值（万元） */
+	total_mv?: number;
+	/** 流通市值（万元） */
+	circ_mv?: number;
+	pe_ttm?: number;
+	pb?: number;
+	/** 换手率（%） */
+	turnover_rate?: number;
+	/** 近 20 交易日均价 */
+	avg_price_20d?: number;
+	/** 近 20 交易日平均成交额（元） */
+	avg_amount_20d?: number;
+	/** 盘口是否为真实行情五档 */
+	order_book_real?: boolean;
 	order_book?: {
 		asks: TradeV2QuoteDepthLevel[];
 		bids: TradeV2QuoteDepthLevel[];

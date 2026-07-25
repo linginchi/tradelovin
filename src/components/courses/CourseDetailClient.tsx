@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Eye, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -8,7 +8,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth/use-auth";
-import type { CourseRow } from "@/components/courses/CoursesListClient";
+import { extractLessonOrder } from "@/lib/analytics/lesson-order";
+import { formatViewCount } from "@/lib/analytics/format";
+
+type CourseRow = {
+	id: string;
+	title: string;
+	description: string | null;
+	mode: string | null;
+	start_date: string | null;
+	end_date: string | null;
+	location: string | null;
+};
 
 type Props = { courseId: string };
 type VideoRow = {
@@ -19,6 +30,7 @@ type VideoRow = {
 	duration: number | null;
 	sort_order: number;
 	is_free_preview: boolean;
+	view_count?: number;
 };
 
 export function CourseDetailClient({ courseId }: Props) {
@@ -78,7 +90,10 @@ export function CourseDetailClient({ courseId }: Props) {
 			};
 			if (!alive) return;
 			if (!res.ok) return;
-			setVideos(js.videos ?? []);
+			const sorted = (js.videos ?? []).sort(
+				(a, b) => extractLessonOrder(a.title) - extractLessonOrder(b.title),
+			);
+			setVideos(sorted);
 			setHasCourseAccess(Boolean(js.hasCourseAccess));
 		}
 		void run();
@@ -144,37 +159,34 @@ export function CourseDetailClient({ courseId }: Props) {
 					<p className="text-muted-foreground text-sm">{t("loginToApply")}</p>
 				)}
 			</div>
+
 			<div className="space-y-2 border-t border-border/60 pt-4">
-				<h2 className="text-base font-semibold">教学视频</h2>
+				<h2 className="text-base font-semibold">{t("videoSectionTitle")}</h2>
 				{videos.length === 0 ? (
-					<p className="text-muted-foreground text-sm">暂无视频</p>
+					<p className="text-muted-foreground text-sm">{t("noVideos")}</p>
 				) : (
-					<ul className="space-y-2">
-						{videos.map((video) => (
-							<li
-								key={video.id}
-								className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2"
-							>
-								<div>
-									<p className="text-sm font-medium">{video.title}</p>
-									<p className="text-muted-foreground text-xs">
-										{video.duration ? `${video.duration}s` : "时长未知"} ·{" "}
-										{video.is_free_preview ? "免费预览" : "付费视频"}
-									</p>
-								</div>
+					<ul className="space-y-1">
+						{videos.map((video, idx) => (
+							<li key={video.id}>
 								<Link
 									href={`/video-player?courseId=${encodeURIComponent(courseId)}&videoId=${encodeURIComponent(video.id)}`}
-									className="text-sm text-cyan-300 underline-offset-4 hover:underline"
+									className="block rounded-lg px-3 py-2 text-sm transition-colors hover:bg-card/60"
 								>
-									播放
+								<span className="text-muted-foreground tabular-nums">
+									{String(idx + 1).padStart(2, "0")}
+								</span>
+									<span className="ml-2 font-medium">{video.title}</span>
+									{video.view_count != null && video.view_count > 0 ? (
+										<span className="text-muted-foreground ml-2 inline-flex items-center gap-0.5 text-xs">
+											<Eye className="size-3" />
+											{formatViewCount(video.view_count)}
+										</span>
+									) : null}
 								</Link>
 							</li>
 						))}
 					</ul>
 				)}
-				{!hasCourseAccess && videos.some((v) => !v.is_free_preview) ? (
-					<p className="text-muted-foreground text-xs">付费视频需课程审核通过后观看。</p>
-				) : null}
 			</div>
 		</div>
 	);

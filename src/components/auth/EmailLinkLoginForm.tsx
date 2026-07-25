@@ -30,7 +30,7 @@ export function EmailLinkLoginForm() {
 		if (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")) {
 			return nextParam;
 		}
-		return "/my-learning";
+		return "/courses";
 	})();
 
 	const {

@@ -27,7 +27,7 @@ export function GoogleLoginButton({ nextPath }: Props) {
     if (nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//")) {
       redirectTo.searchParams.set("next", nextPath);
     } else {
-      redirectTo.searchParams.set("next", "/my-learning");
+      redirectTo.searchParams.set("next", "/courses");
     }
     const { error } = await sb.auth.signInWithOAuth({
       provider: "google",

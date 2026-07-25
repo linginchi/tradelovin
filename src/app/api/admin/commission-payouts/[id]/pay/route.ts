@@ -52,14 +52,17 @@ export async function POST(
     .eq("settlement_month", payout.settlement_month)
     .in("status", ["locked"]);
 
-  // 3. 更新 KOL 累计已付
-  await srv
-    .from("channel_partners")
-    .update({
-      total_paid: payout.total_commission,
-      updated_at: now,
-    })
-    .eq("id", payout.partner_id);
+  // 3. 递增 KOL 累计已付（RPC 保证原子累加，避免覆盖历史值）
+  const { error: rpcError } = await srv.rpc(
+    "increment_channel_partner_total_paid",
+    {
+      p_partner_id: payout.partner_id,
+      p_amount: payout.total_commission,
+    },
+  );
+  if (rpcError) {
+    console.error("[pay] increment_total_paid RPC failed:", rpcError);
+  }
 
   return NextResponse.json({ success: true });
 }

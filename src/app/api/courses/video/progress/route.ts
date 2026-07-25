@@ -70,6 +70,8 @@ export async function POST(request: Request) {
   }
 
   const completed = parsed.data.completed ?? false;
+  const position = parsed.data.position;
+
   const { error } = await srv.from("user_video_progress").upsert(
     {
       user_id: auth.userId,

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 function resolveNextPath(request: NextRequest): string {
 	const next = request.nextUrl.searchParams.get("next");
 	if (next && next.startsWith("/") && !next.startsWith("//")) return next;
-	return "/my-learning";
+	return "/courses";
 }
 
 export async function GET(request: NextRequest) {

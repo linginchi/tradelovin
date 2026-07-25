@@ -36,6 +36,11 @@ export async function GET() {
 
   // 获取每个 KOL 的学员数和本月预估佣金
   const partnerIds = partners.map((p) => p.id);
+
+  if (partnerIds.length === 0) {
+    return NextResponse.json({ success: true, data: { rows: [] } });
+  }
+
   const [referralCountsResult, commissionSumsResult] = await Promise.all([
     srv
       .from("referrals")

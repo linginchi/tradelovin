@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 	const next =
 		rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
 			? rawNext
-			: "/my-learning";
+			: "/courses";
 
 	if (code) {
 		try {

@@ -9,6 +9,32 @@ export type QuoteResult = {
 	displaySymbol: string;
 };
 
+export type SinaDepthLevel = {
+	level: number;
+	price: number;
+	volume: number;
+};
+
+export type SinaQuoteDetail = {
+	price: number;
+	name?: string;
+	sinaKey: string;
+	displaySymbol: string;
+	open?: number;
+	prevClose?: number;
+	high?: number;
+	low?: number;
+	/** 成交量（股） */
+	volume?: number;
+	/** 成交额（元） */
+	amount?: number;
+	/** A 股真实五档；港股无深度 */
+	depth?: {
+		asks: SinaDepthLevel[];
+		bids: SinaDepthLevel[];
+	};
+};
+
 const SIMPLIFIED_TO_TRADITIONAL: Record<string, string> = {
 	万: "萬",
 	东: "東",
@@ -180,6 +206,47 @@ function parseCsvPrice(cols: string[], isHk: boolean): number | null {
 	return null;
 }
 
+async function fetchSinaCols(sinaListKey: string): Promise<string[] | null> {
+	const url = `https://hq.sinajs.cn/list=${encodeURIComponent(sinaListKey)}`;
+	let res: Response;
+	try {
+		res = await fetch(url, {
+			cache: "no-store",
+			headers: {
+				Referer: "https://finance.sina.com.cn/",
+				"User-Agent": "Mozilla/5.0 (compatible; tradelovin-quote/1)",
+			},
+		});
+	} catch (error) {
+		console.warn("[quote.sina] fetch_error", {
+			sinaListKey,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return null;
+	}
+
+	if (!res.ok) {
+		console.warn("[quote.sina] http_error", { sinaListKey, status: res.status });
+		return null;
+	}
+
+	const txt = iconv.decode(Buffer.from(await res.arrayBuffer()), "gb2312");
+	const escapedKey = sinaListKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const m = txt.match(new RegExp(`hq_str_${escapedKey}="([^"]*)"`, "i"));
+	if (!m?.[1]) {
+		console.warn("[quote.sina] parse_miss", { sinaListKey, preview: txt.slice(0, 120) });
+		return null;
+	}
+
+	const body = m[1].trim();
+	if (!body.length) {
+		console.warn("[quote.sina] empty_body", { sinaListKey });
+		return null;
+	}
+
+	return body.split(",").map((c) => c.trim());
+}
+
 /** 新浪财经行情；不可用返回 null（由调用方提示「暂时无法获取行情」）；可用 SIM_QUOTE_PRICE_OVERRIDE 覆盖 */
 export async function getCurrentPrice(rawSymbol: string, locale = "zh"): Promise<QuoteResult | null> {
 	const mapped = mapUserSymbolToSina(rawSymbol);
@@ -198,30 +265,15 @@ export async function getCurrentPrice(rawSymbol: string, locale = "zh"): Promise
 		}
 	}
 
-	const url = `https://hq.sinajs.cn/list=${encodeURIComponent(mapped.sinaListKey)}`;
-	const res = await fetch(url, {
-		cache: "no-store",
-		headers: {
-			Referer: "https://finance.sina.com.cn/",
-			"User-Agent": "Mozilla/5.0 (compatible; tradelovin-quote/1)",
-		},
-	});
-
-	if (!res.ok) return null;
-
-	const txt = iconv.decode(Buffer.from(await res.arrayBuffer()), "gb2312");
-	const escapedKey = mapped.sinaListKey.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-	const m = txt.match(new RegExp(`hq_str_${escapedKey}="([^"]*)"`, "i"));
-	if (!m?.[1]) return null;
-
-	const body = m[1].trim();
-	if (!body.length) return null;
-
-	const cols = body.split(",").map((c) => c.trim());
+	const cols = await fetchSinaCols(mapped.sinaListKey);
+	if (!cols) return null;
 	const isHk = mapped.sinaListKey.startsWith("hk");
 
 	const pv = parseCsvPrice(cols, isHk);
-	if (pv == null || !Number.isFinite(pv)) return null;
+	if (pv == null || !Number.isFinite(pv)) {
+		console.warn("[quote.sina] invalid_price", { sinaListKey: mapped.sinaListKey, isHk });
+		return null;
+	}
 
 	return {
 		price: Math.round(pv * 10000) / 10000,
@@ -233,4 +285,101 @@ export async function getCurrentPrice(rawSymbol: string, locale = "zh"): Promise
 		sinaKey: mapped.sinaListKey,
 		displaySymbol: mapped.displaySymbol,
 	};
+}
+
+function parseNum(raw: string | undefined): number | undefined {
+	if (raw == null || !raw.length) return undefined;
+	const v = parseFloat(raw.replace(/,/g, ""));
+	return Number.isFinite(v) ? v : undefined;
+}
+
+function parsePositive(raw: string | undefined): number | undefined {
+	const v = parseNum(raw);
+	return v != null && v > 0 ? v : undefined;
+}
+
+/**
+ * 解析 A 股五档：买五档在 cols[10..19]、卖五档在 cols[20..29]，每档为 (量,价) 成对。
+ */
+function parseAShareDepth(cols: string[]): SinaQuoteDetail["depth"] {
+	const bids: SinaDepthLevel[] = [];
+	const asks: SinaDepthLevel[] = [];
+	for (let i = 0; i < 5; i += 1) {
+		const bidVol = parsePositive(cols[10 + i * 2]);
+		const bidPrice = parsePositive(cols[11 + i * 2]);
+		if (bidVol != null && bidPrice != null) {
+			bids.push({ level: i + 1, price: bidPrice, volume: bidVol });
+		}
+		const askVol = parsePositive(cols[20 + i * 2]);
+		const askPrice = parsePositive(cols[21 + i * 2]);
+		if (askVol != null && askPrice != null) {
+			asks.push({ level: i + 1, price: askPrice, volume: askVol });
+		}
+	}
+	if (!asks.length && !bids.length) return undefined;
+	return { asks, bids };
+}
+
+type DetailCacheValue = {
+	expiresAt: number;
+	value: SinaQuoteDetail | null;
+};
+
+const detailCache = new Map<string, DetailCacheValue>();
+const DETAIL_CACHE_TTL_MS = 3000;
+
+/**
+ * 新浪完整行情明细（OHLC / 量额 / A 股真实五档）。
+ * 仅作信息增强：任何字段缺失为 undefined，整体失败返回 null，调用方降级处理。
+ */
+export async function getSinaQuoteDetail(rawSymbol: string, locale = "zh"): Promise<SinaQuoteDetail | null> {
+	const mapped = mapUserSymbolToSina(rawSymbol);
+	if (!mapped) return null;
+
+	const cacheKey = `${mapped.sinaListKey}:${locale}`;
+	const hit = detailCache.get(cacheKey);
+	if (hit && Date.now() <= hit.expiresAt) return hit.value;
+
+	const cols = await fetchSinaCols(mapped.sinaListKey);
+	const isHk = mapped.sinaListKey.startsWith("hk");
+
+	let detail: SinaQuoteDetail | null = null;
+	if (cols) {
+		const pv = parseCsvPrice(cols, isHk);
+		if (pv != null && Number.isFinite(pv)) {
+			if (isHk) {
+				// 港股：0 英文名, 1 中文名, 2 今开, 3 昨收, 4 最高, 5 最低, 6 现价, 11 成交额, 12 成交量
+				detail = {
+					price: Math.round(pv * 10000) / 10000,
+					name: localizeHkName(cols[1]?.length ? cols[1] : undefined, locale, mapped.displaySymbol),
+					sinaKey: mapped.sinaListKey,
+					displaySymbol: mapped.displaySymbol,
+					open: parsePositive(cols[2]),
+					prevClose: parsePositive(cols[3]),
+					high: parsePositive(cols[4]),
+					low: parsePositive(cols[5]),
+					amount: parsePositive(cols[11]),
+					volume: parsePositive(cols[12]),
+				};
+			} else {
+				// A 股：0 名称, 1 今开, 2 昨收, 3 现价, 4 最高, 5 最低, 8 成交量(股), 9 成交额(元)
+				detail = {
+					price: Math.round(pv * 10000) / 10000,
+					name: cols[0]?.length ? cols[0] : undefined,
+					sinaKey: mapped.sinaListKey,
+					displaySymbol: mapped.displaySymbol,
+					open: parsePositive(cols[1]),
+					prevClose: parsePositive(cols[2]),
+					high: parsePositive(cols[4]),
+					low: parsePositive(cols[5]),
+					volume: parsePositive(cols[8]),
+					amount: parsePositive(cols[9]),
+					depth: parseAShareDepth(cols),
+				};
+			}
+		}
+	}
+
+	detailCache.set(cacheKey, { expiresAt: Date.now() + DETAIL_CACHE_TTL_MS, value: detail });
+	return detail;
 }

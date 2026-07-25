@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getMarketQuote } from "@/lib/market/market-domain";
+import { getMarketQuoteExtended } from "@/lib/market/market-domain";
 import { getInstrumentRule } from "@/lib/trade/instrument-rules";
 import type { ApiErrorResponse, TradeV2QuoteApiResponse, TradeV2QuoteData } from "@/lib/trade-v2/api-types";
 
@@ -81,21 +81,42 @@ export async function GET(request: NextRequest) {
 	}
 	const locale = readLocale(request.nextUrl.searchParams.get("locale"));
 
-	const quote = await getMarketQuote(symbol, locale);
+	const quote = await getMarketQuoteExtended(symbol, locale);
 	if (!quote) {
 		return NextResponse.json<ApiErrorResponse>({ success: false, error: "暂时无法获取行情" }, { status: 503 });
 	}
 	const rule = getInstrumentRule(symbol);
 	const tick = inferTickByInstrument(rule.instrument);
 	const seeded = symbolSeed(quote.symbol);
-	const l1 = buildL1Depth(quote.price, tick, seeded);
+	const hasRealDepth = Boolean(quote.realDepth && (quote.realDepth.asks.length || quote.realDepth.bids.length));
+	const l1 = hasRealDepth && quote.realDepth ? quote.realDepth : buildL1Depth(quote.price, tick, seeded);
 	const prints = buildL1Prints(quote.price, tick, seeded);
 
 	const data: TradeV2QuoteData = {
-		...quote,
+		symbol: quote.symbol,
+		name: quote.name,
+		price: quote.price,
+		source: quote.source,
+		instrument: quote.instrument,
 		lot_size: rule.lotSize,
 		limit_band_ratio: rule.limitBandRatio,
 		market_mode: "l1",
+		prev_close: quote.prevClose,
+		open: quote.open,
+		high: quote.high,
+		low: quote.low,
+		change: quote.change,
+		change_pct: quote.changePct,
+		volume: quote.volume,
+		amount: quote.amount,
+		total_mv: quote.totalMv,
+		circ_mv: quote.circMv,
+		pe_ttm: quote.peTtm,
+		pb: quote.pb,
+		turnover_rate: quote.turnoverRate,
+		avg_price_20d: quote.avgPrice20d,
+		avg_amount_20d: quote.avgAmount20d,
+		order_book_real: hasRealDepth,
 		order_book: l1,
 		recent_trades: prints,
 		snapshot_time: new Date().toISOString(),

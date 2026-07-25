@@ -1,9 +1,16 @@
 "use client";
 
-import { Copy, Loader2, Share2 } from "lucide-react";
+import { Copy, Loader2, Plus, Share2, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  KOL_MAX_PLATFORM_ACCOUNTS,
+  KOL_PLATFORMS,
+  type KolPlatform,
+  type PlatformAccount,
+} from "@/lib/channel-partner/kol-application-constants";
 
 type PartnerData = {
   partner: {
@@ -35,14 +42,67 @@ type ReferralRow = {
   completedAt: string | null;
 };
 
+const PLATFORM_LABEL_KEYS: Record<KolPlatform, string> = {
+  xiaohongshu: "platformXiaohongshu",
+  douyin: "platformDouyin",
+  weibo: "platformWeibo",
+  bilibili: "platformBilibili",
+  youtube: "platformYoutube",
+  instagram: "platformInstagram",
+  twitter: "platformTwitter",
+  other: "platformOther",
+};
+
+function emptyPlatformRow(): PlatformAccount {
+  return { platform: "xiaohongshu", account: "" };
+}
+
+function SelfApplySubmittedPanel() {
+  const t = useTranslations("KolApply");
+  return (
+    <div className="mx-auto max-w-md space-y-4 text-center">
+      <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-emerald-500/20">
+        <Share2 className="size-8 text-emerald-400" />
+      </div>
+      <h2 className="text-xl font-semibold">{t("applicationSubmitted")}</h2>
+      <p className="text-sm text-muted-foreground">{t("applicationSubmittedHint")}</p>
+    </div>
+  );
+}
+
 function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
-  const [mode, setMode] = useState<"invite" | "self">("invite");
+  const t = useTranslations("KolApply");
+  const [mode, setMode] = useState<"invite" | "self">("self");
+  const [selfStep, setSelfStep] = useState<"form" | "verifying_otp" | "submitted">("form");
   const [code, setCode] = useState("");
-  const [socialUrl, setSocialUrl] = useState("");
-  const [platform, setPlatform] = useState("xiaohongshu");
+  const [email, setEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
+  const [platformAccounts, setPlatformAccounts] = useState<PlatformAccount[]>([
+    emptyPlatformRow(),
+  ]);
   const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  function updatePlatformAccount(index: number, patch: Partial<PlatformAccount>) {
+    setPlatformAccounts((rows) =>
+      rows.map((row, i) => (i === index ? { ...row, ...patch } : row)),
+    );
+  }
+
+  function addPlatformRow() {
+    if (platformAccounts.length >= KOL_MAX_PLATFORM_ACCOUNTS) return;
+    setPlatformAccounts((rows) => [...rows, emptyPlatformRow()]);
+  }
+
+  function removePlatformRow(index: number) {
+    if (platformAccounts.length <= 1) return;
+    setPlatformAccounts((rows) => rows.filter((_, i) => i !== index));
+  }
+
+  const selfFormValid =
+    email.trim().length > 0 &&
+    platformAccounts.every((row) => row.account.trim().length > 0);
 
   async function handleInviteSubmit() {
     setError("");
@@ -53,16 +113,17 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
       const res = await fetch("/api/channel-partner/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       const json: { success?: boolean; error?: string } = await res.json();
       if (json.success) {
         onSuccess();
       } else {
-        setError(json.error ?? "申请失败");
+        setError(json.error ?? t("applyFailed"));
       }
     } catch {
-      setError("请求失败，请稍后重试");
+      setError(t("requestFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -72,7 +133,13 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
     setError("");
     setSubmitting(true);
     try {
-      const body: Record<string, unknown> = { socialUrl, platform };
+      const body: Record<string, unknown> = {
+        email: email.trim(),
+        platformAccounts: platformAccounts.map((row) => ({
+          platform: row.platform,
+          account: row.account.trim(),
+        })),
+      };
       if (name.trim()) body.channelName = name.trim();
       const res = await fetch("/api/channel-partner/apply-self", {
         method: "POST",
@@ -81,22 +148,51 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
       });
       const json: { success?: boolean; error?: string; message?: string } = await res.json();
       if (json.success) {
-        onSuccess();
+        setSelfStep("verifying_otp");
       } else {
-        setError(json.error ?? "提交失败");
+        setError(json.error ?? t("submitFailed"));
       }
     } catch {
-      setError("请求失败，请稍后重试");
+      setError(t("requestFailed"));
     } finally {
       setSubmitting(false);
     }
   }
 
+  async function handleVerifyOtp() {
+    setError("");
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/channel-partner/apply-self/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), code: otpCode.trim() }),
+      });
+      const json: { success?: boolean; error?: string } = await res.json();
+      if (json.success) {
+        setSelfStep("submitted");
+      } else {
+        setError(json.error ?? t("otpInvalid"));
+      }
+    } catch {
+      setError(t("requestFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (mode === "self" && selfStep === "submitted") {
+    return (
+      <div className="mx-auto max-w-md space-y-6">
+        <h1 className="text-center text-2xl font-semibold">{t("title")}</h1>
+        <SelfApplySubmittedPanel />
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-6">
-      <h1 className="text-center text-2xl font-semibold">
-        成为KOL/渠道合作伙伴
-      </h1>
+      <h1 className="text-center text-2xl font-semibold">{t("title")}</h1>
 
       <div className="flex rounded-xl border border-border/70 bg-card/35 p-1">
         <button
@@ -108,7 +204,7 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
           }`}
           onClick={() => setMode("invite")}
         >
-          我有邀请码
+          {t("tabInvite")}
         </button>
         <button
           type="button"
@@ -119,7 +215,7 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
           }`}
           onClick={() => setMode("self")}
         >
-          自荐申请
+          {t("tabSelf")}
         </button>
       </div>
 
@@ -127,86 +223,167 @@ function ApplyPanel({ onSuccess }: { onSuccess: () => void }) {
         {mode === "invite" ? (
           <div>
             <label className="mb-1.5 block text-sm text-muted-foreground">
-              邀请码
+              {t("inviteCode")}
             </label>
             <input
               type="text"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="请输入邀请码"
+              placeholder={t("inviteCodePlaceholder")}
               className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
             />
+            <p className="mt-1 text-xs text-muted-foreground">{t("inviteLoginHint")}</p>
+          </div>
+        ) : selfStep === "verifying_otp" ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">{t("otpSent", { email })}</p>
+            <div>
+              <label className="mb-1.5 block text-sm text-muted-foreground">
+                {t("otpLabel")}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                placeholder={t("otpPlaceholder")}
+                className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm tracking-widest outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+              />
+            </div>
+            <Button
+              className="w-full"
+              disabled={submitting || otpCode.length !== 6}
+              onClick={() => void handleVerifyOtp()}
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" /> {t("submitting")}
+                </>
+              ) : (
+                t("verifyOtp")
+              )}
+            </Button>
+            <button
+              type="button"
+              className="w-full text-sm text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => {
+                setSelfStep("form");
+                setOtpCode("");
+              }}
+            >
+              {t("backToForm")}
+            </button>
           </div>
         ) : (
           <>
             <div>
               <label className="mb-1.5 block text-sm text-muted-foreground">
-                平台类型
-              </label>
-              <select
-                value={platform}
-                onChange={(e) => setPlatform(e.target.value)}
-                className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
-              >
-                <option value="xiaohongshu">小红书</option>
-                <option value="douyin">抖音</option>
-                <option value="weibo">微博</option>
-                <option value="bilibili">B站</option>
-                <option value="youtube">YouTube</option>
-                <option value="instagram">Instagram</option>
-                <option value="twitter">Twitter/X</option>
-                <option value="other">其他</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-muted-foreground">
-                社交平台链接（必填）
+                {t("email")} <span className="text-amber-400">*</span>
               </label>
               <input
-                type="text"
-                value={socialUrl}
-                onChange={(e) => setSocialUrl(e.target.value)}
-                placeholder="粘贴你的社交主页链接"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("emailPlaceholder")}
                 className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
               />
-              <p className="mt-1 text-xs text-muted-foreground">
-                填写你的社交平台主页链接，管理员将据此审核
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("emailHint")}</p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-muted-foreground">
+                  {t("platformAccounts")} <span className="text-amber-400">*</span>
+                </label>
+                {platformAccounts.length < KOL_MAX_PLATFORM_ACCOUNTS && (
+                  <button
+                    type="button"
+                    className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300"
+                    onClick={addPlatformRow}
+                  >
+                    <Plus className="size-3.5" /> {t("addPlatform")}
+                  </button>
+                )}
+              </div>
+              {platformAccounts.map((row, index) => (
+                <div key={index} className="flex gap-2">
+                  <select
+                    value={row.platform}
+                    onChange={(e) =>
+                      updatePlatformAccount(index, {
+                        platform: e.target.value as KolPlatform,
+                      })
+                    }
+                    className="w-32 shrink-0 rounded-xl border border-border/70 bg-background px-2 py-2.5 text-sm outline-none focus:border-cyan-500/60"
+                  >
+                    {KOL_PLATFORMS.map((p) => (
+                      <option key={p} value={p}>
+                        {t(PLATFORM_LABEL_KEYS[p])}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={row.account}
+                    onChange={(e) => updatePlatformAccount(index, { account: e.target.value })}
+                    placeholder={t("platformAccountPlaceholder")}
+                    className="min-w-0 flex-1 rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+                  />
+                  {platformAccounts.length > 1 && (
+                    <button
+                      type="button"
+                      className="shrink-0 rounded-xl border border-border/70 px-2 text-muted-foreground hover:text-foreground"
+                      onClick={() => removePlatformRow(index)}
+                      aria-label={t("removePlatform")}
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <p className="text-xs text-muted-foreground">{t("maxPlatforms")}</p>
             </div>
           </>
         )}
 
-        <div>
-          <label className="mb-1.5 block text-sm text-muted-foreground">
-            渠道名称（选填）
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="个人或渠道名称"
-            className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
-          />
-        </div>
+        {!(mode === "self" && selfStep === "verifying_otp") && (
+          <div>
+            <label className="mb-1.5 block text-sm text-muted-foreground">
+              {t("channelName")}
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("channelNamePlaceholder")}
+              className="w-full rounded-xl border border-border/70 bg-background px-3 py-2.5 text-sm outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30"
+            />
+          </div>
+        )}
 
-        <Button
-          className="w-full"
-          disabled={
-            submitting ||
-            (mode === "invite" ? !code.trim() : !socialUrl.trim())
-          }
-          onClick={() =>
-            mode === "invite" ? void handleInviteSubmit() : void handleSelfSubmit()
-          }
-        >
-          {submitting ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" /> 提交中...
-            </>
-          ) : (
-            "提交申请"
-          )}
-        </Button>
+        {!(mode === "self" && selfStep === "verifying_otp") && (
+          <Button
+            className="w-full"
+            disabled={
+              submitting ||
+              (mode === "invite" ? !code.trim() : !selfFormValid)
+            }
+            onClick={() =>
+              mode === "invite" ? void handleInviteSubmit() : void handleSelfSubmit()
+            }
+          >
+            {submitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" /> {t("submitting")}
+              </>
+            ) : mode === "self" ? (
+              t("sendOtp")
+            ) : (
+              t("submit")
+            )}
+          </Button>
+        )}
 
         {error && (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
@@ -278,6 +455,13 @@ export function PartnerDashboardClient() {
       const profileRes = await fetch("/api/channel-partner/my-profile", {
         credentials: "include",
       });
+
+      if (profileRes.status === 401) {
+        setIsPartner(false);
+        setIsPendingReview(false);
+        return;
+      }
+
       const profileJson: {
         success?: boolean;
         isPartner?: boolean;

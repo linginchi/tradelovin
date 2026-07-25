@@ -18,14 +18,35 @@ const bodySchema = z.object({
 	next: z.string().trim().optional(),
 });
 
-function getMagicLinkBaseUrl(request: Request): string {
-	const preferred =
-		process.env.MAGIC_LINK_ORIGIN?.trim() ||
-		process.env.APP_ORIGIN?.trim() ||
-		"https://xeoaxis.com";
-	if (/^https?:\/\//i.test(preferred)) return preferred.replace(/\/+$/, "");
-	const reqUrl = new URL(request.url);
-	return `${reqUrl.protocol}//${preferred}`.replace(/\/+$/, "");
+const DEFAULT_GOOGLE_EMAIL_DOMAINS = ["gmail.com", "googlemail.com", "hkfac.org"];
+
+function stripTrailingSlash(value: string): string {
+	return value.replace(/\/+$/, "");
+}
+
+function getGoogleEmailDomains(): Set<string> {
+	const extra = (process.env.MAGIC_LINK_GOOGLE_DOMAINS ?? "")
+		.split(",")
+		.map((s) => s.trim().toLowerCase())
+		.filter(Boolean);
+	return new Set([...DEFAULT_GOOGLE_EMAIL_DOMAINS, ...extra]);
+}
+
+/**
+ * 跨境路由：cjkzt 后台登录 或 谷歌邮箱（gmail / Google Workspace，境内不可达）→ tradelovin.com；
+ * 其余（按境内处理）→ xeoaxis.com。可用 MAGIC_LINK_ORIGIN / APP_ORIGIN 应急强制覆盖。
+ */
+function getMagicLinkBaseUrl(email: string, nextPath: string): string {
+	const override = process.env.MAGIC_LINK_ORIGIN?.trim() || process.env.APP_ORIGIN?.trim();
+	if (override && /^https?:\/\//i.test(override)) return stripTrailingSlash(override);
+
+	const isCjkzt = nextPath.startsWith("/cjkzt") || nextPath.startsWith("/admin");
+	const domain = email.split("@")[1]?.toLowerCase() ?? "";
+	const isGoogle = domain ? getGoogleEmailDomains().has(domain) : false;
+
+	const tradelovin = stripTrailingSlash(process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://tradelovin.com");
+	const xeoaxis = stripTrailingSlash(process.env.MAGIC_LINK_XEOAXIS_ORIGIN?.trim() || "https://xeoaxis.com");
+	return isCjkzt || isGoogle ? tradelovin : xeoaxis;
 }
 
 export async function POST(request: Request) {
@@ -50,7 +71,7 @@ export async function POST(request: Request) {
 	const nextPath =
 		parsed.data.next && parsed.data.next.startsWith("/") && !parsed.data.next.startsWith("//")
 			? parsed.data.next
-			: "/my-learning";
+			: "/courses";
 	console.log("[send-login-link] request", { emailMasked: `${email.slice(0, 2)}***`, nextPath });
 	const sentInLastHour = await countRecentMagicLinkSends(srv, email);
 	if (sentInLastHour >= MAGIC_LINK_SEND_LIMIT_PER_HOUR) {
@@ -79,7 +100,7 @@ export async function POST(request: Request) {
 		);
 	}
 
-	const baseUrl = getMagicLinkBaseUrl(request);
+	const baseUrl = getMagicLinkBaseUrl(email, nextPath);
 	const loginUrl = `${baseUrl}/auth/magic-link?token=${encodeURIComponent(token)}${
 		nextPath ? `&next=${encodeURIComponent(nextPath)}` : ""
 	}`;

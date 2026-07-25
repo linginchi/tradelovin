@@ -27,7 +27,11 @@ export function createSupabaseRouteClient(request: NextRequest, response: NextRe
 			},
 			setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
 				for (const { name, value, options } of cookiesToSet) {
-					response.cookies.set(name, value, withPersistentSessionCookieOptions(options));
+					response.cookies.set(name, value, {
+						...withPersistentSessionCookieOptions(options),
+						path: "/",
+						sameSite: "lax",
+					});
 				}
 			},
 		},
@@ -170,33 +174,39 @@ export async function registerUserAndSession(
 	return { ok: true, userId, response };
 }
 
-/** 已存在用户：轮换临时密码并建立浏览器会话（邮箱 OTP 验证通过后调用）。 */
+/** 已存在用户：建立浏览器会话（不轮换密码，避免覆盖用户自设密码）。 */
 export async function signInExistingUserWithFreshPassword(
 	srv: SupabaseClient,
 	request: NextRequest,
 	emailLower: string,
 	userId: string,
 ): Promise<RegisterAndSessionResult> {
-	const password = randomInternalPassword();
-	const { error: updErr } = await srv.auth.admin.updateUserById(userId, { password });
-	if (updErr) {
-		return { ok: false, error: updErr.message ?? "无法更新登录凭证", status: 500 };
-	}
-
 	const response = NextResponse.json({
 		success: true,
 		message: "登录成功",
 		data: { userId },
 	});
 
-	const cookieClient = createSupabaseRouteClient(request, response);
-	const { error: signErr } = await cookieClient.auth.signInWithPassword({
+	const { data: linkData, error: linkErr } = await srv.auth.admin.generateLink({
+		type: "magiclink",
 		email: emailLower,
-		password,
 	});
+	const tokenHash = linkData?.properties?.hashed_token;
+	if (linkErr || !tokenHash) {
+		return {
+			ok: false,
+			error: linkErr?.message ?? "无法创建登录会话",
+			status: 500,
+		};
+	}
 
-	if (signErr) {
-		return { ok: false, error: "会话建立失败：" + signErr.message, status: 500 };
+	const cookieClient = createSupabaseRouteClient(request, response);
+	const { error: otpErr } = await cookieClient.auth.verifyOtp({
+		token_hash: tokenHash,
+		type: "email",
+	});
+	if (otpErr) {
+		return { ok: false, error: "会话建立失败：" + otpErr.message, status: 500 };
 	}
 
 	return { ok: true, userId, response };

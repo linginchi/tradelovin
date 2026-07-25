@@ -38,7 +38,9 @@ export function AdminEmailLinkLoginForm() {
 
 	const nextPathRaw = searchParams.get("next");
 	const nextPath =
-		nextPathRaw && nextPathRaw.startsWith("/cjkzt") && !nextPathRaw.startsWith("//")
+		nextPathRaw &&
+		!nextPathRaw.startsWith("//") &&
+		(nextPathRaw.startsWith("/cjkzt") || nextPathRaw.startsWith("/admin"))
 			? nextPathRaw
 			: "/cjkzt";
 

@@ -1,4 +1,4 @@
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { VideoPlayerClient } from "@/components/video/VideoPlayerClient";
 import { buttonVariants } from "@/components/ui/button";
@@ -12,12 +12,13 @@ type Props = {
 export default async function VideoPlayerPage({ params }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("CoursesPage");
 
   return (
     <div className="relative flex min-h-full flex-1 flex-col">
       <div className="mx-auto flex w-full max-w-5xl px-4 pt-3 sm:px-6">
         <Link href="/courses" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}>
-          返回课程
+          {t("back")}
         </Link>
       </div>
       <div className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 md:py-12">

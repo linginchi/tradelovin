@@ -1,0 +1,33 @@
+# 每日按动态日增模型自动增加视频观看人次
+name: Bump Video View Counts
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天 08:10 HKT（00:10 UTC）
+    - cron: "10 0 * * *"
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call bump-view-counts cron
+        env:
+          APP_URL: ${{ vars.TQ_CRON_BASE_URL }}
+          INTERNAL_WEBHOOK_TOKEN: ${{ secrets.INTERNAL_WEBHOOK_TOKEN }}
+          TQ_CRON_API_KEY: ${{ secrets.TQ_CRON_API_KEY }}
+        run: |
+          set -euo pipefail
+          BASE_URL="${APP_URL:-https://tradelovin.com}"
+          if [ -n "${INTERNAL_WEBHOOK_TOKEN:-}" ]; then
+            curl -fsS -X POST "${BASE_URL%/}/api/cron/bump-view-counts" \
+              -H "Content-Type: application/json" \
+              -H "x-internal-token: ${INTERNAL_WEBHOOK_TOKEN}"
+          elif [ -n "${TQ_CRON_API_KEY:-}" ]; then
+            curl -fsS -X POST "${BASE_URL%/}/api/cron/bump-view-counts" \
+              -H "Content-Type: application/json" \
+              -H "x-cron-key: ${TQ_CRON_API_KEY}"
+          else
+            echo "Missing INTERNAL_WEBHOOK_TOKEN or TQ_CRON_API_KEY secret"
+            exit 1
+          fi

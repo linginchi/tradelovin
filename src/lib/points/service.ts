@@ -36,6 +36,9 @@ export const REDEEM_RULES: Record<
   t2_report_single_download: { pointsCost: 150, name: "P2 · 云豹报告单次下载券", validityDays: 30 },
 };
 
+/** 观看一个课程视频需要的积分 */
+export const VIDEO_POINTS_COST = 10;
+
 function dayRangeUtc8(now = new Date()) {
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
   const hkMs = utcMs + 8 * 3600 * 1000;
@@ -236,4 +239,45 @@ export async function redeemPoints(
   if (redeemErr) throw new Error(redeemErr.message);
 
   return { code, pointsCost: rule.pointsCost, balance: nextBalance };
+}
+
+/** 消费积分看视频，只在用户无课程权限时调用 */
+export async function consumePointsForVideo(
+  supabase: SupabaseClient,
+  input: { userId: string; videoId: string; amount: number },
+): Promise<{ success: boolean; balance: number }> {
+  await ensureUserPointsRow(supabase, input.userId);
+  const { data: pointsRow } = await supabase
+    .from("user_points")
+    .select("balance,total_spent")
+    .eq("user_id", input.userId)
+    .single();
+  const balance = Number(pointsRow?.balance ?? 0);
+  if (balance < input.amount) {
+    throw new Error("积分不足");
+  }
+
+  const nextBalance = balance - input.amount;
+  const totalSpent = Number(pointsRow?.total_spent ?? 0) + input.amount;
+
+  const { error: updErr } = await supabase
+    .from("user_points")
+    .update({
+      balance: nextBalance,
+      total_spent: totalSpent,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", input.userId);
+  if (updErr) throw new Error(updErr.message);
+
+  const { error: txErr } = await supabase.from("points_transactions").insert({
+    user_id: input.userId,
+    amount: -input.amount,
+    type: "spend",
+    reason: "watch_video",
+    reference_id: input.videoId,
+  });
+  if (txErr) throw new Error(txErr.message);
+
+  return { success: true, balance: nextBalance };
 }

@@ -11,6 +11,7 @@ import {
   getDisplayLevel,
   getLocalizedLevelDescription,
   getLocalizedLevelLabel,
+  getLocalizedLevelName,
 } from "@/lib/membership/level-mapping";
 
 type Membership = {
@@ -308,7 +309,7 @@ export function MembershipCenterClient() {
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {upgradePreview.nextPlan
-                    ? `下一档 ${upgradePreview.nextPlan} 门槛：${upgradePreview.planRequirements[upgradePreview.nextPlan].requiredScore}`
+                    ? `下一档 ${getLocalizedLevelName(getDisplayLevel(upgradePreview.nextPlan), locale)} 门槛：${upgradePreview.planRequirements[upgradePreview.nextPlan].requiredScore}`
                     : "已到最高档位"}
                 </p>
               </div>

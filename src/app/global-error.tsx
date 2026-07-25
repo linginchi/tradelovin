@@ -27,7 +27,7 @@ export default function GlobalError({
 						<Button type="button" onClick={() => reset()}>
 							重试
 						</Button>
-						<Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/my-learning")}>
+						<Button type="button" variant="outline" onClick={() => window.location.assign("/login?next=/courses")}>
 							返回登录
 						</Button>
 					</div>

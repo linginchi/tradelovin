@@ -1,0 +1,101 @@
+# 豹哥·交易新銳 + 豹叔·交易經典 — 每週搜尋並加工交易人物故事影片
+name: AI Content Pipeline
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 交易新銳: 每週二 03:00 HKT (週一 19:00 UTC)
+    - cron: "0 19 * * 1"
+    # 交易經典: 每週五 03:00 HKT (週四 19:00 UTC)
+    - cron: "0 19 * * 4"
+
+jobs:
+  newedge:
+    if: github.event.schedule == '0 19 * * 1' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg yt-dlp
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: 豹哥 · 交易新銳 — 搜尋當前最火交易員人物故事
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VIDEO_STORAGE_PROVIDER: ${{ vars.VIDEO_STORAGE_PROVIDER || 'r2' }}
+          VIDEO_STORAGE_BUCKET: ${{ vars.VIDEO_STORAGE_BUCKET }}
+          VIDEO_STORAGE_ENDPOINT: ${{ secrets.VIDEO_STORAGE_ENDPOINT }}
+          VIDEO_STORAGE_ACCESS_KEY_ID: ${{ secrets.VIDEO_STORAGE_ACCESS_KEY_ID }}
+          VIDEO_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.VIDEO_STORAGE_SECRET_ACCESS_KEY }}
+          VIDEO_STORAGE_PUBLIC_URL: ${{ vars.VIDEO_STORAGE_PUBLIC_URL || '' }}
+        run: |
+          set -euo pipefail
+          node scripts/ai-pipeline/search-and-process.mjs
+
+  classics:
+    if: github.event.schedule == '0 19 * * 4' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg yt-dlp
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: 豹叔 · 交易經典 — 搜尋歷史交易大師人物故事
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VIDEO_STORAGE_PROVIDER: ${{ vars.VIDEO_STORAGE_PROVIDER || 'r2' }}
+          VIDEO_STORAGE_BUCKET: ${{ vars.VIDEO_STORAGE_BUCKET }}
+          VIDEO_STORAGE_ENDPOINT: ${{ secrets.VIDEO_STORAGE_ENDPOINT }}
+          VIDEO_STORAGE_ACCESS_KEY_ID: ${{ secrets.VIDEO_STORAGE_ACCESS_KEY_ID }}
+          VIDEO_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.VIDEO_STORAGE_SECRET_ACCESS_KEY }}
+          VIDEO_STORAGE_PUBLIC_URL: ${{ vars.VIDEO_STORAGE_PUBLIC_URL || '' }}
+        run: |
+          set -euo pipefail
+          node scripts/ai-pipeline/search-classics.mjs
+
+  xiaohongshu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Xiaohongshu article
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          node scripts/ai-pipeline/generate-redbook-article.mjs

@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Eye, Pencil, Play, Trash2, Upload, CheckCircle, Calendar, Clock } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 
 type SessionRow = {
@@ -50,7 +60,9 @@ type VideoRow = {
 	duration: number | null;
 	sort_order: number;
 	is_free_preview: boolean;
+	view_count?: number;
 	created_at: string;
+	published_at: string | null;
 };
 
 export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
@@ -74,7 +86,25 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const [videoSort, setVideoSort] = useState("0");
 	const [videoFreePreview, setVideoFreePreview] = useState(false);
 	const [videoFile, setVideoFile] = useState<File | null>(null);
+	const [videoPublishedAt, setVideoPublishedAt] = useState("");
 	const [storageConfigured, setStorageConfigured] = useState(true);
+
+	// 審片發佈台：二次確認 dialog
+	const [scheduleOpen, setScheduleOpen] = useState(false);
+	const [scheduleVideoId, setScheduleVideoId] = useState<string | null>(null);
+	const [scheduleDate, setScheduleDate] = useState("");
+	const [confirmAction, setConfirmAction] = useState<{
+		open: boolean;
+		title: string;
+		desc: string;
+		onConfirm: () => void;
+	}>({ open: false, title: "", desc: "", onConfirm: () => {} });
+
+	// QR code
+	const [partnerQrUrl, setPartnerQrUrl] = useState<string | null>(null);
+	const [partnerQrLabel, setPartnerQrLabel] = useState("合作夥伴");
+	const [qrFile, setQrFile] = useState<File | null>(null);
+	const [qrUploading, setQrUploading] = useState(false);
 
 	const [sessDate, setSessDate] = useState("");
 	const [sessStart, setSessStart] = useState("");
@@ -90,7 +120,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		try {
 			const res = await fetch(`/api/admin/courses/${courseId}`, { credentials: "include" });
 			const data = (await res.json()) as {
-				course?: CourseRow;
+				course?: CourseRow & { partner_qr_url?: string | null; partner_qr_label?: string };
 				sessions?: SessionRow[];
 				instructor_id?: string | null;
 				enrollments?: EnrollRow[];
@@ -106,6 +136,8 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 				setDescription(data.course.description ?? "");
 				setMode(data.course.mode as "online" | "offline");
 				setCapacity(data.course.capacity);
+				setPartnerQrUrl(data.course.partner_qr_url ?? null);
+				setPartnerQrLabel(data.course.partner_qr_label ?? "合作夥伴");
 			}
 			setSessions(data.sessions ?? []);
 			setInstructorId(data.instructor_id ?? "");
@@ -165,6 +197,60 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			setError(t("saveError"));
 		} finally {
 			setSaving(false);
+		}
+	}
+
+	async function uploadPartnerQr() {
+		if (!qrFile) {
+			setError("请先选择二维码图片（PNG/JPG）");
+			return;
+		}
+		setQrUploading(true);
+		setError(null);
+		try {
+			const fd = new FormData();
+			fd.set("qr_image", qrFile);
+			fd.set("label", partnerQrLabel.trim() || "合作夥伴");
+
+			const res = await fetch(`/api/admin/courses/${courseId}/partner-qr`, {
+				method: "POST",
+				body: fd,
+				credentials: "include",
+			});
+			const js = (await res.json()) as { error?: string; partnerQrUrl?: string };
+			if (!res.ok) {
+				setError(js.error ?? "上传二维码失败");
+				return;
+			}
+			setQrFile(null);
+			void load();
+		} catch {
+			setError("上传二维码失败");
+		} finally {
+			setQrUploading(false);
+		}
+	}
+
+	async function setQrUrlDirect(url: string, label: string) {
+		setQrUploading(true);
+		setError(null);
+		try {
+			const res = await fetch(`/api/admin/courses/${courseId}/partner-qr`, {
+				method: "PUT",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ partner_qr_url: url, partner_qr_label: label }),
+			});
+			const js = (await res.json()) as { error?: string; ok?: boolean };
+			if (!res.ok) {
+				setError(js.error ?? "更新失败");
+				return;
+			}
+			void load();
+		} catch {
+			setError("更新失败");
+		} finally {
+			setQrUploading(false);
 		}
 	}
 
@@ -255,6 +341,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			if (videoDuration.trim()) fd.set("duration", videoDuration.trim());
 			if (videoSort.trim()) fd.set("sort_order", videoSort.trim());
 			fd.set("is_free_preview", videoFreePreview ? "true" : "false");
+			if (videoPublishedAt.trim()) fd.set("published_at", new Date(videoPublishedAt).toISOString());
 
 			const res = await fetch(`/api/admin/courses/${courseId}/videos`, {
 				method: "POST",
@@ -271,6 +358,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			setVideoDuration("");
 			setVideoSort("0");
 			setVideoFreePreview(false);
+			setVideoPublishedAt("");
 			setVideoFile(null);
 			void load();
 		} catch {
@@ -278,6 +366,118 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		} finally {
 			setSaving(false);
 		}
+	}
+
+	async function deleteVideo(id: string) {
+		setConfirmAction({
+			open: true,
+			title: "刪除視頻",
+			desc: "確定刪除該視頻？此操作不可撤銷。",
+			onConfirm: async () => {
+				setConfirmAction((p) => ({ ...p, open: false }));
+				const res = await fetch(`/api/admin/videos/${id}`, {
+					method: "DELETE",
+					credentials: "include",
+				});
+				if (res.ok) void load();
+			},
+		});
+	}
+
+	function setPublishedAt(id: string, publishedAt: string | null, label: string) {
+		setConfirmAction({
+			open: true,
+			title: label,
+			desc: publishedAt === null
+				? "確定下架該視頻？下架後學員無法觀看。"
+				: "確定發布該視頻？發布後學員即可觀看。",
+			onConfirm: async () => {
+				setConfirmAction((p) => ({ ...p, open: false }));
+				setError(null);
+				try {
+					const res = await fetch(`/api/admin/videos/${id}`, {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						credentials: "include",
+						body: JSON.stringify({ published_at: publishedAt }),
+					});
+					if (!res.ok) {
+						const js = await res.json().catch(() => ({}));
+						setError((js as { error?: string }).error ?? "操作失败");
+						return;
+					}
+					void load();
+				} catch {
+					setError("操作失败");
+				}
+			},
+		});
+	}
+
+	function openScheduleDialog(videoId: string) {
+		const now = new Date();
+		now.setMinutes(now.getMinutes() + 1); // 至少一分鐘後
+		setScheduleDate(now.toISOString().slice(0, 16));
+		setScheduleVideoId(videoId);
+		setScheduleOpen(true);
+	}
+
+	function confirmSchedule() {
+		if (!scheduleVideoId || !scheduleDate) return;
+		const dt = new Date(scheduleDate);
+		setConfirmAction({
+			open: true,
+			title: "排程發佈",
+			desc: `確認將視頻排程至 ${dt.toLocaleString("zh-TW", { timeZone: "Asia/Taipei" })} 自動發佈？`,
+			onConfirm: async () => {
+				setConfirmAction((p) => ({ ...p, open: false }));
+				setScheduleOpen(false);
+				setError(null);
+				try {
+					const res = await fetch(`/api/admin/videos/${scheduleVideoId}`, {
+						method: "PATCH",
+						headers: { "Content-Type": "application/json" },
+						credentials: "include",
+						body: JSON.stringify({ published_at: dt.toISOString() }),
+					});
+					if (!res.ok) {
+						const js = await res.json().catch(() => ({}));
+						setError((js as { error?: string }).error ?? "排程失败");
+						return;
+					}
+					void load();
+				} catch {
+					setError("排程失败");
+				}
+			},
+		});
+	}
+
+	// ── 影片狀態標籤 ──
+	function videoStatusTag(v: VideoRow) {
+		if (!v.published_at) {
+			return <span className="text-amber-400 inline-flex items-center gap-0.5">待發佈</span>;
+		}
+		const pub = new Date(v.published_at);
+		if (pub.getTime() > Date.now()) {
+			return (
+				<span className="text-sky-400 inline-flex items-center gap-0.5 ml-2">
+					<Clock className="size-3" />
+					排程中
+				</span>
+			);
+		}
+		return (
+			<span className="text-emerald-400 inline-flex items-center gap-0.5">
+				<CheckCircle className="size-3" />
+				已發佈
+			</span>
+		);
+	}
+
+	// deprecated: kept for backward compat
+	function openVideoPlayer(videoId: string) {
+		window.open(`/zh/video-player?courseId=${courseId}&videoId=${videoId}`, "_blank");
 	}
 
 	function fmtTime(tstr: string) {
@@ -295,7 +495,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		<div className="space-y-8">
 			<p className="text-sm">
 				<Link href="/cjkzt/courses" className="text-cyan-300 underline-offset-4 hover:underline">
-					? {t("coursesTitle")}
+					← {t("coursesTitle")}
 				</Link>
 			</p>
 			{error && <p className="text-destructive text-sm">{error}</p>}
@@ -355,7 +555,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 								onChange={(e) => setInstructorId(e.target.value)}
 								className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm dark:bg-input/30"
 							>
-								<option value="">�</option>
+								<option value="">—</option>
 								{allInstructors.map((ins) => (
 									<option key={ins.id} value={ins.id}>
 										{ins.name}
@@ -367,6 +567,76 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 					<Button type="button" disabled={saving} onClick={() => void saveCourse()}>
 						{t("save")}
 					</Button>
+				</CardContent>
+			</Card>
+
+			{/* 合作伙伴二维码 */}
+			<Card className="border-border/60 bg-card/35">
+				<CardHeader>
+					<CardTitle className="text-base">合作伙伴二维码</CardTitle>
+				</CardHeader>
+				<CardContent className="space-y-4">
+					{partnerQrUrl ? (
+						<div className="flex items-center gap-4">
+							{/* eslint-disable-next-line @next/next/no-img-element */}
+							<img
+								src={partnerQrUrl}
+								alt={partnerQrLabel}
+								className="size-20 rounded-lg border border-border/40 object-contain"
+							/>
+							<span className="text-sm text-muted-foreground">{partnerQrLabel}</span>
+						</div>
+					) : (
+						<p className="text-muted-foreground text-sm">尚未设置合作伙伴二维码</p>
+					)}
+					<div className="space-y-2">
+						<Label htmlFor="qr-url">图片地址（直接粘贴 URL，无需上传）</Label>
+						<Input
+							id="qr-url"
+							value={partnerQrUrl ?? ""}
+							onChange={(e) => setPartnerQrUrl(e.target.value)}
+							className="h-10"
+							placeholder="/partner-qr.png 或 https://..."
+						/>
+					</div>
+					<div className="grid gap-3 sm:grid-cols-2">
+						<div className="space-y-2">
+							<Label htmlFor="qr-image">二维码图片（PNG/JPG）</Label>
+							<Input
+								id="qr-image"
+								type="file"
+								accept="image/png,image/jpeg"
+								onChange={(e) => setQrFile(e.target.files?.[0] ?? null)}
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="qr-label">标签文字</Label>
+							<Input
+								id="qr-label"
+								value={partnerQrLabel}
+								onChange={(e) => setPartnerQrLabel(e.target.value)}
+								className="h-10"
+								placeholder="广发证券"
+							/>
+						</div>
+					</div>
+					<div className="flex gap-2">
+						<Button
+							type="button"
+							disabled={qrUploading || !qrFile}
+							onClick={() => void uploadPartnerQr()}
+						>
+							{qrUploading ? "上传中..." : "上传二维码"}
+						</Button>
+						<Button
+							type="button"
+							variant="outline"
+							disabled={qrUploading || !partnerQrUrl}
+							onClick={() => void setQrUrlDirect(partnerQrUrl!, partnerQrLabel)}
+						>
+							更新标签
+						</Button>
+					</div>
 				</CardContent>
 			</Card>
 
@@ -383,7 +653,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 						>
 							<span>
 								{s.date} {fmtTime(s.start_time)}-{fmtTime(s.end_time)}
-								{s.location ? ` ?${s.location}` : ""}
+								{s.location ? ` · ${s.location}` : ""}
 							</span>
 							<Button type="button" variant="outline" size="sm" onClick={() => void deleteSession(s.id)}>
 								{t("removeEnrollment")}
@@ -426,7 +696,7 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			<Card className="border-border/60 bg-card/35">
 				<CardHeader>
 					<CardTitle className="text-base">
-						{t("enrollTitle")}?{enrollments.length}/{capacity}?
+						{t("enrollTitle")} · {enrollments.length}/{capacity}
 					</CardTitle>
 				</CardHeader>
 				<CardContent className="space-y-4">
@@ -527,6 +797,16 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 							/>
 							<Label htmlFor="video-free-preview">免费预览</Label>
 						</div>
+						<div className="space-y-2">
+							<Label htmlFor="video-publish-at">發佈時間（留空=立即，填未來=排程）</Label>
+							<Input
+								id="video-publish-at"
+								type="datetime-local"
+								value={videoPublishedAt}
+								onChange={(e) => setVideoPublishedAt(e.target.value)}
+								className="h-10"
+							/>
+						</div>
 						<div className="space-y-2 sm:col-span-2">
 							<Label htmlFor="video-desc">简介（可选）</Label>
 							<Textarea
@@ -547,10 +827,79 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 					<ul className="space-y-2 text-sm">
 						{videos.map((v) => (
 							<li key={v.id} className="border-border/40 rounded-lg border px-3 py-2">
-								<div className="font-medium">{v.title}</div>
-								<div className="text-muted-foreground">
-									#{v.sort_order} · {v.duration ? `${v.duration}s` : "时长未设置"} ·{" "}
-									{v.is_free_preview ? "免费预览" : "付费可看"}
+								<div className="flex items-center justify-between gap-2">
+									<div className="flex-1 min-w-0">
+										<div className="font-medium truncate">{v.title}</div>
+										<div className="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-1">
+											<span>#{v.sort_order} · {v.duration ? `${v.duration}s` : "时长未设置"}</span>
+											{v.view_count != null ? (
+												<span className="inline-flex items-center gap-0.5">
+													<Eye className="size-3" />
+													{v.view_count} 人次
+												</span>
+											) : null}
+											{videoStatusTag(v)}
+										</div>
+									</div>
+									<div className="flex items-center gap-1 shrink-0">
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											className="size-7 text-cyan-300/80 hover:text-cyan-300"
+											title="預覽播放"
+											onClick={() => openVideoPlayer(v.id)}
+										>
+											<Play className="size-3.5" />
+										</Button>
+										{!v.published_at ? (
+											<>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													className="h-7 px-2 text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-900/20"
+													onClick={() =>
+														setPublishedAt(v.id, new Date().toISOString(), "立即發佈")
+													}
+												>
+													發佈
+												</Button>
+												<Button
+													type="button"
+													variant="ghost"
+													size="sm"
+													className="h-7 px-2 text-xs text-sky-400 hover:text-sky-300 hover:bg-sky-900/20"
+													onClick={() => openScheduleDialog(v.id)}
+												>
+													<Calendar className="size-3 mr-0.5" />
+													排程
+												</Button>
+											</>
+										) : (
+											<Button
+												type="button"
+												variant="ghost"
+												size="sm"
+												className="h-7 px-2 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-900/20"
+												onClick={() =>
+													setPublishedAt(v.id, null, "下架")
+												}
+											>
+												下架
+											</Button>
+										)}
+										<Button
+											type="button"
+											variant="ghost"
+											size="icon"
+											className="size-7 text-destructive/70 hover:text-destructive"
+											title="删除"
+											onClick={() => void deleteVideo(v.id)}
+										>
+											<Trash2 className="size-3.5" />
+										</Button>
+									</div>
 								</div>
 							</li>
 						))}
@@ -558,6 +907,58 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 					</ul>
 				</CardContent>
 			</Card>
+
+			{/* 二次確認 Dialog */}
+			<Dialog
+				open={confirmAction.open}
+				onOpenChange={(open) => {
+					if (!open) setConfirmAction((p) => ({ ...p, open: false }));
+				}}
+			>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader>
+						<DialogTitle>{confirmAction.title}</DialogTitle>
+						<DialogDescription>{confirmAction.desc}</DialogDescription>
+					</DialogHeader>
+					<DialogFooter showCloseButton closeLabel="取消">
+						<Button variant="default" onClick={confirmAction.onConfirm}>
+							確認
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			{/* 排程發佈 Dialog */}
+			<Dialog
+				open={scheduleOpen}
+				onOpenChange={(open) => {
+					if (!open) { setScheduleOpen(false); setScheduleVideoId(null); }
+				}}
+			>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader>
+						<DialogTitle>排程發佈</DialogTitle>
+						<DialogDescription>
+							設定未來時間，影片將在該時間自動發佈。
+						</DialogDescription>
+					</DialogHeader>
+					<div className="space-y-2">
+						<Label htmlFor="schedule-datetime">發佈時間</Label>
+						<Input
+							id="schedule-datetime"
+							type="datetime-local"
+							value={scheduleDate}
+							onChange={(e) => setScheduleDate(e.target.value)}
+							className="h-10"
+						/>
+					</div>
+					<DialogFooter showCloseButton closeLabel="取消">
+						<Button variant="default" onClick={confirmSchedule} disabled={!scheduleDate}>
+							確認排程
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

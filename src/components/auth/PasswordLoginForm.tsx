@@ -3,13 +3,12 @@
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type FormValues = {
 	email: string;
@@ -18,6 +17,7 @@ type FormValues = {
 
 export function PasswordLoginForm() {
 	const searchParams = useSearchParams();
+	const locale = useLocale();
 	const t = useTranslations("MagicLogin");
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -32,29 +32,43 @@ export function PasswordLoginForm() {
 	});
 
 	const nextParam = searchParams.get("next");
-	const nextPath =
+	const rawNext =
 		nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")
 			? nextParam
-			: "/my-learning";
+			: "/courses";
+	// 带 locale，避免跳到无前缀路径时命中旧缓存/错误入口
+	const nextPath = rawNext === `/${locale}` || rawNext.startsWith(`/${locale}/`)
+		? rawNext
+		: `/${locale}${rawNext}`;
 
 	const signIn = async (values: FormValues) => {
 		setBusy(true);
 		setError(null);
 		try {
-			const sb = getSupabaseBrowserClient();
-			if (!sb) {
-				setError(t("sendFailed"));
-				return;
-			}
-			const { error: signInError } = await sb.auth.signInWithPassword({
-				email: values.email.trim().toLowerCase(),
-				password: values.password,
+			const res = await fetch("/api/auth/password-login", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({
+					email: values.email.trim().toLowerCase(),
+					password: values.password,
+				}),
 			});
-			if (signInError) {
-				setError(t("passwordLoginFailed"));
+			const js = (await res.json()) as {
+				success?: boolean;
+				error?: string;
+				errorEn?: string;
+			};
+			if (!res.ok || !js.success) {
+				setError(
+					locale === "en"
+						? (js.errorEn ?? js.error ?? t("passwordLoginFailed"))
+						: (js.error ?? js.errorEn ?? t("passwordLoginFailed")),
+				);
 				return;
 			}
-			window.location.assign(nextPath);
+			// 整页跳转，避免 SPA 残留未登录态 / 旧资源
+			window.location.replace(nextPath);
 		} catch {
 			setError(t("passwordLoginFailed"));
 		} finally {

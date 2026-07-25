@@ -20,6 +20,16 @@ type PartnerRow = {
   payout_info?: Record<string, unknown> | null;
 };
 
+type KolApplicationRow = {
+  id: string;
+  email: string;
+  channel_name: string | null;
+  platform_accounts: Array<{ platform: string; account: string }>;
+  status: string;
+  created_at: string;
+  email_verified_at: string | null;
+};
+
 type UserSearchResult = {
   id: string;
   email: string;
@@ -261,11 +271,15 @@ export function AdminChannelPartnersPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [rows, setRows] = useState<PartnerRow[]>([]);
-  const [pendingRows, setPendingRows] = useState<Partial<PartnerRow>[]>([]);
+  const [pendingRows, setPendingRows] = useState<KolApplicationRow[]>([]);
   const [search, setSearch] = useState("");
   const [showInviteDialog, setShowInviteDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [tab, setTab] = useState<"active" | "pending">("active");
+
+  const [approveMessage, setApproveMessage] = useState("");
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   async function load() {
     setLoading(true);
@@ -283,9 +297,11 @@ export function AdminChannelPartnersPanel() {
 
   async function loadPending() {
     setLoading(true);
+    setApproveMessage("");
     try {
-      const res = await fetch("/api/admin/channel-partners/pending");
-      const json: { success?: boolean; error?: string; data?: { rows: Partial<PartnerRow>[] } } = await res.json();
+      const res = await fetch("/api/admin/kol-applications?status=pending_review");
+      const json: { success?: boolean; error?: string; data?: { rows: KolApplicationRow[] } } =
+        await res.json();
       if (json.success && json.data) setPendingRows(json.data.rows);
       else setError(json.error ?? "加载失败");
     } catch {
@@ -295,16 +311,32 @@ export function AdminChannelPartnersPanel() {
     }
   }
 
-  async function approveSelf(id: string) {
-    const res = await fetch(`/api/admin/channel-partners/${id}/approve`, { method: "POST" });
-    const json: { success?: boolean } = await res.json();
-    if (json.success) void loadPending();
+  async function approveApplication(id: string) {
+    setApproveMessage("");
+    const res = await fetch(`/api/admin/kol-applications/${id}/approve`, { method: "POST" });
+    const json: { success?: boolean; message?: string; error?: string } = await res.json();
+    if (json.success) {
+      setApproveMessage(json.message ?? "邀请码已发送");
+      void loadPending();
+    } else {
+      setError(json.error ?? "审核失败");
+    }
   }
 
-  async function rejectSelf(id: string) {
-    const res = await fetch(`/api/admin/channel-partners/${id}/reject`, { method: "POST" });
-    const json: { success?: boolean } = await res.json();
-    if (json.success) void loadPending();
+  async function rejectApplication(id: string) {
+    const res = await fetch(`/api/admin/kol-applications/${id}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: rejectReason.trim() || undefined }),
+    });
+    const json: { success?: boolean; error?: string } = await res.json();
+    if (json.success) {
+      setRejectingId(null);
+      setRejectReason("");
+      void loadPending();
+    } else {
+      setError(json.error ?? "驳回失败");
+    }
   }
 
   useEffect(() => {
@@ -428,70 +460,103 @@ export function AdminChannelPartnersPanel() {
       </>
       )}
 
-      {tab === "pending" &&
-        (loading ? (
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> 加载中...
-          </div>
-        ) : error ? (
-          <p className="text-amber-300">{error}</p>
-        ) : pendingRows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">暂无待审核申请</p>
-        ) : (
-          <div className="rounded-xl border border-border/70">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">名称</th>
-                  <th className="px-4 py-3 font-medium">平台</th>
-                  <th className="px-4 py-3 font-medium">社交链接</th>
-                  <th className="px-4 py-3 font-medium">申请时间</th>
-                  <th className="px-4 py-3 font-medium">操作</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingRows.map((r) => {
-                  const payoutInfo = r.payout_info as Record<string, unknown> | null;
-                  const socialUrl = String(payoutInfo?.social_url ?? "—");
-                  return (
-                    <tr key={r.id} className="border-b border-border/40">
-                      <td className="px-4 py-3 font-medium">{String(r.channel_name ?? "")}</td>
-                      <td className="px-4 py-3">{String(r.platform ?? "—")}</td>
+      {tab === "pending" && (
+        <>
+          {approveMessage && (
+            <p className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+              {approveMessage}
+            </p>
+          )}
+          {loading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> 加载中...
+            </div>
+          ) : error ? (
+            <p className="text-amber-300">{error}</p>
+          ) : pendingRows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-muted-foreground">暂无待审核申请</p>
+          ) : (
+            <div className="rounded-xl border border-border/70">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">邮箱</th>
+                    <th className="px-4 py-3 font-medium">名称</th>
+                    <th className="px-4 py-3 font-medium">平台账号</th>
+                    <th className="px-4 py-3 font-medium">申请时间</th>
+                    <th className="px-4 py-3 font-medium">操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingRows.map((r) => (
+                    <tr key={r.id} className="border-b border-border/40 align-top">
+                      <td className="px-4 py-3">{r.email}</td>
+                      <td className="px-4 py-3 font-medium">{r.channel_name ?? "—"}</td>
                       <td className="px-4 py-3">
-                        {socialUrl !== "—" ? (
-                          <a
-                            href={socialUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-400 hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            查看主页
-                          </a>
-                        ) : (
-                          "—"
-                        )}
+                        <ul className="space-y-1 text-muted-foreground">
+                          {(r.platform_accounts ?? []).map((pa, i) => (
+                            <li key={i}>
+                              <span className="text-foreground">{pa.platform}</span>: {pa.account}
+                            </li>
+                          ))}
+                        </ul>
                       </td>
                       <td className="px-4 py-3 text-muted-foreground">
-                        {r.created_at ? new Date(r.created_at).toLocaleDateString() : "—"}
+                        {r.email_verified_at
+                          ? new Date(r.email_verified_at).toLocaleString()
+                          : new Date(r.created_at).toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => r.id && void approveSelf(r.id)}>
-                            通过
-                          </Button>
-                          <Button variant="outline" size="sm" onClick={() => r.id && void rejectSelf(r.id)}>
-                            驳回
-                          </Button>
-                        </div>
+                        {rejectingId === r.id ? (
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="驳回理由（选填）"
+                              value={rejectReason}
+                              onChange={(e) => setRejectReason(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void rejectApplication(r.id)}
+                              >
+                                确认驳回
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setRejectingId(null);
+                                  setRejectReason("");
+                                }}
+                              >
+                                取消
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => void approveApplication(r.id)}>
+                              通过并发送邀请码
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setRejectingId(r.id)}
+                            >
+                              驳回
+                            </Button>
+                          </div>
+                        )}
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ))}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       <InviteCodeDialog open={showInviteDialog} onClose={() => setShowInviteDialog(false)} />
       <AddKOLDialog open={showAddDialog} onClose={() => setShowAddDialog(false)} onSuccess={() => void load()} />

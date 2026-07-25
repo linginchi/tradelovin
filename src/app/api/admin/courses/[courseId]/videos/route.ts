@@ -23,6 +23,7 @@ const fieldSchema = z.object({
   duration: z.number().int().nonnegative().optional(),
   sort_order: z.number().int().nonnegative().optional(),
   is_free_preview: z.boolean().optional(),
+  published_at: z.string().datetime().nullable().optional(),
 });
 
 function safeName(name: string): string {
@@ -42,7 +43,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const { data: rows, error } = await srv
     .from("course_videos")
-    .select("id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at")
+    .select("id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, view_count, created_at, published_at")
     .eq("course_id", courseId)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
@@ -116,6 +117,10 @@ export async function POST(request: Request, { params }: RouteContext) {
     is_free_preview:
       String(form.get("is_free_preview") ?? "").toLowerCase() === "true" ||
       String(form.get("is_free_preview") ?? "") === "1",
+    published_at:
+      form.get("published_at")
+        ? String(form.get("published_at")).trim() || null
+        : undefined,
   });
   if (!parsed.success) {
     return NextResponse.json({ error: "视频参数无效" }, { status: 400 });
@@ -138,8 +143,9 @@ export async function POST(request: Request, { params }: RouteContext) {
       sort_order: parsed.data.sort_order ?? 0,
       storage_key: storageKey,
       is_free_preview: parsed.data.is_free_preview ?? false,
+      published_at: parsed.data.published_at ?? null,
     })
-    .select("id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at")
+    .select("id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at, published_at")
     .maybeSingle();
 
   if (error) {

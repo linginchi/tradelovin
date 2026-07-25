@@ -75,7 +75,7 @@ export function useAuth() {
 				if (token) {
 					console.warn("[auth] detected SIGNED_OUT, try one silent retry");
 					setSilentRetryDone(true);
-					void fetch(`/api/auth/magic-link?token=${encodeURIComponent(token)}&next=/my-learning`, {
+					void fetch(`/api/auth/magic-link?token=${encodeURIComponent(token)}&next=/courses`, {
 						credentials: "include",
 					})
 						.then(() => refresh())

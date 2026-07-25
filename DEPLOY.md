@@ -158,6 +158,11 @@ npm run deploy:cloudflare
 | 运行期（Worker Secret） | `SUPABASE_SERVICE_ROLE_KEY` | 服务端 API 写库、后台管理、受保护流程 | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `ADMIN_JWT_SECRET` | 管理后台 JWT 签发与校验 | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `RESEND_API_KEY` | 邮件验证码与通知邮件 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `TUSHARE_TOKEN` | A 股行情（Tushare daily/rt_k 与基本面）；缺失时仅依赖新浪 L1 回退 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `STRIPE_SECRET_KEY` | 会员订阅 Checkout 创建、订阅检索、webhook 内调用 Stripe API（`sk_live_...`）；过期/撤销后付费立即报 `Expired API Key provided` | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `STRIPE_WEBHOOK_SECRET` | Stripe webhook 签名校验（`whsec_...`），对应 Dashboard Webhooks 端点的 signing secret | Cloudflare Worker Secrets |
+| 运行期（Worker Var） | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `NEXT_PUBLIC_STRIPE_PUBLIC_KEY` | 前端 Stripe.js 公开 key（`pk_live_...`）；当前 Hosted Checkout 跳转流程非必需，缺失仅前端告警 | `wrangler.jsonc` vars / GitHub Actions Variables |
+| 运行期（Worker Var） | `PRICE_T?_MONTHLY` / `PRICE_T?_YEARLY`（及 `STRIPE_PRICE_*` 别名） | 各档位会员对应的 Stripe Price ID；归档价格会导致 Checkout 创建失败 | `wrangler.jsonc` vars |
 | 运行期（Worker Var/Secret） | `RESEND_FROM_EMAIL` | 发件人地址 | Cloudflare Worker Variables/Secrets |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP` | 开启后台固定码登录（仅开发/测试建议） | Cloudflare Worker Variables / 本地 `.env` |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION` | 生产环境二次确认固定码（默认不启用） | Cloudflare Worker Variables |
@@ -165,6 +170,25 @@ npm run deploy:cloudflare
 | 构建期（Next 打包） | `NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN` | `/cjkzt/login` 显示「一键登录（测试）」按钮（仍需 Worker 打开固定管理员 OTP） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `0`） |
 | 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS` | 启用 `/api/auth/dev-test-login`（固定测试账号入口） | Worker Variables（不设时 workflow 部署默认 `0`） |
 | 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION` | 生产环境二次确认 dev 测试账号入口（默认不启用） | Worker Variables（不设时 workflow 部署默认 `0`） |
+
+#### Stripe 密钥轮换 SOP（付费功能「停了」首选排查项）
+
+当会员中心点「立即支付」报 `Expired API Key provided` 或 webhook 不再同步会员状态时，**优先怀疑 `STRIPE_SECRET_KEY` 已被轮换/撤销**，而非代码问题。代码侧（`create-checkout`、`webhook/stripe`、CSRF 豁免、middleware）已长期稳定，无需改动。
+
+1. **取新 key**：Stripe Dashboard → Developers → **API keys** → **Reveal / Create secret key**，复制新的 `sk_live_...`。
+2. **更新 Worker secret（即时生效，无需重新部署）**：
+   ```powershell
+   npx wrangler secret put STRIPE_SECRET_KEY
+   # 粘贴新 sk_live_... 后回车
+   ```
+3. **核对 webhook**：Dashboard → Developers → **Webhooks** → 确认指向 `https://tradelovin.com/api/membership/webhook/stripe` 的 endpoint 为 **Enabled**；若其 signing secret 重新生成过，同步更新：
+   ```powershell
+   npx wrangler secret put STRIPE_WEBHOOK_SECRET
+   ```
+4. **核对价格**：Dashboard → **Products** → 确认 `wrangler.jsonc` 里 `PRICE_T?_*` 对应的 Price 仍为 **Active**（归档价会导致 `No such price`）。若价格变动，更新 `wrangler.jsonc` vars 并重新 `npm run deploy:cloudflare`。
+5. **冒烟**：会员中心点「立即支付」应跳转 Stripe Checkout；Dashboard → Developers → **Events** 应见新的 `checkout.session.completed` 送达。
+
+> `wrangler secret put` 只更新值、不触发重新构建；`wrangler.jsonc` 的 vars 变更才需要 `npm run deploy:cloudflare`。
 
 ### 6.2 GitHub Actions：推送到 `main` 自动部署 Workers（推荐路径）
 

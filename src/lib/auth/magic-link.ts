@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseRouteClient, randomInternalPassword } from "@/lib/auth/auto-register";
 import { isBootstrapSuperAdminEmail } from "@/lib/auth/bootstrap-super-admin";
-import { signAdminToken } from "@/lib/auth/admin-jwt";
+import { signAdminToken, type AdminRole } from "@/lib/auth/admin-jwt";
 import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { getTradeUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
@@ -97,27 +97,32 @@ async function ensureTradeUserByEmail(srv: SupabaseClient, emailLower: string): 
 	return userId;
 }
 
-async function signInWithFreshPassword(
+async function signInWithoutRotatingPassword(
 	srv: SupabaseClient,
 	request: NextRequest,
 	response: NextResponse,
 	emailLower: string,
-	userId: string,
 ): Promise<boolean> {
-	const password = randomInternalPassword();
-	const { error: updErr } = await srv.auth.admin.updateUserById(userId, { password });
-	if (updErr) {
-		console.error("[magic-link signInWithFreshPassword updateUserById]", updErr.message);
+	const { data: linkData, error: linkErr } = await srv.auth.admin.generateLink({
+		type: "magiclink",
+		email: emailLower,
+	});
+	const tokenHash = linkData?.properties?.hashed_token;
+	if (linkErr || !tokenHash) {
+		console.error(
+			"[magic-link signInWithoutRotatingPassword generateLink]",
+			linkErr?.message ?? "missing hashed_token",
+		);
 		return false;
 	}
 
 	const cookieClient = createSupabaseRouteClient(request, response);
-	const { error: signErr } = await cookieClient.auth.signInWithPassword({
-		email: emailLower,
-		password,
+	const { error: otpErr } = await cookieClient.auth.verifyOtp({
+		token_hash: tokenHash,
+		type: "email",
 	});
-	if (signErr) {
-		console.error("[magic-link signInWithFreshPassword signInWithPassword]", signErr.message);
+	if (otpErr) {
+		console.error("[magic-link signInWithoutRotatingPassword verifyOtp]", otpErr.message);
 		return false;
 	}
 	return true;
@@ -144,16 +149,41 @@ async function ensureSuperAdminProfile(srv: SupabaseClient, userId: string, emai
 	return true;
 }
 
-function attachAdminCookie(response: NextResponse, emailLower: string): Promise<void> | void {
-	if (!isBootstrapSuperAdminEmail(emailLower)) return;
-	return signAdminToken({ email: emailLower, role: "super_admin" }).then((adminToken) => {
-		response.cookies.set(ADMIN_TOKEN_COOKIE, adminToken, {
-			httpOnly: true,
-			secure: process.env.NODE_ENV === "production",
-			sameSite: "lax",
-			path: "/",
-			maxAge: 60 * 60 * 24 * 7,
-		});
+/**
+ * 写入后台 admin 会话 cookie：
+ * - 引导超管邮箱恒为 super_admin（即使 admins 表尚未落地）。
+ * - 其余邮箱按 admins 表中的角色授予（支持多管理员登录）；不在表中则不授予。
+ */
+async function attachAdminCookie(
+	srv: SupabaseClient,
+	response: NextResponse,
+	emailLower: string,
+): Promise<void> {
+	let role: AdminRole | null = null;
+	if (isBootstrapSuperAdminEmail(emailLower)) {
+		role = "super_admin";
+	} else {
+		const { data, error } = await srv
+			.from("admins")
+			.select("role")
+			.eq("email", emailLower)
+			.maybeSingle();
+		if (error) {
+			console.error("[magic-link attachAdminCookie admins lookup]", error.message);
+			return;
+		}
+		const r = String(data?.role ?? "").toLowerCase();
+		if (r === "super_admin" || r === "admin" || r === "analytics") role = r;
+	}
+	if (!role) return;
+
+	const adminToken = await signAdminToken({ email: emailLower, role });
+	response.cookies.set(ADMIN_TOKEN_COOKIE, adminToken, {
+		httpOnly: true,
+		secure: process.env.NODE_ENV === "production",
+		sameSite: "lax",
+		path: "/",
+		maxAge: 60 * 60 * 24 * 7,
 	});
 }
 
@@ -203,10 +233,10 @@ export async function consumeMagicLink(
 	const adminProfileOk = await ensureSuperAdminProfile(srv, userId, emailLower);
 	if (!adminProfileOk) return { ok: false };
 
-	const signedIn = await signInWithFreshPassword(srv, request, response, emailLower, userId);
+	const signedIn = await signInWithoutRotatingPassword(srv, request, response, emailLower);
 	if (!signedIn) return { ok: false };
 
-	await attachAdminCookie(response, emailLower);
+	await attachAdminCookie(srv, response, emailLower);
 
 	return { ok: true };
 }

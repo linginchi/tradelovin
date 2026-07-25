@@ -100,6 +100,61 @@ function fmtMoney(n: number) {
 	return v.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 }
 
+/** 大额金额（元）格式化为 亿/万 */
+function fmtLargeCN(yuan: number | undefined): string {
+	if (yuan == null || !Number.isFinite(yuan)) return "—";
+	const abs = Math.abs(yuan);
+	if (abs >= 1e8) return `${(yuan / 1e8).toLocaleString(undefined, { maximumFractionDigits: 2 })}亿`;
+	if (abs >= 1e4) return `${(yuan / 1e4).toLocaleString(undefined, { maximumFractionDigits: 2 })}万`;
+	return yuan.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function fmtPct(v: number | undefined): string {
+	if (v == null || !Number.isFinite(v)) return "—";
+	return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
+}
+
+function fmtSigned(v: number | undefined): string {
+	if (v == null || !Number.isFinite(v)) return "—";
+	return `${v >= 0 ? "+" : ""}${fmtMoney(v)}`;
+}
+
+/** 涨跌取色：中国习惯，涨=红，跌=绿，平/缺失=灰 */
+function changeColorClass(change: number | undefined): string {
+	if (change == null || !Number.isFinite(change) || change === 0) return "text-muted-foreground";
+	return change > 0 ? "text-red-600" : "text-green-600";
+}
+
+function TickerStatsGrid({ quote }: { quote: TradeV2QuoteData | null }) {
+	const items: Array<{ label: string; value: string }> = [
+		{ label: "今开", value: quote?.open != null ? fmtMoney(quote.open) : "—" },
+		{ label: "昨收", value: quote?.prev_close != null ? fmtMoney(quote.prev_close) : "—" },
+		{ label: "最高", value: quote?.high != null ? fmtMoney(quote.high) : "—" },
+		{ label: "最低", value: quote?.low != null ? fmtMoney(quote.low) : "—" },
+		{ label: "成交量", value: quote?.volume != null ? `${fmtLargeCN(quote.volume)}股` : "—" },
+		{ label: "成交额", value: fmtLargeCN(quote?.amount) },
+	];
+	// 基本面字段（仅 A 股有 Tushare 数据）：缺失时整项隐藏
+	if (quote?.total_mv != null) items.push({ label: "总市值", value: fmtLargeCN(quote.total_mv * 10000) });
+	if (quote?.circ_mv != null) items.push({ label: "流通值", value: fmtLargeCN(quote.circ_mv * 10000) });
+	if (quote?.pe_ttm != null) items.push({ label: "市盈率TTM", value: quote.pe_ttm.toFixed(2) });
+	if (quote?.pb != null) items.push({ label: "市净率", value: quote.pb.toFixed(2) });
+	if (quote?.turnover_rate != null) items.push({ label: "换手率", value: `${quote.turnover_rate.toFixed(2)}%` });
+	if (quote?.avg_price_20d != null) items.push({ label: "20日均价", value: fmtMoney(quote.avg_price_20d) });
+	if (quote?.avg_amount_20d != null) items.push({ label: "20日均额", value: fmtLargeCN(quote.avg_amount_20d) });
+
+	return (
+		<div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t pt-2 sm:grid-cols-4">
+			{items.map((it) => (
+				<div key={it.label} className="flex items-baseline justify-between gap-2 text-xs">
+					<span className="text-muted-foreground shrink-0">{it.label}</span>
+					<span className="font-medium tabular-nums">{it.value}</span>
+				</div>
+			))}
+		</div>
+	);
+}
+
 function hkTime(iso: string) {
 	return new Date(iso).toLocaleString(undefined, {
 		timeZone: "Asia/Hong_Kong",
@@ -205,7 +260,8 @@ export function TradeV2PageClient() {
 	const [price, setPrice] = useState("");
 	const [sourceMode, setSourceMode] = useState<"normal" | "fast">("normal");
 	const [accountType, setAccountType] = useState<"normal" | "credit">("normal");
-	const [positionMode, setPositionMode] = useState<"long" | "short">("long");
+	const [positionMode, setPositionMode] = useState<"long" | "short" | null>(null);
+	const [defaultPositionMode, setDefaultPositionMode] = useState<"long" | "short">("long");
 	const [placing, setPlacing] = useState(false);
 	const [bootLoading, setBootLoading] = useState(true);
 	const [resourceLoading, setResourceLoading] = useState(false);
@@ -333,7 +389,7 @@ export function TradeV2PageClient() {
 		}
 		setQty(String(json.data.default_qty));
 		setAccountType(json.data.default_account_type);
-		setPositionMode(json.data.default_position_mode);
+		setDefaultPositionMode(json.data.default_position_mode);
 		setSourceMode(json.data.default_source_mode);
 		setAutoLogoutNight(json.data.auto_logout_night);
 		setQuickOrderPrefs(parseQuickOrderPrefs(json.data.quick_order_prefs));
@@ -609,6 +665,10 @@ export function TradeV2PageClient() {
 				toast.error("股数必须为正整数");
 				return;
 			}
+			if (!positionMode) {
+				toast.error("请先选择交易模式（做多或做空）");
+				return;
+			}
 			setPlacing(true);
 			try {
 				const res = await fetch("/api/trade-v2/order", {
@@ -720,7 +780,7 @@ export function TradeV2PageClient() {
 					price: px,
 					quantity: closeQty,
 					accountType,
-					positionMode,
+					positionMode: selectedPosition.position_type,
 				}),
 			});
 			const json = await parseJson<TradeV2OrderApiResponse>(res);
@@ -737,7 +797,7 @@ export function TradeV2PageClient() {
 		} finally {
 			setPlacing(false);
 		}
-	}, [accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price, selectedPosition]);
+	}, [accountType, loadQuote, loadResources, loadTradeData, price, quote?.price, selectedPosition]);
 	const forceClosePositionByRow = useCallback(
 		async (position: PositionRow) => {
 			const closeSide = position.position_type === "long" ? "sell" : "buy";
@@ -765,7 +825,7 @@ export function TradeV2PageClient() {
 						price: px,
 						quantity: closeQty,
 						accountType,
-						positionMode,
+						positionMode: position.position_type,
 					}),
 				});
 				const json = await parseJson<TradeV2OrderApiResponse>(res);
@@ -783,7 +843,7 @@ export function TradeV2PageClient() {
 				setPlacing(false);
 			}
 		},
-		[accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price],
+		[accountType, loadQuote, loadResources, loadTradeData, price, quote?.price],
 	);
 	const adjustQty = useCallback((delta: number) => {
 		setQty((prev) => {
@@ -981,7 +1041,7 @@ export function TradeV2PageClient() {
 				body: JSON.stringify({
 					defaultQty,
 					defaultAccountType: accountType,
-					defaultPositionMode: positionMode,
+					defaultPositionMode,
 					defaultSourceMode: sourceMode,
 					autoLogoutNight,
 					quickOrderPrefs,
@@ -996,7 +1056,7 @@ export function TradeV2PageClient() {
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : "保存设置失败");
 		}
-	}, [accountType, autoLogoutNight, positionMode, qty, quickOrderPrefs, sourceMode]);
+	}, [accountType, autoLogoutNight, defaultPositionMode, qty, quickOrderPrefs, sourceMode]);
 
 	const copyFailureDetail = useCallback(async (event: TriggerEvent) => {
 		const diagnostic = formatRiskDiagnostic(event);
@@ -1160,7 +1220,12 @@ export function TradeV2PageClient() {
 							<div className="sm:text-right">
 								<p className="text-sm font-medium">{quote?.symbol ?? resolvedSymbol}</p>
 								<p className="text-muted-foreground text-xs">{quote?.name ?? "加载中..."}</p>
-								<p className="mt-1 text-xl font-semibold">{quote ? fmtMoney(quote.price) : "--"}</p>
+								<p className={`mt-1 text-xl font-semibold tabular-nums ${changeColorClass(quote?.change)}`}>
+									{quote ? fmtMoney(quote.price) : "--"}
+								</p>
+								<p className={`text-xs font-medium tabular-nums ${changeColorClass(quote?.change)}`}>
+									{fmtSigned(quote?.change)} ({fmtPct(quote?.change_pct)})
+								</p>
 							</div>
 						) : (
 							<p className="text-muted-foreground text-sm sm:max-w-xs sm:text-right">
@@ -1196,12 +1261,27 @@ export function TradeV2PageClient() {
 						) : (
 							<>
 						<div className="rounded-md border p-3">
-							<p className="text-sm font-medium">{quote?.symbol ?? resolvedSymbol}</p>
-							<p className="text-muted-foreground text-xs">{quote?.name ?? "—"}</p>
-							<p className="mt-2 text-2xl font-semibold">{quote ? fmtMoney(quote.price) : "--"}</p>
-							<p className="text-muted-foreground text-xs">
-								快照时间：{quote?.snapshot_time ? new Date(quote.snapshot_time).toLocaleTimeString() : "—"}
-							</p>
+							<div className="flex flex-wrap items-start justify-between gap-2">
+								<div>
+									<p className="text-sm font-medium">{quote?.symbol ?? resolvedSymbol}</p>
+									<p className="text-muted-foreground text-xs">{quote?.name ?? "—"}</p>
+								</div>
+								<p className="text-muted-foreground text-xs">
+									快照时间：{quote?.snapshot_time ? new Date(quote.snapshot_time).toLocaleTimeString() : "—"}
+								</p>
+							</div>
+							<div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+								<p className={`text-2xl font-semibold tabular-nums ${changeColorClass(quote?.change)}`}>
+									{quote ? fmtMoney(quote.price) : "--"}
+								</p>
+								<span className={`text-sm font-medium tabular-nums ${changeColorClass(quote?.change)}`}>
+									{fmtSigned(quote?.change)}
+								</span>
+								<span className={`text-sm font-medium tabular-nums ${changeColorClass(quote?.change)}`}>
+									{fmtPct(quote?.change_pct)}
+								</span>
+							</div>
+							<TickerStatsGrid quote={quote} />
 						</div>
 						{bootLoading ? <p className="text-muted-foreground text-sm">加载中...</p> : null}
 						{fetchError ? <p className="text-sm text-red-500">{fetchError}</p> : null}
@@ -1299,16 +1379,32 @@ export function TradeV2PageClient() {
 						) : null}
 						<div className={!hasResolvedSymbol ? "pointer-events-none opacity-50" : undefined}>
 						<div className="space-y-1.5">
-							<Label htmlFor="positionMode">交易模式</Label>
-							<select
-								id="positionMode"
-								className="bg-background w-full rounded-md border px-3 py-2 text-sm"
-								value={positionMode}
-								onChange={(e) => setPositionMode(e.target.value === "short" ? "short" : "long")}
-							>
-								<option value="long">做多（买入开仓/卖出平仓）</option>
-								<option value="short">做空（卖出开仓/买入回补）</option>
-							</select>
+							<Label>交易模式</Label>
+							<div className="grid grid-cols-2 gap-2">
+								<Button
+									type="button"
+									variant={positionMode === "long" ? "default" : "outline"}
+									className="min-h-11"
+									onClick={() => setPositionMode("long")}
+								>
+									做多
+								</Button>
+								<Button
+									type="button"
+									variant={positionMode === "short" ? "default" : "outline"}
+									className="min-h-11"
+									onClick={() => setPositionMode("short")}
+								>
+									做空
+								</Button>
+							</div>
+							<p className="text-muted-foreground text-xs">
+								{positionMode === "long"
+									? "买入开仓 · 卖出平仓"
+									: positionMode === "short"
+										? "卖出开仓 · 买入回补"
+										: "请选择做多或做空后再下单"}
+							</p>
 						</div>
 						<div className="space-y-1.5">
 							<Label htmlFor="orderPrice">价格</Label>
@@ -1354,10 +1450,19 @@ export function TradeV2PageClient() {
 							</div>
 						</div>
 						<div className="grid grid-cols-2 gap-2 sm:hidden">
-							<Button disabled={placing || !hasResolvedSymbol} className="min-h-11" onClick={() => debouncedPlaceOrder("buy")}>
+							<Button
+								disabled={placing || !hasResolvedSymbol || !positionMode}
+								className="min-h-11"
+								onClick={() => debouncedPlaceOrder("buy")}
+							>
 								{positionMode === "short" ? "买入回补" : "买入"}
 							</Button>
-							<Button disabled={placing || !hasResolvedSymbol} variant="destructive" className="min-h-11" onClick={() => debouncedPlaceOrder("sell")}>
+							<Button
+								disabled={placing || !hasResolvedSymbol || !positionMode}
+								variant="destructive"
+								className="min-h-11"
+								onClick={() => debouncedPlaceOrder("sell")}
+							>
 								{positionMode === "short" ? "卖出开空" : "卖出"}
 							</Button>
 							<Button
@@ -1370,10 +1475,14 @@ export function TradeV2PageClient() {
 							</Button>
 						</div>
 						<div className="hidden grid-cols-2 gap-2 sm:grid">
-							<Button disabled={placing || !hasResolvedSymbol} onClick={() => debouncedPlaceOrder("buy")}>
+							<Button disabled={placing || !hasResolvedSymbol || !positionMode} onClick={() => debouncedPlaceOrder("buy")}>
 								{positionMode === "short" ? "买入回补" : "买入"} ({quickOrderPrefs.hotkeys.buy.toUpperCase()})
 							</Button>
-							<Button disabled={placing || !hasResolvedSymbol} variant="destructive" onClick={() => debouncedPlaceOrder("sell")}>
+							<Button
+								disabled={placing || !hasResolvedSymbol || !positionMode}
+								variant="destructive"
+								onClick={() => debouncedPlaceOrder("sell")}
+							>
 								{positionMode === "short" ? "卖出开空" : "卖出"} ({quickOrderPrefs.hotkeys.sell.toUpperCase()})
 							</Button>
 						</div>
@@ -1731,8 +1840,8 @@ export function TradeV2PageClient() {
 							<select
 								id="settingMode"
 								className="bg-background w-full rounded-md border px-3 py-2 text-sm"
-								value={positionMode}
-								onChange={(e) => setPositionMode(e.target.value === "short" ? "short" : "long")}
+								value={defaultPositionMode}
+								onChange={(e) => setDefaultPositionMode(e.target.value === "short" ? "short" : "long")}
 							>
 								<option value="long">做多</option>
 								<option value="short">做空</option>

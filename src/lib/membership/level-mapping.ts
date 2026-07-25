@@ -52,7 +52,7 @@ export function getLevelByCode(code: string) {
 }
 
 export function getDisplayLevel(plan: string) {
-	// T0_trial / T0_paid both display as P0
+	// T0_paid 已停用對外開放，顯示層降為花豹（邏輯保留以備將來復用）
 	const normalizedPlan = plan === "T0_paid" ? "T0_trial" : plan;
 	return getLevelByPlan(normalizedPlan);
 }
@@ -70,5 +70,5 @@ export function getLocalizedLevelDescription(level: MembershipLevel, locale: str
 }
 
 export function getLocalizedLevelLabel(level: MembershipLevel, locale: string): string {
-	return `${level.code} · ${getLocalizedLevelName(level, locale)}`;
+	return getLocalizedLevelName(level, locale);
 }

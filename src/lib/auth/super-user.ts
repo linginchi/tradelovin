@@ -6,8 +6,13 @@ import type { CurrentMembership } from "@/lib/membership/v2";
 /** 硬编码超级用户白名单（绕过会员/试用/课程付费门槛）。 */
 export const SUPER_USER_EMAILS = [
 	"549516157@qq.com",
+	"125400510@qq.com",
 	"william.hu@hkcas.org",
 	"lin@hkcas.org",
+	"mark@hkfac.org",
+	"mark@hkfac.com",
+	"mark@hkcas.org",
+	"markgclin@gmail.com",
 ] as const;
 
 export type SuperUserEmail = (typeof SUPER_USER_EMAILS)[number];

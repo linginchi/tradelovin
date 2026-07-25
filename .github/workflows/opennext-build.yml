@@ -11,9 +11,10 @@ on:
     # TQ recalculate: weekdays 16:05 HKT (08:05 UTC)
     - cron: "5 8 * * 1-5"
     # Lock commissions (7-day protection): 1st of month 02:00 HKT (18:00 UTC prev day)
-    - cron: "0 18 1 * *"
-    # Settle monthly commissions: 5th of month 02:00 HKT (18:00 UTC prev day)
-    - cron: "0 18 5 * *"
+    # GitHub cron 不支持 L/月末语法，用 28-31 + 运行时判断是否月末最后一天
+    - cron: "0 18 28-31 * *"
+    # Settle monthly commissions: 5th of month 02:00 HKT (18:00 UTC on 4th)
+    - cron: "0 18 4 * *"
 
 concurrency:
   group: opennext-${{ github.workflow }}-${{ github.ref }}
@@ -145,6 +146,17 @@ jobs:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
     steps:
+      - name: Confirm last day of month (HKT)
+        run: |
+          # cron "0 18 28-31 * *" fires on days 28-31; only proceed if today is the
+          # last day in HKT (UTC+8). After 18:00 UTC ≈ 02:00 HKT the next day, so we
+          # check if "tomorrow in HKT" crosses into the next month.
+          TOMORROW_HKT=$(TZ=Asia/Hong_Kong date -d "+1 day" +%d)
+          if [ "$TOMORROW_HKT" != "01" ]; then
+            echo "Not the last day of the month in HKT. Skipping."
+            exit 0
+          fi
+          echo "Confirmed: last day of month in HKT."
       - name: Lock commission records (7-day protection period)
         env:
           CRON_BASE_URL: ${{ vars.TQ_CRON_BASE_URL }}

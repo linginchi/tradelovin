@@ -10,6 +10,7 @@ const postSchema = z.object({
 	mode: z.enum(["online", "offline"]),
 	capacity: z.number().int().positive().max(10000),
 	instructor_id: z.string().uuid().nullable().optional(),
+	topic_id: z.string().uuid().nullable().optional(),
 	cover_image: z.string().max(2048).nullable().optional(),
 	instructor_label: z.string().max(200).nullable().optional(),
 	start_date: z.string().max(32).nullable().optional(),
@@ -60,11 +61,34 @@ export async function GET() {
 		}
 	}
 
-	const withCounts = (courses ?? []).map((c) => ({
-		...c,
-		enrollment_count: countByCourse.get(c.id) ?? 0,
-		instructor_name: c.instructor_id ? (instructorName.get(c.instructor_id as string) ?? null) : null,
-	}));
+	const topicIds = [
+		...new Set((courses ?? []).map((c) => c.topic_id as string | null).filter(Boolean)),
+	] as string[];
+	const topicMeta = new Map<string, { title: string; sort_order: number }>();
+	if (topicIds.length > 0) {
+		const { data: topics } = await supabase
+			.from("course_topics")
+			.select("id, title, sort_order")
+			.in("id", topicIds);
+		for (const row of topics ?? []) {
+			topicMeta.set(row.id as string, {
+				title: (row.title as string) || "—",
+				sort_order: (row.sort_order as number) ?? 0,
+			});
+		}
+	}
+
+	const withCounts = (courses ?? []).map((c) => {
+		const tid = c.topic_id as string | null;
+		const topic = tid ? topicMeta.get(tid) : null;
+		return {
+			...c,
+			enrollment_count: countByCourse.get(c.id) ?? 0,
+			instructor_name: c.instructor_id ? (instructorName.get(c.instructor_id as string) ?? null) : null,
+			topic_title: topic?.title ?? null,
+			topic_sort_order: topic?.sort_order ?? null,
+		};
+	});
 
 	return NextResponse.json({ courses: withCounts });
 }
@@ -97,6 +121,7 @@ export async function POST(req: Request) {
 		capacity: parsed.data.capacity,
 	};
 	if (parsed.data.instructor_id) insert.instructor_id = parsed.data.instructor_id;
+	if (parsed.data.topic_id !== undefined) insert.topic_id = parsed.data.topic_id;
 	if (parsed.data.cover_image !== undefined) insert.cover_image = parsed.data.cover_image?.trim() || null;
 	if (parsed.data.instructor_label !== undefined) {
 		insert.instructor_label = parsed.data.instructor_label?.trim() || null;

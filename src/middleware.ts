@@ -7,7 +7,7 @@ import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
 import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
-const PROTECTED_PATHS = ["/courses", "/my-learning", "/membership", "/trade", "/trade-v2"] as const;
+const PROTECTED_PATHS = ["/my-learning", "/membership", "/trade", "/trade-v2"] as const;
 
 const LEGACY_LEARNING = [
 	{ from: "my-courses", to: "my-learning" },
@@ -70,7 +70,7 @@ function isProtectedPath(pathname: string): boolean {
 function buildLoginRedirect(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
 	url.pathname = "/login";
-	url.searchParams.set("next", "/my-learning");
+	url.searchParams.set("next", "/courses");
 	return NextResponse.redirect(url);
 }
 
@@ -136,12 +136,18 @@ async function middlewareAsync(request: NextRequest) {
 		}
 	}
 
-	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+	if (pathname === "/admin" || (pathname.startsWith("/admin/") && !pathname.startsWith("/admin/analytics") && !pathname.startsWith("/admin/login"))) {
 		return new NextResponse(null, { status: 404 });
 	}
 
 	if (/^\/(zh|zh-TW|en)\/admin(\/|$)/.test(pathname)) {
 		return new NextResponse(null, { status: 404 });
+	}
+
+	// /admin/analytics 独立数据分析入口；/admin/login 密码登录入口
+	if (pathname === "/admin/analytics" || pathname.startsWith("/admin/analytics/") ||
+	    pathname === "/admin/login" || pathname.startsWith("/admin/login/")) {
+		return withInvokePath(request);
 	}
 
 	if (pathname === "/cjkzt" || pathname.startsWith("/cjkzt/")) {

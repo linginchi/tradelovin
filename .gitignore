@@ -52,3 +52,6 @@ supabase/.temp/
 
 # Shared agent skills (junction → C:\projects\.agents\skills)
 .agents/
+
+# LEO test outputs (generated videos)
+scripts/test/*/output/
