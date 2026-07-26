@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { isMissingViewCounterError } from "@/lib/analytics/video-views";
 import { isSuperUserById } from "@/lib/auth/super-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
@@ -15,17 +14,31 @@ type RouteContext = {
 
 type ServiceClient = NonNullable<ReturnType<typeof getServiceSupabase>>;
 
+type DbErrorLike = {
+  code?: string;
+  message?: string;
+};
+
+/** True when marketing_view_count is not deployed yet. */
+function isMissingMarketingPopularityError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as DbErrorLike;
+  if (e.code === "42703" || e.code === "PGRST204") return true;
+  const message = (e.message ?? "").toLowerCase();
+  return message.includes("marketing_view_count");
+}
+
 /**
- * view_count is the only view-derived field exposed here. Viewer identities and
- * per-viewer events are never selected, so the list cannot leak who watched.
+ * Public list exposes marketing popularity only (人气/热度).
+ * Real playback counters, viewer events, and growth audit tables are never selected.
  */
 const BASE_COLUMNS = "id, course_id, title, description, duration, sort_order, is_free_preview";
-const COLUMNS_WITH_VIEW_COUNT = `${BASE_COLUMNS}, view_count`;
+const COLUMNS_WITH_POPULARITY = `${BASE_COLUMNS}, marketing_view_count`;
 
 type VideoListResult = {
   videos: unknown[] | null;
   error: unknown;
-  viewCountsAvailable: boolean;
+  popularityAvailable: boolean;
 };
 
 async function checkCourseAccess(
@@ -55,25 +68,25 @@ async function queryVideos(
   return filtered.order("sort_order", { ascending: true }).order("created_at", { ascending: true });
 }
 
-/** Falls back to the pre-counter column set when view_count is not deployed yet. */
+/** Falls back to the pre-popularity column set when marketing_view_count is not deployed yet. */
 async function listVideos(
   srv: ServiceClient,
   courseId: string,
   freePreviewOnly: boolean,
 ): Promise<VideoListResult> {
-  const withCounts = await queryVideos(srv, courseId, freePreviewOnly, COLUMNS_WITH_VIEW_COUNT);
-  if (!withCounts.error) {
-    return { videos: withCounts.data ?? [], error: null, viewCountsAvailable: true };
+  const withPopularity = await queryVideos(srv, courseId, freePreviewOnly, COLUMNS_WITH_POPULARITY);
+  if (!withPopularity.error) {
+    return { videos: withPopularity.data ?? [], error: null, popularityAvailable: true };
   }
-  if (!isMissingViewCounterError(withCounts.error)) {
-    return { videos: null, error: withCounts.error, viewCountsAvailable: false };
+  if (!isMissingMarketingPopularityError(withPopularity.error)) {
+    return { videos: null, error: withPopularity.error, popularityAvailable: false };
   }
 
   const fallback = await queryVideos(srv, courseId, freePreviewOnly, BASE_COLUMNS);
   return {
     videos: fallback.error ? null : (fallback.data ?? []),
     error: fallback.error,
-    viewCountsAvailable: false,
+    popularityAvailable: false,
   };
 }
 
@@ -95,7 +108,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
         videos: [],
         hasCourseAccess: false,
         authed: false,
-        viewCountsAvailable: false,
+        popularityAvailable: false,
         warning: "视频表尚未初始化，请先执行数据库迁移（course_videos）。",
       });
     }
@@ -110,7 +123,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       videos: freeVideos,
       hasCourseAccess: false,
       authed: false,
-      viewCountsAvailable: free.viewCountsAvailable,
+      popularityAvailable: free.popularityAvailable,
     });
   }
 
@@ -121,7 +134,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
       videos: freeVideos,
       hasCourseAccess: false,
       authed: true,
-      viewCountsAvailable: free.viewCountsAvailable,
+      popularityAvailable: free.popularityAvailable,
     });
   }
 
@@ -132,7 +145,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
         videos: freeVideos,
         hasCourseAccess: false,
         authed: true,
-        viewCountsAvailable: free.viewCountsAvailable,
+        popularityAvailable: free.popularityAvailable,
         warning: "视频表尚未初始化，请先执行数据库迁移（course_videos）。",
       });
     }
@@ -144,6 +157,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
     videos: all.videos ?? [],
     hasCourseAccess: true,
     authed: true,
-    viewCountsAvailable: all.viewCountsAvailable,
+    popularityAvailable: all.popularityAvailable,
   });
 }

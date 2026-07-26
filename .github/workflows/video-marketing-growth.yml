@@ -1,0 +1,35 @@
+# Hourly marketing popularity growth (人气/热度). Does not touch real view_count.
+# Separate from OpenNext/TQ weekday schedule so TQ is never re-triggered hourly.
+name: Video marketing growth (hourly)
+
+on:
+  schedule:
+    # Every hour at minute 0 (UTC). Endpoint catch-up uses Asia/Hong_Kong.
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: video-marketing-growth
+  cancel-in-progress: false
+
+jobs:
+  apply-marketing-growth:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger marketing popularity growth endpoint
+        env:
+          VIDEO_MARKETING_GROWTH_BASE_URL: ${{ vars.TQ_CRON_BASE_URL }}
+          VIDEO_MARKETING_GROWTH_CRON_KEY: ${{ secrets.VIDEO_MARKETING_GROWTH_CRON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${VIDEO_MARKETING_GROWTH_BASE_URL:-}" ]; then
+            echo "ERROR: Missing production base URL (vars.TQ_CRON_BASE_URL). Cannot run marketing growth."
+            exit 1
+          fi
+          if [ -z "${VIDEO_MARKETING_GROWTH_CRON_KEY:-}" ]; then
+            echo "ERROR: Missing secrets.VIDEO_MARKETING_GROWTH_CRON_KEY. Cannot run marketing growth."
+            exit 1
+          fi
+          curl -fsS -X POST "${VIDEO_MARKETING_GROWTH_BASE_URL%/}/api/cron/video-marketing-growth" \
+            -H "x-video-marketing-growth-cron-key: ${VIDEO_MARKETING_GROWTH_CRON_KEY}" \
+            -H "Content-Type: application/json"

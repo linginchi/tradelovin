@@ -272,7 +272,8 @@
 		"apply": "報名本課程",
 		"applied": "已提交報名",
 		"loginToApply": "登錄後報名",
-		"loadError": "加載失敗"
+		"loadError": "加載失敗",
+		"popularity": "人氣"
 	},
 	"VideoPlayerPage": {
 		"previewEnded": "免費預覽已結束。取得課程權限後可觀看完整影片。",

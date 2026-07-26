@@ -269,7 +269,8 @@
 		"apply": "报名本课程",
 		"applied": "已提交报名",
 		"loginToApply": "登录后报名",
-		"loadError": "加载失败"
+		"loadError": "加载失败",
+		"popularity": "人气"
 	},
 	"VideoPlayerPage": {
 		"previewEnded": "免费预览已结束。取得课程权限后可观看完整视频。",

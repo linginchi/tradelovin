@@ -60,6 +60,8 @@ type VideoRow = {
 	sort_order: number;
 	is_free_preview: boolean;
 	created_at: string;
+	view_count?: number | null;
+	marketing_view_count?: number | null;
 };
 
 export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
@@ -87,6 +89,8 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const [videoFreePreview, setVideoFreePreview] = useState(false);
 	const [videoFile, setVideoFile] = useState<File | null>(null);
 	const [storageConfigured, setStorageConfigured] = useState(true);
+	const [popularityDrafts, setPopularityDrafts] = useState<Record<string, string>>({});
+	const [savingPopularityId, setSavingPopularityId] = useState<string | null>(null);
 
 	const [sessDate, setSessDate] = useState("");
 	const [sessStart, setSessStart] = useState("");
@@ -137,8 +141,14 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			if (insRes.ok) setAllInstructors(insJson.instructors ?? []);
 			if (rosterRes.ok) setRoster(rosterJson.students ?? []);
 			if (videoRes.ok) {
-				setVideos(videoJson.videos ?? []);
+				const nextVideos = videoJson.videos ?? [];
+				setVideos(nextVideos);
 				setStorageConfigured(videoJson.storageConfigured ?? true);
+				const drafts: Record<string, string> = {};
+				for (const video of nextVideos) {
+					drafts[video.id] = String(video.marketing_view_count ?? 0);
+				}
+				setPopularityDrafts(drafts);
 			}
 			setTopicsUnavailable(!topicRes.ok);
 			setTopics(topicRes.ok ? (topicJson.topics ?? []) : []);
@@ -299,6 +309,35 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 			setError("上传视频失败");
 		} finally {
 			setSaving(false);
+		}
+	}
+
+	async function savePopularity(videoId: string) {
+		const raw = popularityDrafts[videoId] ?? "0";
+		const value = Number(raw);
+		if (!Number.isInteger(value) || value < 0) {
+			setError("人气值必须为非负整数");
+			return;
+		}
+		setSavingPopularityId(videoId);
+		setError(null);
+		try {
+			const res = await fetch(`/api/admin/courses/${courseId}/videos/${videoId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ marketing_view_count: value }),
+			});
+			const js = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setError(js.error ?? "保存人气值失败");
+				return;
+			}
+			void load();
+		} catch {
+			setError("保存人气值失败");
+		} finally {
+			setSavingPopularityId(null);
 		}
 	}
 
@@ -595,11 +634,39 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 					</Button>
 					<ul className="space-y-2 text-sm">
 						{videos.map((v) => (
-							<li key={v.id} className="border-border/40 rounded-lg border px-3 py-2">
+							<li key={v.id} className="border-border/40 space-y-2 rounded-lg border px-3 py-2">
 								<div className="font-medium">{v.title}</div>
 								<div className="text-muted-foreground">
 									#{v.sort_order} · {v.duration ? `${v.duration}s` : "时长未设置"} ·{" "}
 									{v.is_free_preview ? "免费预览" : "付费可看"}
+								</div>
+								<div className="text-muted-foreground">
+									真实观看数（只读统计）：{typeof v.view_count === "number" ? v.view_count : "—"}
+								</div>
+								<div className="flex flex-wrap items-end gap-2">
+									<div className="space-y-1">
+										<Label htmlFor={`popularity-${v.id}`}>人气值（可调整，非真实观看）</Label>
+										<Input
+											id={`popularity-${v.id}`}
+											type="number"
+											min={0}
+											step={1}
+											value={popularityDrafts[v.id] ?? String(v.marketing_view_count ?? 0)}
+											onChange={(e) =>
+												setPopularityDrafts((prev) => ({ ...prev, [v.id]: e.target.value }))
+											}
+											className="h-9 w-36"
+										/>
+									</div>
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										disabled={savingPopularityId === v.id}
+										onClick={() => void savePopularity(v.id)}
+									>
+										保存人气值
+									</Button>
 								</div>
 							</li>
 						))}

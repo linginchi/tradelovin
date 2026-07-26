@@ -272,7 +272,8 @@
 		"apply": "Apply for this course",
 		"applied": "Application submitted",
 		"loginToApply": "Sign in to apply",
-		"loadError": "Could not load course"
+		"loadError": "Could not load course",
+		"popularity": "Popularity"
 	},
 	"VideoPlayerPage": {
 		"previewEnded": "Free preview has ended. Enroll in this course to watch the full video.",

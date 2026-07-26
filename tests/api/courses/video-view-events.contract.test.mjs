@@ -109,7 +109,7 @@ test("atomic RPC inserts the dedup event and increments only inside one transact
 	assert.match(helper, /degraded: true/);
 });
 
-test("the list API exposes the aggregate only and no viewer data", async () => {
+test("the list API exposes marketing popularity only and no viewer data", async () => {
 	const source = await read(LIST_ROUTE);
 
 	const base = source.match(/const BASE_COLUMNS = "([^"]+)"/);
@@ -122,10 +122,11 @@ test("the list API exposes the aggregate only and no viewer data", async () => {
 		);
 	}
 
-	assert.match(source, /const COLUMNS_WITH_VIEW_COUNT = `\$\{BASE_COLUMNS\}, view_count`;/);
+	// Public list shows marketing popularity, never the real view_count counter.
+	assert.match(source, /marketing_view_count/);
+	assert.ok(!/`\$\{BASE_COLUMNS\}, view_count`/.test(source), "must not select real view_count");
 	assert.ok(!source.includes("video_view_events"), "list route must not read the event table");
-	assert.match(source, /isMissingViewCounterError\(withCounts\.error\)/);
-	assert.match(source, /viewCountsAvailable: false/);
+	assert.match(source, /popularityAvailable:\s*false/);
 });
 
 test("migrations define counter + events without seed, cron, or random history", async () => {
