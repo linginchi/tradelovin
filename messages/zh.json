@@ -269,7 +269,12 @@
 		"apply": "报名本课程",
 		"applied": "已提交报名",
 		"loginToApply": "登录后报名",
-		"loadError": "加载失败"
+		"loadError": "加载失败",
+		"popularity": "人气"
+	},
+	"VideoPlayerPage": {
+		"previewEnded": "免费预览已结束。取得课程权限后可观看完整视频。",
+		"previewCta": "查看课程"
 	},
 	"MyCoursesPage": {
 		"metaTitle": "我的课程",
@@ -831,7 +836,24 @@
 		"registrationId": "报名 ID",
 		"score": "分数",
 		"grade": "等级",
-		"certificateFile": "证书文件"
+		"certificateFile": "证书文件",
+		"courseTopicsTitle": "课程主题",
+		"courseTopicsSubtitle": "以主题分组课程。只有启用中的主题可指派给课程。",
+		"courseTopicName": "主题名称",
+		"courseTopicDescription": "主题说明（选填）",
+		"courseTopicAdd": "新增主题",
+		"courseTopicEmpty": "暂无课程主题。",
+		"courseTopicActive": "启用中",
+		"courseTopicInactive": "已停用",
+		"courseTopicEnable": "启用",
+		"courseTopicDisable": "停用",
+		"courseTopicMoveUp": "上移",
+		"courseTopicMoveDown": "下移",
+		"courseTopicField": "课程主题",
+		"courseTopicNone": "不设置主题",
+		"courseTopicMissing": "主题已不可用",
+		"courseTopicUnavailable": "课程主题当前不可用，请先执行课程主题数据库迁移后再指派主题。",
+		"courseTopicColumn": "主题"
 	},
 	"AdminAuth": {
 		"title": "管理员登录",

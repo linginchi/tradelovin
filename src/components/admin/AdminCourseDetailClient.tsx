@@ -40,6 +40,15 @@ type CourseRow = {
 	description: string | null;
 	mode: string;
 	capacity: number;
+	topic_id?: string | null;
+};
+
+type TopicRow = {
+	id: string;
+	title: string;
+	description: string | null;
+	sort_order: number;
+	is_active: boolean;
 };
 
 type VideoRow = {
@@ -51,6 +60,8 @@ type VideoRow = {
 	sort_order: number;
 	is_free_preview: boolean;
 	created_at: string;
+	view_count?: number | null;
+	marketing_view_count?: number | null;
 };
 
 export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
@@ -63,6 +74,9 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const [mode, setMode] = useState<"online" | "offline">("online");
 	const [capacity, setCapacity] = useState(30);
 	const [instructorId, setInstructorId] = useState<string>("");
+	const [topicId, setTopicId] = useState<string>("");
+	const [topics, setTopics] = useState<TopicRow[]>([]);
+	const [topicsUnavailable, setTopicsUnavailable] = useState(false);
 	const [sessions, setSessions] = useState<SessionRow[]>([]);
 	const [allInstructors, setAllInstructors] = useState<InstructorRow[]>([]);
 	const [enrollments, setEnrollments] = useState<EnrollRow[]>([]);
@@ -75,6 +89,8 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 	const [videoFreePreview, setVideoFreePreview] = useState(false);
 	const [videoFile, setVideoFile] = useState<File | null>(null);
 	const [storageConfigured, setStorageConfigured] = useState(true);
+	const [popularityDrafts, setPopularityDrafts] = useState<Record<string, string>>({});
+	const [savingPopularityId, setSavingPopularityId] = useState<string | null>(null);
 
 	const [sessDate, setSessDate] = useState("");
 	const [sessStart, setSessStart] = useState("");
@@ -106,25 +122,36 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 				setDescription(data.course.description ?? "");
 				setMode(data.course.mode as "online" | "offline");
 				setCapacity(data.course.capacity);
+				setTopicId(data.course.topic_id ?? "");
 			}
 			setSessions(data.sessions ?? []);
 			setInstructorId(data.instructor_id ?? "");
 			setEnrollments(data.enrollments ?? []);
 
-			const [insRes, rosterRes, videoRes] = await Promise.all([
+			const [insRes, rosterRes, videoRes, topicRes] = await Promise.all([
 				fetch("/api/admin/instructors", { credentials: "include" }),
 				fetch("/api/admin/roster", { credentials: "include" }),
 				fetch(`/api/admin/courses/${courseId}/videos`, { credentials: "include" }),
+				fetch("/api/admin/course-topics", { credentials: "include" }),
 			]);
 			const insJson = (await insRes.json()) as { instructors?: InstructorRow[] };
 			const rosterJson = (await rosterRes.json()) as { students?: RosterRow[] };
 			const videoJson = (await videoRes.json()) as { videos?: VideoRow[]; storageConfigured?: boolean };
+			const topicJson = (await topicRes.json()) as { topics?: TopicRow[] };
 			if (insRes.ok) setAllInstructors(insJson.instructors ?? []);
 			if (rosterRes.ok) setRoster(rosterJson.students ?? []);
 			if (videoRes.ok) {
-				setVideos(videoJson.videos ?? []);
+				const nextVideos = videoJson.videos ?? [];
+				setVideos(nextVideos);
 				setStorageConfigured(videoJson.storageConfigured ?? true);
+				const drafts: Record<string, string> = {};
+				for (const video of nextVideos) {
+					drafts[video.id] = String(video.marketing_view_count ?? 0);
+				}
+				setPopularityDrafts(drafts);
 			}
+			setTopicsUnavailable(!topicRes.ok);
+			setTopics(topicRes.ok ? (topicJson.topics ?? []) : []);
 		} catch {
 			setError(t("loadError"));
 		} finally {
@@ -143,17 +170,22 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		setSaving(true);
 		setError(null);
 		try {
+			const payload: Record<string, unknown> = {
+				title: title.trim(),
+				description: description.trim() || null,
+				mode,
+				capacity,
+				instructor_id: instructorId ? instructorId : null,
+			};
+			// Topic binding is only sent when the topics API answered; otherwise the
+			// existing binding is left untouched instead of reporting a fake success.
+			if (!topicsUnavailable) payload.topic_id = topicId ? topicId : null;
+
 			const res = await fetch(`/api/admin/courses/${courseId}`, {
 				method: "PATCH",
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
-				body: JSON.stringify({
-					title: title.trim(),
-					description: description.trim() || null,
-					mode,
-					capacity,
-					instructor_id: instructorId ? instructorId : null,
-				}),
+				body: JSON.stringify(payload),
 			});
 			const data = (await res.json()) as { error?: string };
 			if (!res.ok) {
@@ -280,9 +312,44 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 		}
 	}
 
+	async function savePopularity(videoId: string) {
+		const raw = popularityDrafts[videoId] ?? "0";
+		const value = Number(raw);
+		if (!Number.isInteger(value) || value < 0) {
+			setError("人气值必须为非负整数");
+			return;
+		}
+		setSavingPopularityId(videoId);
+		setError(null);
+		try {
+			const res = await fetch(`/api/admin/courses/${courseId}/videos/${videoId}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ marketing_view_count: value }),
+			});
+			const js = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setError(js.error ?? "保存人气值失败");
+				return;
+			}
+			void load();
+		} catch {
+			setError("保存人气值失败");
+		} finally {
+			setSavingPopularityId(null);
+		}
+	}
+
 	function fmtTime(tstr: string) {
 		return tstr?.length >= 5 ? tstr.slice(0, 5) : tstr;
 	}
+
+	const activeTopics = topics.filter((topic) => topic.is_active);
+	const boundTopic = topicId ? (topics.find((topic) => topic.id === topicId) ?? null) : null;
+	// A topic that was disabled after being bound stays listed so it can be cleared.
+	const topicOptions = boundTopic && !boundTopic.is_active ? [...activeTopics, boundTopic] : activeTopics;
+	const boundTopicMissing = Boolean(topicId) && !boundTopic && !topicsUnavailable;
 
 	if (loading && !course) {
 		return <p className="text-muted-foreground text-sm">...</p>;
@@ -362,6 +429,27 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 									</option>
 								))}
 							</select>
+						</div>
+						<div className="space-y-2 sm:col-span-2">
+							<Label htmlFor="cd-topic">{t("courseTopicField")}</Label>
+							<select
+								id="cd-topic"
+								value={topicId}
+								disabled={topicsUnavailable}
+								onChange={(e) => setTopicId(e.target.value)}
+								className="border-input bg-background h-10 w-full rounded-lg border px-3 text-sm disabled:opacity-60 dark:bg-input/30"
+							>
+								<option value="">{t("courseTopicNone")}</option>
+								{topicOptions.map((topic) => (
+									<option key={topic.id} value={topic.id}>
+										{topic.is_active ? topic.title : `${topic.title}（${t("courseTopicInactive")}）`}
+									</option>
+								))}
+								{boundTopicMissing ? <option value={topicId}>{t("courseTopicMissing")}</option> : null}
+							</select>
+							{topicsUnavailable ? (
+								<p className="text-sm text-amber-300">{t("courseTopicUnavailable")}</p>
+							) : null}
 						</div>
 					</div>
 					<Button type="button" disabled={saving} onClick={() => void saveCourse()}>
@@ -546,11 +634,39 @@ export function AdminCourseDetailClient({ courseId }: { courseId: string }) {
 					</Button>
 					<ul className="space-y-2 text-sm">
 						{videos.map((v) => (
-							<li key={v.id} className="border-border/40 rounded-lg border px-3 py-2">
+							<li key={v.id} className="border-border/40 space-y-2 rounded-lg border px-3 py-2">
 								<div className="font-medium">{v.title}</div>
 								<div className="text-muted-foreground">
 									#{v.sort_order} · {v.duration ? `${v.duration}s` : "时长未设置"} ·{" "}
 									{v.is_free_preview ? "免费预览" : "付费可看"}
+								</div>
+								<div className="text-muted-foreground">
+									真实观看数（只读统计）：{typeof v.view_count === "number" ? v.view_count : "—"}
+								</div>
+								<div className="flex flex-wrap items-end gap-2">
+									<div className="space-y-1">
+										<Label htmlFor={`popularity-${v.id}`}>人气值（可调整，非真实观看）</Label>
+										<Input
+											id={`popularity-${v.id}`}
+											type="number"
+											min={0}
+											step={1}
+											value={popularityDrafts[v.id] ?? String(v.marketing_view_count ?? 0)}
+											onChange={(e) =>
+												setPopularityDrafts((prev) => ({ ...prev, [v.id]: e.target.value }))
+											}
+											className="h-9 w-36"
+										/>
+									</div>
+									<Button
+										type="button"
+										size="sm"
+										variant="outline"
+										disabled={savingPopularityId === v.id}
+										onClick={() => void savePopularity(v.id)}
+									>
+										保存人气值
+									</Button>
 								</div>
 							</li>
 						))}

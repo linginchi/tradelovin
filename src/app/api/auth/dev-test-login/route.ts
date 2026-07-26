@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 
 import { registerUserAndSession, signInExistingUserWithFreshPassword } from "@/lib/auth/auto-register";
+import { isDevTestLoginEnabled } from "@/lib/auth/dev-test-login-enabled.mjs";
 import { getTradeUserIdByEmail } from "@/lib/auth/profile-resolve";
 import type { RegisterPayload } from "@/lib/auth/register-payload";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
@@ -21,37 +22,6 @@ const DEV_TEST_ACCOUNT_EMAIL: Record<"kk" | "william" | "mark", string> = {
 	william: "william@hkfac.com",
 	mark: "mark@hkfac.com",
 };
-
-function parseFlag(raw: string | undefined): { defined: boolean; enabled: boolean } {
-	const val = String(raw ?? "").trim().toLowerCase();
-	if (!val) return { defined: false, enabled: false };
-	if (val === "1" || val === "true") return { defined: true, enabled: true };
-	if (val === "0" || val === "false") return { defined: true, enabled: false };
-	return { defined: false, enabled: false };
-}
-
-function isDevTestLoginEnabled(): boolean {
-	const runtimeToggle = parseFlag(process.env.ENABLE_DEV_TEST_ACCOUNTS);
-	const runtimeProdToggle = parseFlag(process.env.ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION);
-	const publicToggle = parseFlag(process.env.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS);
-	const runtimeEnabled = runtimeToggle.defined ? runtimeToggle.enabled : true;
-	const runtimeProdEnabled = runtimeProdToggle.defined ? runtimeProdToggle.enabled : true;
-	const publicEnabled = publicToggle.defined ? publicToggle.enabled : true;
-
-	if (process.env.NODE_ENV !== "production") {
-		if (runtimeToggle.defined) return runtimeEnabled;
-		return publicEnabled;
-	}
-
-	// 默认启用：仅在显式设置为 0/false 时关闭。
-	// 生产环境仍优先运行时开关，避免构建期 NEXT_PUBLIC 漂移造成入口“时有时无”。
-	if (!runtimeEnabled) return false;
-	if (runtimeToggle.defined) {
-		if (runtimeProdToggle.defined) return runtimeProdEnabled;
-		return true;
-	}
-	return publicEnabled;
-}
 
 export async function GET() {
 	return NextResponse.json({

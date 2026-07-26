@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { recordVideoView } from "@/lib/analytics/video-views";
 import { isSuperUserById } from "@/lib/auth/super-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
@@ -9,12 +10,29 @@ import { isMissingRelationError } from "@/lib/video/db";
 
 export const runtime = "nodejs";
 
+/** Product limit for unauthorized free-preview viewers in the normal player UI. */
+const FREE_PREVIEW_MAX_SECONDS = 10;
+
 type RouteContext = {
   params: Promise<{ courseId: string; videoId: string }>;
 };
 
+type ServiceClient = NonNullable<ReturnType<typeof getServiceSupabase>>;
+
+type VideoRow = {
+  id: string;
+  course_id: string;
+  storage_key: string;
+  is_free_preview: boolean;
+};
+
+type PreviewPolicy = {
+  limited: boolean;
+  maxSeconds: number | null;
+};
+
 async function hasCourseAccess(
-  srv: NonNullable<ReturnType<typeof getServiceSupabase>>,
+  srv: ServiceClient,
   userId: string,
   courseId: string,
 ): Promise<boolean> {
@@ -29,20 +47,11 @@ async function hasCourseAccess(
   return Boolean(data);
 }
 
-export async function GET(_request: Request, { params }: RouteContext) {
-  const { courseId, videoId } = await params;
-  if (!z.string().uuid().safeParse(courseId).success || !z.string().uuid().safeParse(videoId).success) {
-    return NextResponse.json({ error: "参数无效" }, { status: 400 });
-  }
-  if (!isVideoStorageConfigured()) {
-    return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
-  }
-
-  const srv = getServiceSupabase();
-  if (!srv) {
-    return NextResponse.json({ error: "服务不可用" }, { status: 503 });
-  }
-
+async function loadVideo(
+  srv: ServiceClient,
+  courseId: string,
+  videoId: string,
+): Promise<VideoRow | NextResponse> {
   const { data: video, error: videoErr } = await srv
     .from("course_videos")
     .select("id, course_id, storage_key, is_free_preview")
@@ -61,24 +70,141 @@ export async function GET(_request: Request, { params }: RouteContext) {
   if (!video) {
     return NextResponse.json({ error: "视频不存在" }, { status: 404 });
   }
+  return video as VideoRow;
+}
 
-  if (!video.is_free_preview) {
-    const auth = await requireTradeUser();
-    if (auth instanceof NextResponse) {
+/**
+ * Runs the existing watch authorization. Resolves to the signed-in viewer id, or
+ * to null for a guest watching a free preview. Anything that is not authorized
+ * to watch returns a 403 response, so no caller can count an unauthorized view.
+ */
+async function authorizeViewer(
+  srv: ServiceClient,
+  video: VideoRow,
+  courseId: string,
+): Promise<{ viewerId: string | null } | NextResponse> {
+  const auth = await requireTradeUser();
+  const viewerId = auth instanceof NextResponse ? null : auth.userId;
+
+  if (video.is_free_preview) {
+    return { viewerId };
+  }
+
+  if (!viewerId) {
+    return NextResponse.json({ error: "无权限观看，请先购买课程" }, { status: 403 });
+  }
+
+  const isSuper = await isSuperUserById(srv, viewerId);
+  if (!isSuper) {
+    const allowed = await hasCourseAccess(srv, viewerId, courseId);
+    if (!allowed) {
       return NextResponse.json({ error: "无权限观看，请先购买课程" }, { status: 403 });
     }
-    const isSuper = await isSuperUserById(srv, auth.userId);
-    if (!isSuper) {
-      const allowed = await hasCourseAccess(srv, auth.userId, courseId);
-      if (!allowed) {
-        return NextResponse.json({ error: "无权限观看，请先购买课程" }, { status: 403 });
-      }
-    }
   }
+
+  return { viewerId };
+}
+
+/**
+ * Server-authoritative free-preview limit. Entitled / super viewers and
+ * non-preview videos are never limited; guests and logged-in users without
+ * course access are capped at FREE_PREVIEW_MAX_SECONDS for free-preview only.
+ */
+async function resolvePreviewPolicy(
+  srv: ServiceClient,
+  video: VideoRow,
+  courseId: string,
+  viewerId: string | null,
+): Promise<PreviewPolicy> {
+  if (!video.is_free_preview) {
+    return { limited: false, maxSeconds: null };
+  }
+  if (!viewerId) {
+    return { limited: true, maxSeconds: FREE_PREVIEW_MAX_SECONDS };
+  }
+  const isSuper = await isSuperUserById(srv, viewerId);
+  if (isSuper) {
+    return { limited: false, maxSeconds: null };
+  }
+  const allowed = await hasCourseAccess(srv, viewerId, courseId);
+  if (allowed) {
+    return { limited: false, maxSeconds: null };
+  }
+  return { limited: true, maxSeconds: FREE_PREVIEW_MAX_SECONDS };
+}
+
+function parseIds(courseId: string, videoId: string): NextResponse | null {
+  if (!z.string().uuid().safeParse(courseId).success || !z.string().uuid().safeParse(videoId).success) {
+    return NextResponse.json({ error: "参数无效" }, { status: 400 });
+  }
+  return null;
+}
+
+/** Issues a playback URL. Requesting a URL is not playback, so it never counts. */
+export async function GET(_request: Request, { params }: RouteContext) {
+  const { courseId, videoId } = await params;
+  const invalid = parseIds(courseId, videoId);
+  if (invalid) return invalid;
+
+  if (!isVideoStorageConfigured()) {
+    return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
+  }
+
+  const srv = getServiceSupabase();
+  if (!srv) {
+    return NextResponse.json({ error: "服务不可用" }, { status: 503 });
+  }
+
+  const video = await loadVideo(srv, courseId, videoId);
+  if (video instanceof NextResponse) return video;
+
+  const viewer = await authorizeViewer(srv, video, courseId);
+  if (viewer instanceof NextResponse) return viewer;
+
+  const preview = await resolvePreviewPolicy(srv, video, courseId, viewer.viewerId);
 
   const playUrl = await createSignedVideoUrl(String(video.storage_key), 15 * 60);
   if (!playUrl) {
     return NextResponse.json({ error: "播放地址生成失败" }, { status: 500 });
   }
-  return NextResponse.json({ playUrl, expiresIn: 15 * 60 });
+  return NextResponse.json({ playUrl, expiresIn: 15 * 60, preview });
+}
+
+/**
+ * Records one view event for playback the client actually started.
+ *
+ * Counting happens only after the same authorization the GET handler applies,
+ * and only for a signed-in viewer, so guests previewing a free video and any
+ * unauthorized or unknown video never move the counter.
+ */
+export async function POST(_request: Request, { params }: RouteContext) {
+  const { courseId, videoId } = await params;
+  const invalid = parseIds(courseId, videoId);
+  if (invalid) return invalid;
+
+  const srv = getServiceSupabase();
+  if (!srv) {
+    return NextResponse.json({ error: "服务不可用" }, { status: 503 });
+  }
+
+  const video = await loadVideo(srv, courseId, videoId);
+  if (video instanceof NextResponse) return video;
+
+  const viewer = await authorizeViewer(srv, video, courseId);
+  if (viewer instanceof NextResponse) return viewer;
+
+  if (!viewer.viewerId) {
+    return NextResponse.json({ counted: false, viewCount: null });
+  }
+
+  const result = await recordVideoView(srv, { videoId, userId: viewer.viewerId });
+  if (result.degraded) {
+    return NextResponse.json({
+      counted: false,
+      viewCount: null,
+      warning: "观看计数尚未初始化，请先执行数据库迁移（course_videos.view_count）。",
+    });
+  }
+
+  return NextResponse.json({ counted: result.counted, viewCount: result.viewCount });
 }

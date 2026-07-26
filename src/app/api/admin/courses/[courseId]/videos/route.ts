@@ -40,12 +40,31 @@ export async function GET(_request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: "服务不可用" }, { status: 503 });
   }
 
-  const { data: rows, error } = await srv
+  const fullColumns =
+    "id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at, view_count, marketing_view_count";
+  const baseColumns =
+    "id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at";
+
+  const primary = await srv
     .from("course_videos")
-    .select("id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at")
+    .select(fullColumns)
     .eq("course_id", courseId)
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
+
+  let rows: unknown[] | null = primary.data;
+  let error = primary.error;
+
+  if (error && /view_count|marketing_view_count/i.test(error.message)) {
+    const fallback = await srv
+      .from("course_videos")
+      .select(baseColumns)
+      .eq("course_id", courseId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
+    rows = fallback.data;
+    error = fallback.error;
+  }
 
   if (error) {
     if (isMissingRelationError(error, "course_videos")) {
@@ -139,7 +158,9 @@ export async function POST(request: Request, { params }: RouteContext) {
       storage_key: storageKey,
       is_free_preview: parsed.data.is_free_preview ?? false,
     })
-    .select("id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at")
+    .select(
+      "id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at, view_count, marketing_view_count",
+    )
     .maybeSingle();
 
   if (error) {

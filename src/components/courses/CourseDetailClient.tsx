@@ -19,6 +19,7 @@ type VideoRow = {
 	duration: number | null;
 	sort_order: number;
 	is_free_preview: boolean;
+	marketing_view_count?: number | null;
 };
 
 export function CourseDetailClient({ courseId }: Props) {
@@ -160,6 +161,9 @@ export function CourseDetailClient({ courseId }: Props) {
 									<p className="text-muted-foreground text-xs">
 										{video.duration ? `${video.duration}s` : "时长未知"} ·{" "}
 										{video.is_free_preview ? "免费预览" : "付费视频"}
+										{typeof video.marketing_view_count === "number"
+											? ` · ${t("popularity")} ${video.marketing_view_count}`
+											: ""}
 									</p>
 								</div>
 								<Link
