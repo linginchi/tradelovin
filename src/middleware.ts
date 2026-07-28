@@ -16,7 +16,11 @@ const LEGACY_LEARNING = [
 ] as const;
 
 const LOCALES = ["zh", "zh-TW", "en"] as const;
-const HTTPS_ONLY_HOST_SUFFIXES = ["xeoaxis.com", "tradelovin.com"] as const;
+const HTTPS_ONLY_HOST_SUFFIXES = [
+	"xeoaxis.com",
+	"tradelovin.com",
+	"leolearnstotrade.com",
+] as const;
 
 /** 供根 layout 设置 `<html lang>`（须写入 request headers，Server Components 才可读） */
 function withInvokePath(request: NextRequest): NextResponse {

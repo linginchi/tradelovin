@@ -8,6 +8,7 @@ import {
 	issueMagicLinkToken,
 	MAGIC_LINK_SEND_LIMIT_PER_HOUR,
 } from "@/lib/auth/magic-link";
+import { resolveMagicLinkBaseUrl } from "@/lib/auth/magic-link-origin.mjs";
 import { resolveResendEnv } from "@/lib/email/resend-config";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -19,13 +20,14 @@ const bodySchema = z.object({
 });
 
 function getMagicLinkBaseUrl(request: Request): string {
-	const preferred =
-		process.env.MAGIC_LINK_ORIGIN?.trim() ||
-		process.env.APP_ORIGIN?.trim() ||
-		"https://xeoaxis.com";
-	if (/^https?:\/\//i.test(preferred)) return preferred.replace(/\/+$/, "");
-	const reqUrl = new URL(request.url);
-	return `${reqUrl.protocol}//${preferred}`.replace(/\/+$/, "");
+	return resolveMagicLinkBaseUrl({
+		requestUrl: request.url,
+		originHeader: request.headers.get("origin"),
+		forwardedHost: request.headers.get("x-forwarded-host"),
+		hostHeader: request.headers.get("host"),
+		envOrigin: process.env.MAGIC_LINK_ORIGIN?.trim() || process.env.APP_ORIGIN?.trim() || "",
+		fallbackOrigin: "https://xeoaxis.com",
+	});
 }
 
 export async function POST(request: Request) {
