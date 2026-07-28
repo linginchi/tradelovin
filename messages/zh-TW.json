@@ -11,7 +11,7 @@
 		"about": "關於我們",
 		"courses": "課程",
 		"myScores": "我的成績",
-		"trade": "模擬交易",
+		"trade": "TO交易訓練",
 		"enrollCourses": "報名課程",
 		"career": "求職",
 		"myProfile": "我的",
@@ -24,7 +24,8 @@
 		"comingSoon": "待建中",
 		"logout": "退出",
 		"loggingOut": "退出中...",
-		"userFallback": "用戶"
+		"userFallback": "用戶",
+		"lab": "AI量化實驗室"
 	},
 	"LanguageSwitcher": {
 		"label": "語言",
@@ -142,7 +143,8 @@
 		"ctaRegister": "註冊 / 開始交易",
 		"entries": {
 			"video": "訂閱影片",
-			"trade": "模擬交易",
+			"trade": "TO交易訓練",
+			"lab": "AI量化實驗室",
 			"classroom": "豹仔課堂"
 		},
 		"hero": {
@@ -879,5 +881,33 @@
 		"invalidCode": "驗證碼無效或已過期。",
 		"quickLogin": "一鍵登錄（測試）",
 		"quickLoginHint": "需雲端已開啟固定管理員驗證碼；等同於引導超級管理員的受控登錄流程。"
+	},
+	"Lab": {
+		"kicker": "量化投研實驗",
+		"title": "AI量化實驗室",
+		"tagline": "上傳持倉截圖，獲得去標的化的風險結構與教學解讀——練研究、練歸因。",
+		"globalNarrative": "豹仔學堂是交易訓練和量化投資實驗的學習平台。基礎課程（線上）+ 高階導師親授（線下）+ 執行練習 + 量化投研實驗。不薦股、無實盤。",
+		"doesTitle": "本入口做什麼",
+		"does1": "持倉截圖組合診斷（教學向）",
+		"does2": "風險結構、行業暴露與教學問題",
+		"does3": "保存診斷歷史，便於複盤",
+		"doesNotTitle": "本入口不做什麼",
+		"doesNot1": "不替代 T0 下單與撮合練習",
+		"doesNot2": "不給出買賣指令或薦股",
+		"doesNot3": "不接實盤、不管理真實資產",
+		"compliance": "不薦股 · 無實盤 · 僅供學習訓練。截圖將送至多模態模型處理，請勿上傳含真實身分資訊的畫面。",
+		"enterCta": "進入實驗室",
+		"entering": "正在簽發通行…",
+		"lockedCta": "需 P2 · 雲豹及以上",
+		"upgradeLink": "升級會員",
+		"goTrade": "想練下單手感？→ 進入 TO交易訓練",
+		"enterFailed": "無法進入實驗室，請稍後重試",
+		"labNotConfigured": "實驗室服務尚未配置（LAB_PUBLIC_BASE_URL）。主站入口已就緒，待 VPS 接通後即可跳轉。",
+		"loadHistoryFailed": "載入診斷歷史失敗",
+		"historyTitle": "最近診斷",
+		"historyLocked": "升級至 T2 後可查看診斷歷史。",
+		"historyLoading": "載入中…",
+		"historyEmpty": "暫無診斷記錄。完成首次截圖診斷後將顯示在此。",
+		"historyItemFallback": "組合診斷"
 	}
 }
