@@ -11,7 +11,7 @@
 		"about": "关于我们",
 		"courses": "课程",
 		"myScores": "我的成绩",
-		"trade": "模拟交易",
+		"trade": "TO交易训练",
 		"enrollCourses": "报名课程",
 		"career": "求职",
 		"myProfile": "我的",
@@ -24,7 +24,8 @@
 		"comingSoon": "待建中",
 		"logout": "退出",
 		"loggingOut": "退出中...",
-		"userFallback": "用户"
+		"userFallback": "用户",
+		"lab": "AI量化实验室"
 	},
 	"LanguageSwitcher": {
 		"label": "语言",
@@ -142,7 +143,8 @@
 		"ctaRegister": "注册 / 开始交易",
 		"entries": {
 			"video": "订阅视频",
-			"trade": "模拟交易",
+			"trade": "TO交易训练",
+			"lab": "AI量化实验室",
 			"classroom": "豹仔课堂"
 		},
 		"hero": {
@@ -534,8 +536,7 @@
 			}
 		],
 		"myCoursesLink": "学习与成绩",
-		"courseCardScheduleCta": "查看课表"
-		,
+		"courseCardScheduleCta": "查看课表",
 		"passwordSectionTitle": "设置密码",
 		"passwordSectionSubtitle": "设置后可使用邮箱 + 密码登录。若此前仅使用邮箱链接登录，请先在此设置密码。",
 		"newPasswordLabel": "新密码",
@@ -880,5 +881,33 @@
 		"invalidCode": "验证码无效或已过期。",
 		"quickLogin": "一键登录（测试）",
 		"quickLoginHint": "需云端已开启固定管理员验证码；等价于引导超级管理员的受控登录流程。"
+	},
+	"Lab": {
+		"kicker": "量化投研实验",
+		"title": "AI量化实验室",
+		"tagline": "上传持仓截图，获得去标的化的风险结构与教学解读——练研究、练归因。",
+		"globalNarrative": "豹仔学堂是交易训练和量化投资实验的学习平台。基础课程（线上）+ 高阶导师亲授（线下）+ 执行练习 + 量化投研实验。不荐股、无实盘。",
+		"doesTitle": "本入口做什么",
+		"does1": "持仓截图组合诊断（教学向）",
+		"does2": "风险结构、行业暴露与教学问题",
+		"does3": "保存诊断历史，便于复盘",
+		"doesNotTitle": "本入口不做什么",
+		"doesNot1": "不替代 T0 下单与撮合练习",
+		"doesNot2": "不给出买卖指令或荐股",
+		"doesNot3": "不接实盘、不管理真实资产",
+		"compliance": "不荐股 · 无实盘 · 仅供学习训练。截图将送至多模态模型处理，请勿上传含真实身份信息的画面。",
+		"enterCta": "进入实验室",
+		"entering": "正在签发通行…",
+		"lockedCta": "需 P2 · 云豹及以上",
+		"upgradeLink": "升级会员",
+		"goTrade": "想练下单手感？→ 进入 TO交易训练",
+		"enterFailed": "无法进入实验室，请稍后重试",
+		"labNotConfigured": "实验室服务尚未配置（LAB_PUBLIC_BASE_URL）。主站入口已就绪，待 VPS 接通后即可跳转。",
+		"loadHistoryFailed": "加载诊断历史失败",
+		"historyTitle": "最近诊断",
+		"historyLocked": "升级至 T2 后可查看诊断历史。",
+		"historyLoading": "加载中…",
+		"historyEmpty": "暂无诊断记录。完成首次截图诊断后将显示在此。",
+		"historyItemFallback": "组合诊断"
 	}
 }

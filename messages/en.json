@@ -11,7 +11,7 @@
 		"about": "About",
 		"courses": "Courses",
 		"myScores": "My Scores",
-		"trade": "Trading",
+		"trade": "TO Trading Training",
 		"enrollCourses": "Course enrollment",
 		"career": "Careers",
 		"myProfile": "Profile",
@@ -24,7 +24,8 @@
 		"comingSoon": "Coming soon",
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
-		"userFallback": "User"
+		"userFallback": "User",
+		"lab": "AI Quant Lab"
 	},
 	"LanguageSwitcher": {
 		"label": "Language",
@@ -142,7 +143,8 @@
 		"ctaRegister": "Register / Start trading",
 		"entries": {
 			"video": "Video courses",
-			"trade": "Simulated trading",
+			"trade": "TO Trading Training",
+			"lab": "AI Quant Lab",
 			"classroom": "Leopard Classroom"
 		},
 		"hero": {
@@ -879,5 +881,33 @@
 		"invalidCode": "Invalid or expired code.",
 		"quickLogin": "Quick login (test)",
 		"quickLoginHint": "Requires fixed admin OTP to be enabled on the server (bootstrap super-admin flow)."
+	},
+	"Lab": {
+		"kicker": "Quant research lab",
+		"title": "AI Quant Lab",
+		"tagline": "Upload a holdings screenshot for de-tickerized risk structure and teaching Q&A—practice research and attribution.",
+		"globalNarrative": "Leo Academy is a learning platform for trading practice and quant research experiments. Online foundations + offline mentorship + execution drills + research lab. No stock tips. No live trading.",
+		"doesTitle": "What this entry is for",
+		"does1": "Portfolio diagnosis from a holdings screenshot (educational)",
+		"does2": "Risk themes, sector exposure, and teaching questions",
+		"does3": "Saved diagnosis history for review",
+		"doesNotTitle": "What this entry is not",
+		"doesNot1": "Not a substitute for T0 order practice",
+		"doesNot2": "No buy/sell instructions or stock tips",
+		"doesNot3": "No live trading or real asset management",
+		"compliance": "No stock tips · No live trading · Education only. Screenshots are sent to a multimodal model—do not upload personally identifiable screenshots.",
+		"enterCta": "Enter lab",
+		"entering": "Issuing pass…",
+		"lockedCta": "Requires P2 Cloud Leopard+",
+		"upgradeLink": "Upgrade membership",
+		"goTrade": "Want order practice? → Open TO Trading Training",
+		"enterFailed": "Could not enter the lab. Try again later.",
+		"labNotConfigured": "Lab service is not configured yet (LAB_PUBLIC_BASE_URL). The entry is ready; connect the VPS to enable redirect.",
+		"loadHistoryFailed": "Failed to load diagnosis history",
+		"historyTitle": "Recent diagnoses",
+		"historyLocked": "Upgrade to T2 to view diagnosis history.",
+		"historyLoading": "Loading…",
+		"historyEmpty": "No diagnoses yet. Your first screenshot session will appear here.",
+		"historyItemFallback": "Portfolio diagnosis"
 	}
 }
