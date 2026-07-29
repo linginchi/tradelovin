@@ -107,11 +107,25 @@ npm run deploy:cloudflare
 
 ---
 
-## 4. 自定义域名（`tradelovin.com`）
+## 4. 自定义域名（海外主域 / legacy / 内地入口）
 
 当前仓库内的 [`wrangler.jsonc`](wrangler.jsonc) **未提交 `routes`**；自定义域名路由由 **Cloudflare Dashboard** 托管（避免本地/测试分支误覆盖生产路由）。
 
+**多入口角色（见 [`src/lib/site-entries.mjs`](src/lib/site-entries.mjs)）：**
+
+| 角色 | 主机名 | 行为 |
+| --- | --- | --- |
+| 海外主域（canonical） | `leolearnstotrade.com`、`www.leolearnstotrade.com` | 规范入口；外部服务与文档逐步指向此处 |
+| 海外旧域（legacy） | `tradelovin.com`、`www.tradelovin.com` | 仅 308 → 海外主域（保留 path + query） |
+| 内地入口（mainland） | `xeoaxis.com`、`www.xeoaxis.com` | **永不** 308 到海外；不在 legacy 跳转列表 |
+
 首次绑定或变更仍需在 **Cloudflare Dashboard** 中完成 DNS 与路由生效（以控制台提示为准）。
+
+### Phase 2 legacy 跳转开关（默认关闭）
+
+`ENABLE_LEGACY_OVERSEAS_REDIRECT` 只有值为 `1` 或 `true` 时，middleware 才会将 `tradelovin.com` 308 到 `leolearnstotrade.com`；未设置、`0` 或其他值均为**默认关闭**。当前生产仍使用 `tradelovin.com`，且 `leolearnstotrade.com` 尚未绑定时，严禁开启。
+
+启用前必须先完成 Cloudflare 自定义域绑定，并迁移 Stripe webhook/回跳、Supabase Redirect URLs、`NEXT_PUBLIC_APP_URL` 与 `TQ_CRON_BASE_URL`。开关开启后，legacy 主机的跳转也会涵盖 `/api` 与 `/auth` 路径，因此 Stripe 和 Supabase 的回调必须先迁移，避免回调被 308 到尚未就绪的域名。
 
 ### 与 Pages 的切换（domain-cutover）
 
@@ -136,15 +150,15 @@ npm run deploy:cloudflare
 
 [`next.config.ts`](next.config.ts) 仅在设置了 **`NEXT_ASSET_PREFIX`** 或 **`ASSET_PREFIX`**（二选一，无尾部斜杠）时才会启用 Next 的 `assetPrefix`。**不设置时（推荐）静态资源使用同源相对路径 `/_next/static`**，对所有入口都正确。
 
-> ⚠️ **多入口必读（含内地 `xeoaxis.com`）：** 本项目同时存在海外入口 `tradelovin.com` 与内地反代入口 `xeoaxis.com`。`assetPrefix` 一旦设成某个绝对域名（尤其 `*.workers.dev`），会把**所有入口**的 CSS/JS URL 钉死到该域名；内地用户浏览器再去直连 Cloudflare 加载静态资源时会被墙/超时，页面渲染成**无样式裸 HTML**。因此**必须留空 `NEXT_ASSET_PREFIX`**，让各入口走同源相对路径（`xeoaxis.com` 的 `/_next/static` 由内地 Nginx 反代回 Worker，已验证可用）。为防误配，`resolveAssetPrefix()` 现已**主动忽略任何 `*.workers.dev` 前缀**并打印告警。
+> ⚠️ **多入口必读（含内地 `xeoaxis.com`）：** 本项目三入口共用 Worker（见 [`src/lib/site-entries.mjs`](src/lib/site-entries.mjs) 与 [xeoaxis 护栏设计](docs/superpowers/specs/2026-07-29-xeoaxis-entry-hardening-design.md)）。`assetPrefix` 一旦设成**任何绝对 `http(s)://` 前缀**（含 `*.workers.dev` 与任一站点域名），会把**所有入口**的 CSS/JS URL 钉死到该域名；内地用户浏览器再去直连 Cloudflare 加载静态资源时会被墙/超时，页面渲染成**无样式裸 HTML**。因此**必须留空 `NEXT_ASSET_PREFIX`**，让各入口走同源相对路径（`xeoaxis.com` 的 `/_next/static` 由内地 Nginx 反代回 Worker，已验证可用）。为防误配，`resolveAssetPrefix()` 现已**主动忽略任何绝对 `http(s)://` 前缀**（不仅 `*.workers.dev`）并打印告警，强制回退相对路径。
 
 | 场景 | 是否设置 |
 | --- | --- |
 | 本地 `next dev` / `npm run build && npm start` | **不要** 设置 |
-| `npm run build:cloudflare` / `deploy:cloudflare`（当前双入口生产） | **不要** 设置（使用相对路径）；切勿设为 `*.workers.dev` |
+| `npm run build:cloudflare` / `deploy:cloudflare`（当前多入口生产） | **不要** 设置（使用相对路径）；切勿设为 `*.workers.dev` |
 | 将来「单入口 + 独立 CDN」 | 才设为该 **CDN 源站前缀**（非 workers.dev、非任一站点域名） |
 
-**GitHub Actions：** 仓库 **Settings → Secrets and variables → Actions → Variables** 中的 **`NEXT_ASSET_PREFIX`** 在当前双入口架构下应**删除或留空**。工作流仍会注入该变量到 OpenNext 构建步骤，但留空即用相对路径；即使误填 `*.workers.dev`，构建侧也会自动忽略并回退相对路径。
+**GitHub Actions：** 仓库 **Settings → Secrets and variables → Actions → Variables** 中的 **`NEXT_ASSET_PREFIX`** 在当前多入口架构下应**删除或留空**。工作流仍会注入该变量到 OpenNext 构建步骤，但留空即用相对路径；即使误填绝对 `http(s)://` 前缀（含 `*.workers.dev` 或任一站点域名），构建侧也会自动忽略并回退相对路径。
 
 ---
 
@@ -171,7 +185,7 @@ npm run deploy:cloudflare
 - 工作流：[`.github/workflows/opennext-build.yml`](.github/workflows/opennext-build.yml)；向 **`main`** 推送且构建成功后会执行 `npx wrangler deploy`。
 - 同一工作流已内置 **工作日 16:05（Asia/Hong_Kong）** 的定时任务（UTC `5 8 * * 1-5`），调用 `POST /api/tq/cron/recalculate`。
 - **Secrets（Actions）**：`CLOUDFLARE_API_TOKEN`，以及用于 Next 打包的 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`。
-- **Variables（Actions）**：建议配置 `NEXT_ASSET_PREFIX`（与当前 Worker 对外 URL 同源无尾斜杠，见上文「静态资源前缀」）。
+- **Variables（Actions）**：`NEXT_ASSET_PREFIX` 应删除或留空（见上文「静态资源前缀」）。
 - **TQ 定时重算必配项**：
   - Actions Secret：`TQ_CRON_API_KEY`（与 Worker 运行环境变量 `TQ_CRON_API_KEY` 保持一致）。
   - Actions Variable：`TQ_CRON_BASE_URL`（例如 `https://tradelovin.com`）。
@@ -326,5 +340,6 @@ chmod +x setup-hk-proxy.sh verify-mainland-proxy.sh
 ### 9.4 注意事项
 
 - 该方案适合“先让内地同事可测”，不等同于内地合规落地托管。
-- 生产长期方案若需更稳定，建议评估“双入口架构”（内地入口 + 海外入口）与合规要求（备案/CDN）。
-- **静态资源前缀风险（务必）：** 双入口下 **必须留空 `NEXT_ASSET_PREFIX`**（见 §6）。若设为 `*.workers.dev` 或任一站点域名，内地入口（如 `xeoaxis.com`）会出现「HTML 正常返回但 CSS/JS 全部加载失败、页面裸露无样式」。Nginx 透明反代本身正常时无需重配服务器，应优先排查该构建期前缀。
+- 生产长期方案若需更稳定，建议评估「多入口架构」（内地入口 + 海外入口）与合规要求（备案/CDN）。
+- **静态资源前缀风险（务必）：** 多入口下 **必须留空 `NEXT_ASSET_PREFIX`**（见 §6）。若设为任何绝对 `http(s)://` 前缀（含 `*.workers.dev` 或任一站点域名），内地入口（如 `xeoaxis.com`）会出现「HTML 正常返回但 CSS/JS 全部加载失败、页面裸露无样式」。Nginx 透明反代本身正常时无需重配服务器，应优先排查该构建期前缀。
+- **恢复流程：** 内地入口异常时见 [`ops/mainland-access/XEOAXIS_RECOVERY.md`](ops/mainland-access/XEOAXIS_RECOVERY.md)（自检 → env 修复 → `wrangler rollback` → 恢复后验证）。

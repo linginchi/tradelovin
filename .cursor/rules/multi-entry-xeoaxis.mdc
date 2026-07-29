@@ -1,0 +1,29 @@
+---
+description: Protect mainland xeoaxis.com multi-entry invariants
+globs:
+  - src/middleware.ts
+  - next.config.ts
+  - src/lib/site-entries.mjs
+  - src/lib/site/**
+  - src/lib/auth/magic-link-origin.mjs
+  - src/app/api/auth/**
+  - src/lib/supabase/client.ts
+  - .github/workflows/opennext-build.yml
+  - wrangler.jsonc
+  - DEPLOY.md
+  - ops/mainland-access/**
+alwaysApply: false
+---
+
+# Multi-entry / xeoaxis 护栏
+
+本仓库三入口共用 Worker：`leolearnstotrade.com`（canonical）、`tradelovin.com`（legacy 308）、`xeoaxis.com`（mainland）。
+
+硬性规则：
+1. 主机名与角色只改 `src/lib/site-entries.mjs`，并更新 `npm run test:contracts:xeoaxis`。
+2. 禁止把 `xeoaxis` 加入 legacy 跳转列表；禁止 middleware 将内地入口 308 到海外。
+3. 禁止设置绝对 `http(s)://` 的 `NEXT_ASSET_PREFIX`；`resolveAssetPrefix` 必须忽略绝对前缀。
+4. 魔法链接必须 Host/Origin 优先；不得用 `MAGIC_LINK_ORIGIN` 覆盖 xeoaxis 请求。
+5. 改动本 globs 内文件后必须运行：`npm run test:contracts:xeoaxis`。
+6. 线上内地入口异常：先读 `ops/mainland-access/XEOAXIS_RECOVERY.md`。
+7. `NEXT_PUBLIC_APP_URL` 仍是已知单一 origin 缺口；本波不改写 checkout，修改时必须单独评审。

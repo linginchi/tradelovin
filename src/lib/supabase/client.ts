@@ -1,6 +1,7 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { SESSION_COOKIE_MAX_AGE_SECONDS } from "@/lib/supabase/session";
+import { isMainlandEntryHost } from "@/lib/site-entries.mjs";
 
 let browserClient: SupabaseClient | null = null;
 
@@ -14,7 +15,7 @@ export function getSupabaseBrowserClient(): SupabaseClient | null {
 	let url = rawUrl;
 	if (typeof window !== "undefined") {
 		const hostname = window.location.hostname;
-		if (hostname === "xeoaxis.com" || hostname === "www.xeoaxis.com") {
+		if (isMainlandEntryHost(hostname)) {
 			url = window.location.origin + "/supabase-proxy";
 		}
 	}
