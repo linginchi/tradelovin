@@ -107,8 +107,15 @@ test("existing protected pages still require login (including locale prefixes)",
 	}
 });
 
-test("middleware matcher still excludes api routes from page auth gate", async () => {
+test("middleware matches all paths then skips non-page routes before app logic", async () => {
 	const source = await read(MIDDLEWARE);
-	assert.match(source, /matcher:\s*\[/);
-	assert.match(source, /\(\?!api\|_next\|_vercel\|auth/);
+	assert.match(source, /matcher:\s*\[\s*"\/:path\*"\s*\]/);
+	assert.match(source, /function shouldSkipMiddlewarePath/);
+	assert.match(source, /pathname === "\/api"/);
+	assert.match(source, /pathname === "\/_next"/);
+	assert.match(source, /pathname === "\/_vercel"/);
+	assert.match(source, /pathname === "\/auth"/);
+	assert.match(source, /pathname\.includes\("\."\)/);
+	assert.match(source, /if \(shouldSkipMiddlewarePath\(pathname\)\)[\s\S]*?return NextResponse\.next\(\);/);
+	assert.doesNotMatch(source, /\(\?!api\|_next\|_vercel\|auth/);
 });
