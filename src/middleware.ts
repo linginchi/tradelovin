@@ -76,6 +76,20 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 	return NextResponse.redirect(url);
 }
 
+function shouldSkipMiddlewarePath(pathname: string): boolean {
+	return (
+		pathname === "/api" ||
+		pathname.startsWith("/api/") ||
+		pathname === "/_next" ||
+		pathname.startsWith("/_next/") ||
+		pathname === "/_vercel" ||
+		pathname.startsWith("/_vercel/") ||
+		pathname === "/auth" ||
+		pathname.startsWith("/auth/") ||
+		pathname.includes(".")
+	);
+}
+
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
 	if (!isProtectedPath(request.nextUrl.pathname)) return null;
 	console.log("[middleware enforceAuth] check", { pathname: request.nextUrl.pathname });
@@ -141,6 +155,10 @@ async function middlewareAsync(request: NextRequest) {
 		return NextResponse.redirect(legacyOverseas, 308);
 	}
 
+	if (shouldSkipMiddlewarePath(pathname)) {
+		return NextResponse.next();
+	}
+
 	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
 		return new NextResponse(null, { status: 404 });
 	}
@@ -198,5 +216,5 @@ async function middlewareAsync(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ["/((?!api|_next|_vercel|auth|.*\\..*).*)"],
+	matcher: ["/:path*"],
 };
