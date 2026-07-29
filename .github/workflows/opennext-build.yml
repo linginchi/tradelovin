@@ -32,6 +32,9 @@ jobs:
       - name: Verify generated files sync
         run: npm run verify:generated
 
+      - name: xeoaxis multi-entry contract tests
+        run: npm run test:contracts:xeoaxis
+
       - name: Trade session redirect regression guard
         run: npm run verify:trade-session-redirect
 
@@ -122,6 +125,17 @@ jobs:
             exit 0
           fi
           node scripts/deploy/verify-release.mjs
+
+      - name: Verify xeoaxis mainland entry
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          BASE_URL: https://xeoaxis.com
+        run: |
+          set -euo pipefail
+          npm run smoke:xeoaxis || {
+            echo "::error::xeoaxis entry smoke failed. See ops/mainland-access/XEOAXIS_RECOVERY.md"
+            exit 1
+          }
 
   tq-recalculate:
     if: github.event_name == 'schedule'

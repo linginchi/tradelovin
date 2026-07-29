@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
+import { isHttpsOnlyHost } from "@/lib/site-entries.mjs";
+import { buildLegacyOverseasRedirectUrl } from "@/lib/site/legacy-overseas-redirect.mjs";
 
 import { routing } from "./i18n/routing";
 
@@ -16,7 +18,6 @@ const LEGACY_LEARNING = [
 ] as const;
 
 const LOCALES = ["zh", "zh-TW", "en"] as const;
-const HTTPS_ONLY_HOST_SUFFIXES = ["xeoaxis.com", "tradelovin.com"] as const;
 
 /** 供根 layout 设置 `<html lang>`（须写入 request headers，Server Components 才可读） */
 function withInvokePath(request: NextRequest): NextResponse {
@@ -75,9 +76,18 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 	return NextResponse.redirect(url);
 }
 
-function isHttpsOnlyHost(hostname: string): boolean {
-	const host = hostname.toLowerCase();
-	return HTTPS_ONLY_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+function shouldSkipMiddlewarePath(pathname: string): boolean {
+	return (
+		pathname === "/api" ||
+		pathname.startsWith("/api/") ||
+		pathname === "/_next" ||
+		pathname.startsWith("/_next/") ||
+		pathname === "/_vercel" ||
+		pathname.startsWith("/_vercel/") ||
+		pathname === "/auth" ||
+		pathname.startsWith("/auth/") ||
+		pathname.includes(".")
+	);
 }
 
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
@@ -120,8 +130,25 @@ export default function middleware(request: NextRequest) {
 
 async function middlewareAsync(request: NextRequest) {
 	const { pathname } = request.nextUrl;
+	// 内地 Nginx 会将 Host 改写为 Worker；魔法链接改用 X-Forwarded-Host 保留原始入口。
 	const host = request.headers.get("host") ?? "";
 	const hostname = host.split(":")[0] ?? "";
+	const legacyOverseasRedirectEnabled =
+		process.env.ENABLE_LEGACY_OVERSEAS_REDIRECT === "1" ||
+		process.env.ENABLE_LEGACY_OVERSEAS_REDIRECT === "true";
+	const legacyOverseas = legacyOverseasRedirectEnabled
+		? buildLegacyOverseasRedirectUrl({
+				hostname,
+				href: request.nextUrl.href,
+			})
+		: null;
+
+	if (shouldSkipMiddlewarePath(pathname)) {
+		if (legacyOverseas) {
+			return NextResponse.redirect(legacyOverseas, 308);
+		}
+		return NextResponse.next();
+	}
 
 	if (process.env.NODE_ENV === "production") {
 		const forwardedProto = request.headers.get("x-forwarded-proto");
@@ -133,8 +160,12 @@ async function middlewareAsync(request: NextRequest) {
 			const url = request.nextUrl.clone();
 			url.protocol = "https:";
 			url.host = host;
-			return NextResponse.redirect(url, 301);
+			return NextResponse.redirect(url, 308);
 		}
+	}
+
+	if (legacyOverseas) {
+		return NextResponse.redirect(legacyOverseas, 308);
 	}
 
 	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
@@ -194,5 +225,5 @@ async function middlewareAsync(request: NextRequest) {
 }
 
 export const config = {
-	matcher: ["/((?!api|_next|_vercel|auth|.*\\..*).*)"],
+	matcher: ["/:path*"],
 };

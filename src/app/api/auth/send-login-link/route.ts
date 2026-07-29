@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { resolveMagicLinkBaseUrl } from "@/lib/auth/magic-link-origin.mjs";
 import {
 	countRecentMagicLinkSends,
 	generateMagicLinkToken,
@@ -9,6 +10,7 @@ import {
 	MAGIC_LINK_SEND_LIMIT_PER_HOUR,
 } from "@/lib/auth/magic-link";
 import { resolveResendEnv } from "@/lib/email/resend-config";
+import { MAINLAND_FALLBACK_ORIGIN } from "@/lib/site-entries.mjs";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -19,13 +21,14 @@ const bodySchema = z.object({
 });
 
 function getMagicLinkBaseUrl(request: Request): string {
-	const preferred =
-		process.env.MAGIC_LINK_ORIGIN?.trim() ||
-		process.env.APP_ORIGIN?.trim() ||
-		"https://xeoaxis.com";
-	if (/^https?:\/\//i.test(preferred)) return preferred.replace(/\/+$/, "");
-	const reqUrl = new URL(request.url);
-	return `${reqUrl.protocol}//${preferred}`.replace(/\/+$/, "");
+	return resolveMagicLinkBaseUrl({
+		requestUrl: request.url,
+		originHeader: request.headers.get("origin"),
+		forwardedHost: request.headers.get("x-forwarded-host"),
+		hostHeader: request.headers.get("host"),
+		envOrigin: process.env.MAGIC_LINK_ORIGIN?.trim() || process.env.APP_ORIGIN?.trim() || "",
+		fallbackOrigin: MAINLAND_FALLBACK_ORIGIN,
+	});
 }
 
 export async function POST(request: Request) {
