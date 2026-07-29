@@ -18,6 +18,10 @@ test("ignores absolute site-domain prefixes under multi-entry", () => {
 	assert.equal(resolveAssetPrefix({ ASSET_PREFIX: "https://tradelovin.com/_next" }), undefined);
 });
 
+test("ignores protocol-relative prefixes under multi-entry", () => {
+	assert.equal(resolveAssetPrefix({ NEXT_ASSET_PREFIX: "//leolearnstotrade.com/_next" }), undefined);
+});
+
 test("allows relative prefix without scheme", () => {
 	assert.equal(resolveAssetPrefix({ NEXT_ASSET_PREFIX: "/cdn" }), "/cdn");
 });

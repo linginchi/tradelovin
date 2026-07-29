@@ -130,8 +130,25 @@ export default function middleware(request: NextRequest) {
 
 async function middlewareAsync(request: NextRequest) {
 	const { pathname } = request.nextUrl;
+	// 内地 Nginx 会将 Host 改写为 Worker；魔法链接改用 X-Forwarded-Host 保留原始入口。
 	const host = request.headers.get("host") ?? "";
 	const hostname = host.split(":")[0] ?? "";
+	const legacyOverseasRedirectEnabled =
+		process.env.ENABLE_LEGACY_OVERSEAS_REDIRECT === "1" ||
+		process.env.ENABLE_LEGACY_OVERSEAS_REDIRECT === "true";
+	const legacyOverseas = legacyOverseasRedirectEnabled
+		? buildLegacyOverseasRedirectUrl({
+				hostname,
+				href: request.nextUrl.href,
+			})
+		: null;
+
+	if (shouldSkipMiddlewarePath(pathname)) {
+		if (legacyOverseas) {
+			return NextResponse.redirect(legacyOverseas, 308);
+		}
+		return NextResponse.next();
+	}
 
 	if (process.env.NODE_ENV === "production") {
 		const forwardedProto = request.headers.get("x-forwarded-proto");
@@ -143,20 +160,12 @@ async function middlewareAsync(request: NextRequest) {
 			const url = request.nextUrl.clone();
 			url.protocol = "https:";
 			url.host = host;
-			return NextResponse.redirect(url, 301);
+			return NextResponse.redirect(url, 308);
 		}
 	}
 
-	const legacyOverseas = buildLegacyOverseasRedirectUrl({
-		hostname,
-		href: request.nextUrl.href,
-	});
 	if (legacyOverseas) {
 		return NextResponse.redirect(legacyOverseas, 308);
-	}
-
-	if (shouldSkipMiddlewarePath(pathname)) {
-		return NextResponse.next();
 	}
 
 	if (pathname === "/admin" || pathname.startsWith("/admin/")) {

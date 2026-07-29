@@ -29,7 +29,7 @@ async function fetchEntry(baseUrl) {
 		if (BLOCKED_REDIRECT_HOSTS.has(target.hostname)) {
 			throw new Error(`Entry redirects to blocked host ${target.hostname}`);
 		}
-		if (!isSameOrigin(url, target) || !isHttpsUpgrade(url, target)) {
+		if (!(isSameOrigin(url, target) || isHttpsUpgrade(url, target))) {
 			throw new Error(`Entry redirects outside same-origin HTTPS upgrade: ${target.href}`);
 		}
 		url = target;
@@ -56,12 +56,7 @@ async function run() {
 		(match) => match[0],
 	);
 	for (const reference of staticReferences) {
-		if (
-			reference.startsWith("https://leolearnstotrade.com") ||
-			reference.startsWith("https://www.leolearnstotrade.com") ||
-			reference.startsWith("https://tradelovin.com") ||
-			reference.startsWith("https://www.tradelovin.com")
-		) {
+		if (/^https?:\/\/(?:www\.)?(?:leolearnstotrade|tradelovin)\.com(?:\/|$)/i.test(reference)) {
 			throw new Error(`Static asset uses blocked origin: ${reference}`);
 		}
 	}

@@ -29,6 +29,7 @@ BASE_URL=https://xeoaxis.com npm run smoke:xeoaxis
 - Actions Variable / 构建：`NEXT_ASSET_PREFIX` **清空**（必须为空；任何绝对 `http(s)://` 前缀都会被忽略并导致内地静态资源失败）。
 - `MAGIC_LINK_ORIGIN` / `APP_ORIGIN` 可设为海外主域（供非 allowlist Host 回退）；**不得**依赖其覆盖 xeoaxis 请求——代码必须 Host 优先。
 - Supabase Dashboard：Redirect URLs **保留** `https://xeoaxis.com/**` 与既有 callback 路径。
+- `ENABLE_LEGACY_OVERSEAS_REDIRECT` 默认关闭；只有 Cloudflare 已绑定 `leolearnstotrade.com`，并已迁移 Stripe webhook/回跳、Supabase Redirect URLs、`NEXT_PUBLIC_APP_URL` 和 `TQ_CRON_BASE_URL` 后，才可设为 `1` 或 `true`。开启后 legacy `/api` 与 `/auth` 也会 308。
 - 改完后重跑冒烟；若仅构建期变量变更，触发一次生产构建部署。
 
 ---
