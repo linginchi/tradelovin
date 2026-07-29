@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
+import { isHttpsOnlyHost } from "@/lib/site-entries.mjs";
+import { buildLegacyOverseasRedirectUrl } from "@/lib/site/legacy-overseas-redirect.mjs";
 
 import { routing } from "./i18n/routing";
 
@@ -16,7 +18,6 @@ const LEGACY_LEARNING = [
 ] as const;
 
 const LOCALES = ["zh", "zh-TW", "en"] as const;
-const HTTPS_ONLY_HOST_SUFFIXES = ["xeoaxis.com", "tradelovin.com"] as const;
 
 /** 供根 layout 设置 `<html lang>`（须写入 request headers，Server Components 才可读） */
 function withInvokePath(request: NextRequest): NextResponse {
@@ -75,11 +76,6 @@ function buildLoginRedirect(request: NextRequest): NextResponse {
 	return NextResponse.redirect(url);
 }
 
-function isHttpsOnlyHost(hostname: string): boolean {
-	const host = hostname.toLowerCase();
-	return HTTPS_ONLY_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
-}
-
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
 	if (!isProtectedPath(request.nextUrl.pathname)) return null;
 	console.log("[middleware enforceAuth] check", { pathname: request.nextUrl.pathname });
@@ -135,6 +131,14 @@ async function middlewareAsync(request: NextRequest) {
 			url.host = host;
 			return NextResponse.redirect(url, 301);
 		}
+	}
+
+	const legacyOverseas = buildLegacyOverseasRedirectUrl({
+		hostname,
+		href: request.nextUrl.href,
+	});
+	if (legacyOverseas) {
+		return NextResponse.redirect(legacyOverseas, 308);
 	}
 
 	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
