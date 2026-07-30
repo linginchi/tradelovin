@@ -17,6 +17,18 @@ export async function requireAdminSession(): Promise<AdminGuardOk | NextResponse
 	return { session };
 }
 
+/** 视频观看统计入口：admin / super_admin / analytics */
+export async function requireAnalyticsSession(): Promise<AdminGuardOk | NextResponse> {
+	const session = await getAdminSession();
+	if (!session) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
+	if (session.role !== "admin" && session.role !== "super_admin" && session.role !== "analytics") {
+		return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+	}
+	return { session };
+}
+
 export async function requireSuperAdminSession(): Promise<AdminGuardOk | NextResponse> {
 	const gated = await requireAdminSession();
 	if (gated instanceof NextResponse) return gated;

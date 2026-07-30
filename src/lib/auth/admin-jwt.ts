@@ -1,6 +1,6 @@
 import * as jose from "jose";
 
-export type AdminRole = "super_admin" | "admin";
+export type AdminRole = "super_admin" | "admin" | "analytics";
 
 export type AdminJwtPayload = {
 	email: string;
@@ -40,7 +40,7 @@ export async function verifyAdminToken(token: string): Promise<AdminJwtPayload> 
 	const { payload } = await jose.jwtVerify(token, getSecret());
 	const email = typeof payload.sub === "string" ? payload.sub : "";
 	const role = payload.role as AdminRole | undefined;
-	if (!email || (role !== "admin" && role !== "super_admin")) {
+	if (!email || (role !== "admin" && role !== "super_admin" && role !== "analytics")) {
 		throw new Error("Invalid admin token payload");
 	}
 	return { email, role };

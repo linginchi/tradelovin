@@ -168,12 +168,32 @@ async function middlewareAsync(request: NextRequest) {
 		return NextResponse.redirect(legacyOverseas, 308);
 	}
 
-	if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+	/* /admin 总入口隐藏；仅开放视频统计专用登录与看板（analytics 角色） */
+	if (pathname === "/admin") {
+		const url = request.nextUrl.clone();
+		url.pathname = "/admin/login";
+		return NextResponse.redirect(url, 308);
+	}
+
+	if (
+		pathname.startsWith("/admin/") &&
+		!pathname.startsWith("/admin/analytics") &&
+		!pathname.startsWith("/admin/login")
+	) {
 		return new NextResponse(null, { status: 404 });
 	}
 
 	if (/^\/(zh|zh-TW|en)\/admin(\/|$)/.test(pathname)) {
 		return new NextResponse(null, { status: 404 });
+	}
+
+	if (
+		pathname === "/admin/analytics" ||
+		pathname.startsWith("/admin/analytics/") ||
+		pathname === "/admin/login" ||
+		pathname.startsWith("/admin/login/")
+	) {
+		return withInvokePath(request);
 	}
 
 	if (pathname === "/cjkzt" || pathname.startsWith("/cjkzt/")) {
