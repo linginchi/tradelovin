@@ -123,9 +123,20 @@ npm run deploy:cloudflare
 
 ### Phase 2 legacy 跳转开关（默认关闭）
 
-`ENABLE_LEGACY_OVERSEAS_REDIRECT` 只有值为 `1` 或 `true` 时，middleware 才会将 `tradelovin.com` 308 到 `leolearnstotrade.com`；未设置、`0` 或其他值均为**默认关闭**。当前生产仍使用 `tradelovin.com`，且 `leolearnstotrade.com` 尚未绑定时，严禁开启。
+`ENABLE_LEGACY_OVERSEAS_REDIRECT` 只有值为 `1` 或 `true` 时，middleware 才会将 `tradelovin.com` 308 到 `leolearnstotrade.com`；未设置、`0` 或其他值均为**默认关闭**。
 
-启用前必须先完成 Cloudflare 自定义域绑定，并迁移 Stripe webhook/回跳、Supabase Redirect URLs、`NEXT_PUBLIC_APP_URL` 与 `TQ_CRON_BASE_URL`。开关开启后，legacy 主机的跳转也会涵盖 `/api` 与 `/auth` 路径，因此 Stripe 和 Supabase 的回调必须先迁移，避免回调被 308 到尚未就绪的域名。
+**Phase 2 切域 checklist（开启 legacy 308 前必须全部完成）：**
+
+1. `leolearnstotrade.com` / `www` 已在 Cloudflare Worker 绑定且 HTTPS 200。
+2. Stripe webhook 已包含 `https://leolearnstotrade.com/api/membership/webhook/stripe`（可暂时保留 `tradelovin.com` endpoint）。
+3. `wrangler.jsonc` 与 CI 构建的 `NEXT_PUBLIC_APP_URL` 已指向 `https://leolearnstotrade.com` 并完成一次 main 部署。
+4. GitHub Actions Variable `TQ_CRON_BASE_URL` 已改为 `https://leolearnstotrade.com`。
+5. Supabase Authentication → Site URL 已指向新主域；Redirect URLs **仍保留** `https://xeoaxis.com/**`。
+6. 部署后 `npm run smoke:xeoaxis` 与主域 release fingerprint 均通过。
+
+详细步骤见 [`docs/superpowers/specs/2026-07-30-phase2-overseas-domain-cutover.md`](docs/superpowers/specs/2026-07-30-phase2-overseas-domain-cutover.md) 与 [`ops/phase2-overseas-domain-cutover/CHECKLIST.md`](ops/phase2-overseas-domain-cutover/CHECKLIST.md)。
+
+开关开启后，legacy 主机的跳转也会涵盖 `/api` 与 `/auth` 路径，因此 Stripe 和 Supabase 的回调必须先迁移到新主域，避免回调被 308 到尚未就绪的域名。
 
 ### 与 Pages 的切换（domain-cutover）
 

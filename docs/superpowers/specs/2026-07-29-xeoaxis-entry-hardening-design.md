@@ -1,7 +1,7 @@
 # Design: 内地入口 xeoaxis 固化护栏（Phase 2 海外切域期间）
 
 **日期：** 2026-07-29  
-**状态：** 待实现  
+**状态：** 已实现（PR #7）；Phase 2 切域见 [`2026-07-30-phase2-overseas-domain-cutover.md`](2026-07-30-phase2-overseas-domain-cutover.md)  
 **范围：** 在海外主域从 `tradelovin.com` 迁到 `leolearnstotrade.com` 的同时，用工程护栏保护已恢复正常的内地入口 `xeoaxis.com`，并保留短路径恢复手段。  
 **非目标：** 不为内地拆独立 Worker；不做渐进金丝雀分流；不自动 `wrangler rollback`。
 
