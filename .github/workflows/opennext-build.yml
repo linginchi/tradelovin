@@ -46,6 +46,7 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL: ${{ vars.NEXT_PUBLIC_APP_URL || 'https://leolearnstotrade.com' }}
           NEXT_ASSET_PREFIX: ${{ vars.NEXT_ASSET_PREFIX }}
           NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS: ${{ vars.NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS || '0' }}
           NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN: ${{ vars.NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN || '0' }}

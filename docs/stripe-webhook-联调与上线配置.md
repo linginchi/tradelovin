@@ -50,8 +50,9 @@ stripe trigger customer.subscription.deleted
 
 ## 3. 生产配置
 
-1. 在 Stripe Dashboard 创建 webhook endpoint：  
-   `https://your-domain.com/api/membership/webhook/stripe`
+1. 在 Stripe Dashboard 创建 webhook endpoint（或通过 MCP / API）：  
+   `https://leolearnstotrade.com/api/membership/webhook/stripe`（Phase 2 主域）  
+   迁移完成前可暂时保留 `https://tradelovin.com/api/membership/webhook/stripe`。
 2. 勾选事件：
    - `checkout.session.completed`
    - `invoice.paid`

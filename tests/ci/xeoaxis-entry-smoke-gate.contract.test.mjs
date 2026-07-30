@@ -9,6 +9,7 @@ test("opennext workflow runs xeoaxis contract tests and post-deploy smoke", asyn
 	assert.match(source, /test:contracts:xeoaxis/);
 	assert.match(source, /smoke:xeoaxis/);
 	assert.match(source, /XEOAXIS_RECOVERY\.md/);
+	assert.match(source, /NEXT_PUBLIC_APP_URL/);
 });
 
 test("deployment documentation keeps legacy overseas redirect disabled by default", async () => {
