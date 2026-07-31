@@ -1,8 +1,12 @@
+import { cookies, headers } from "next/headers";
+import { createClient } from "@supabase/supabase-js";
+import { parseCookieHeader } from "@supabase/ssr";
 import { NextResponse } from "next/server";
 
 import { maybeAwardDailyLogin } from "@/lib/membership/points";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { readAccessTokenFromCookies } from "@/lib/supabase/session";
 
 export const runtime = "nodejs";
 
@@ -31,28 +35,49 @@ function emailPrefix(email: string): string {
 	return raw.trim() || "用户";
 }
 
-export async function GET() {
-	let supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>;
+async function resolveAuthedUser() {
 	try {
-		supabase = await createServerSupabaseClient();
+		const supabase = await createServerSupabaseClient();
+		const {
+			data: { user },
+			error: userErr,
+		} = await supabase.auth.getUser();
+		if (!userErr && user) return { supabase, user };
 	} catch {
-		const payload: MeResponse = {
-			success: true,
-			loggedIn: false,
-			userId: null,
-			email: null,
-			nickname: null,
-			hasEnrollment: false,
-		};
-		return NextResponse.json(payload, { status: 200 });
+		// fall through to Cookie-header path
 	}
 
+	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+	if (!url || !anon) return null;
+
+	const cookieStore = await cookies();
+	const headerStore = await headers();
+	const fromStore = cookieStore.getAll();
+	const fromHeader = parseCookieHeader(headerStore.get("cookie") ?? "");
+	const merged = new Map<string, string>();
+	for (const c of fromHeader) merged.set(c.name, c.value);
+	for (const c of fromStore) merged.set(c.name, c.value);
+	const accessToken = await readAccessTokenFromCookies(
+		[...merged.entries()].map(([name, value]) => ({ name, value })),
+		url,
+	);
+	if (!accessToken) return null;
+
+	const supabase = createClient(url, anon, {
+		auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+	});
 	const {
 		data: { user },
 		error: userErr,
-	} = await supabase.auth.getUser();
+	} = await supabase.auth.getUser(accessToken);
+	if (userErr || !user) return null;
+	return { supabase, user };
+}
 
-	if (userErr || !user) {
+export async function GET() {
+	const resolved = await resolveAuthedUser();
+	if (!resolved) {
 		const payload: MeResponse = {
 			success: true,
 			loggedIn: false,
@@ -63,6 +88,7 @@ export async function GET() {
 		};
 		return NextResponse.json(payload, { status: 200 });
 	}
+	const { supabase, user } = resolved;
 
 	const userId = user.id;
 	const email = String(user.email ?? "").trim().toLowerCase() || null;
