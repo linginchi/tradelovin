@@ -30,10 +30,14 @@ export function supabaseAuthStorageKey(supabaseUrl: string): string {
 	return `sb-${ref}-auth-token`;
 }
 
-export type WritableAuthSession = Pick<
-	Session,
-	"access_token" | "refresh_token" | "expires_at" | "expires_in" | "token_type" | "user"
->;
+export type WritableAuthSession = {
+	access_token: string;
+	refresh_token: string;
+	user: Session["user"];
+	expires_at?: number;
+	expires_in?: number;
+	token_type?: string;
+};
 
 /**
  * Persist a minted session onto the response without going through
