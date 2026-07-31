@@ -26,8 +26,12 @@ test("legacy overseas redirects are opt-in and include skipped legacy paths", as
 		source,
 		/legacyOverseasRedirectEnabled\s*\?\s*buildLegacyOverseasRedirectUrl/,
 	);
+	assert.match(source, /shouldBypassLegacyOverseasRedirect/);
+	assert.match(source, /\/auth\/callback/);
+	assert.match(source, /\/auth\/handoff/);
+	assert.match(source, /\/api\/auth\/magic-link/);
 	assert.match(
 		source,
-		/if \(shouldSkipMiddlewarePath\(pathname\)\)[\s\S]*?if \(legacyOverseas\)[\s\S]*?return NextResponse\.redirect[\s\S]*?return NextResponse\.next\(\);[\s\S]*?if \(process\.env\.NODE_ENV === "production"\)/,
+		/if \(shouldSkipMiddlewarePath\(pathname\)\)[\s\S]*?if \(legacyOverseas && !shouldBypassLegacyOverseasRedirect\(pathname\)\)[\s\S]*?return NextResponse\.redirect[\s\S]*?return NextResponse\.next\(\);[\s\S]*?if \(process\.env\.NODE_ENV === "production"\)/,
 	);
 });

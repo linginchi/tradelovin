@@ -90,6 +90,25 @@ function shouldSkipMiddlewarePath(pathname: string): boolean {
 	);
 }
 
+/**
+ * Auth callbacks must run on the host Supabase / email links actually hit.
+ * Legacy 308 before the handler would either drop the code exchange or set
+ * session cookies on tradelovin.com while the browser continues on the
+ * canonical host as a guest.
+ */
+function shouldBypassLegacyOverseasRedirect(pathname: string): boolean {
+	return (
+		pathname === "/auth/callback" ||
+		pathname.startsWith("/auth/callback/") ||
+		pathname === "/auth/handoff" ||
+		pathname.startsWith("/auth/handoff/") ||
+		pathname === "/auth/magic-link" ||
+		pathname.startsWith("/auth/magic-link/") ||
+		pathname === "/api/auth/magic-link" ||
+		pathname.startsWith("/api/auth/magic-link/")
+	);
+}
+
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
 	if (!isProtectedPath(request.nextUrl.pathname)) return null;
 	console.log("[middleware enforceAuth] check", { pathname: request.nextUrl.pathname });
@@ -144,7 +163,7 @@ async function middlewareAsync(request: NextRequest) {
 		: null;
 
 	if (shouldSkipMiddlewarePath(pathname)) {
-		if (legacyOverseas) {
+		if (legacyOverseas && !shouldBypassLegacyOverseasRedirect(pathname)) {
 			return NextResponse.redirect(legacyOverseas, 308);
 		}
 		return NextResponse.next();
@@ -164,7 +183,7 @@ async function middlewareAsync(request: NextRequest) {
 		}
 	}
 
-	if (legacyOverseas) {
+	if (legacyOverseas && !shouldBypassLegacyOverseasRedirect(pathname)) {
 		return NextResponse.redirect(legacyOverseas, 308);
 	}
 

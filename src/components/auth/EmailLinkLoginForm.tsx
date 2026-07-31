@@ -89,6 +89,9 @@ export function EmailLinkLoginForm() {
 			{searchParams.get("error") === "invalid_link" ? (
 				<p className="text-destructive text-sm">{t("invalidOrExpired")}</p>
 			) : null}
+			{searchParams.get("error") === "oauth_failed" ? (
+				<p className="text-destructive text-sm">{t("googleLoginFailed")}</p>
+			) : null}
 
 			<div className="space-y-2">
 				<Label htmlFor="email">{t("emailLabel")}</Label>

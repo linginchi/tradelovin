@@ -1,26 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+	buildCanonicalHandoffUrl,
+	needsOverseasSessionHandoff,
+	sanitizeNextPath,
+	signSessionHandoff,
+} from "@/lib/auth/session-handoff";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
 
-/** 魔法链接登录 / OTP 回调后在此处建立服务端会话 */
+/** Google OAuth / OTP 回调后在此处建立服务端会话 */
 export async function GET(request: NextRequest) {
 	const url = request.nextUrl;
 	const code = url.searchParams.get("code");
-	const rawNext = url.searchParams.get("next");
-	const next =
-		rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
-			? rawNext
-			: "/my-learning";
+	const next = sanitizeNextPath(url.searchParams.get("next"));
+	const hostname = request.headers.get("host")?.split(":")[0] ?? url.hostname;
 
 	if (code) {
 		try {
 			const supabase = await createServerSupabaseClient();
-			const { error } = await supabase.auth.exchangeCodeForSession(code);
-			if (error) {
-				console.error("[auth/callback]", error.message);
-				return NextResponse.redirect(new URL("/register?auth=fail", url.origin));
+			const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+			if (error || !data.session?.access_token || !data.session.refresh_token) {
+				console.error("[auth/callback]", error?.message ?? "empty session after code exchange");
+				return NextResponse.redirect(new URL("/login?error=oauth_failed", url.origin));
 			}
 			const {
 				data: { user },
@@ -51,12 +54,28 @@ export async function GET(request: NextRequest) {
 					}
 				}
 			}
+
+			if (needsOverseasSessionHandoff(hostname)) {
+				try {
+					const ticket = await signSessionHandoff({
+						accessToken: data.session.access_token,
+						refreshToken: data.session.refresh_token,
+						nextPath: next,
+					});
+					console.log("[auth/callback] handing off Google session to canonical host");
+					return NextResponse.redirect(buildCanonicalHandoffUrl(ticket, next));
+				} catch (handoffError) {
+					console.error("[auth/callback handoff]", handoffError);
+					return NextResponse.redirect(new URL("/login?error=oauth_failed", url.origin));
+				}
+			}
+
 			return NextResponse.redirect(new URL(next, url.origin));
 		} catch (e) {
 			console.error(e);
-			return NextResponse.redirect(new URL("/register?auth=fail", url.origin));
+			return NextResponse.redirect(new URL("/login?error=oauth_failed", url.origin));
 		}
 	}
 
-	return NextResponse.redirect(new URL("/register", url.origin));
+	return NextResponse.redirect(new URL("/login", url.origin));
 }

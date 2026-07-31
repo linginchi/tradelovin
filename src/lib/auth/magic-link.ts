@@ -103,24 +103,28 @@ async function signInWithFreshPassword(
 	response: NextResponse,
 	emailLower: string,
 	userId: string,
-): Promise<boolean> {
+): Promise<{ ok: true; accessToken: string; refreshToken: string } | { ok: false }> {
 	const password = randomInternalPassword();
 	const { error: updErr } = await srv.auth.admin.updateUserById(userId, { password });
 	if (updErr) {
 		console.error("[magic-link signInWithFreshPassword updateUserById]", updErr.message);
-		return false;
+		return { ok: false };
 	}
 
 	const cookieClient = createSupabaseRouteClient(request, response);
-	const { error: signErr } = await cookieClient.auth.signInWithPassword({
+	const { data, error: signErr } = await cookieClient.auth.signInWithPassword({
 		email: emailLower,
 		password,
 	});
-	if (signErr) {
-		console.error("[magic-link signInWithFreshPassword signInWithPassword]", signErr.message);
-		return false;
+	if (signErr || !data.session?.access_token || !data.session.refresh_token) {
+		console.error("[magic-link signInWithFreshPassword signInWithPassword]", signErr?.message ?? "empty session");
+		return { ok: false };
 	}
-	return true;
+	return {
+		ok: true,
+		accessToken: data.session.access_token,
+		refreshToken: data.session.refresh_token,
+	};
 }
 
 async function ensureSuperAdminProfile(srv: SupabaseClient, userId: string, emailLower: string): Promise<boolean> {
@@ -157,12 +161,16 @@ function attachAdminCookie(response: NextResponse, emailLower: string): Promise<
 	});
 }
 
+export type ConsumeMagicLinkResult =
+	| { ok: true; accessToken: string; refreshToken: string }
+	| { ok: false };
+
 export async function consumeMagicLink(
 	srv: SupabaseClient,
 	request: NextRequest,
 	response: NextResponse,
 	token: string,
-): Promise<{ ok: true } | { ok: false }> {
+): Promise<ConsumeMagicLinkResult> {
 	const { data: row, error: queryErr } = await srv
 		.from("email_login_tokens")
 		.select("id, email, expires_at, used")
@@ -185,6 +193,17 @@ export async function consumeMagicLink(
 		return { ok: false };
 	}
 
+	const userId = await ensureTradeUserByEmail(srv, emailLower);
+	if (!userId) return { ok: false };
+
+	const adminProfileOk = await ensureSuperAdminProfile(srv, userId, emailLower);
+	if (!adminProfileOk) return { ok: false };
+
+	const signedIn = await signInWithFreshPassword(srv, request, response, emailLower, userId);
+	if (!signedIn.ok) return { ok: false };
+
+	// Only burn the token after the session is established, so a transient
+	// sign-in failure does not strand the user with "invalid or expired".
 	const { data: consumed, error: consumeErr } = await srv
 		.from("email_login_tokens")
 		.update({ used: true })
@@ -197,16 +216,11 @@ export async function consumeMagicLink(
 		return { ok: false };
 	}
 
-	const userId = await ensureTradeUserByEmail(srv, emailLower);
-	if (!userId) return { ok: false };
-
-	const adminProfileOk = await ensureSuperAdminProfile(srv, userId, emailLower);
-	if (!adminProfileOk) return { ok: false };
-
-	const signedIn = await signInWithFreshPassword(srv, request, response, emailLower, userId);
-	if (!signedIn) return { ok: false };
-
 	await attachAdminCookie(response, emailLower);
 
-	return { ok: true };
+	return {
+		ok: true,
+		accessToken: signedIn.accessToken,
+		refreshToken: signedIn.refreshToken,
+	};
 }
