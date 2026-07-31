@@ -1,16 +1,4 @@
--- Video hub: three front-door topics. Idempotent enough for re-run on title+sort_order.
-
-INSERT INTO public.course_topics (title, description, sort_order, is_active)
-SELECT v.title, v.description, v.sort_order, true
-FROM (VALUES
-  ('交易经典', '豹哥与豹叔经典内容', 10),
-  ('录播教学', '系统录播课程', 20),
-  ('课程直播', '直播课程敬请期待', 30)
-) AS v(title, description, sort_order)
-WHERE NOT EXISTS (
-  SELECT 1 FROM public.course_topics t
-  WHERE t.sort_order = v.sort_order AND t.is_active = true AND t.title = v.title
-);
+-- Video hub: three front-door topics. Idempotent: UPDATE first, INSERT only when no active row per sort_order.
 
 -- Ensure the three hub rows are active with expected titles (if sort_order already used).
 UPDATE public.course_topics t
@@ -23,6 +11,34 @@ FROM (VALUES
   (30, '课程直播', '直播课程敬请期待')
 ) AS v(sort_order, title, description)
 WHERE t.sort_order = v.sort_order;
+
+INSERT INTO public.course_topics (title, description, sort_order, is_active)
+SELECT v.title, v.description, v.sort_order, true
+FROM (VALUES
+  ('交易经典', '豹哥与豹叔经典内容', 10),
+  ('录播教学', '系统录播课程', 20),
+  ('课程直播', '直播课程敬请期待', 30)
+) AS v(title, description, sort_order)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.course_topics t
+  WHERE t.sort_order = v.sort_order AND t.is_active = true
+);
+
+-- If multiple active rows share a hub sort_order, keep the one with courses (else oldest); deactivate extras.
+UPDATE public.course_topics t
+SET is_active = false
+FROM (
+  SELECT ct.id,
+         ROW_NUMBER() OVER (
+           PARTITION BY ct.sort_order
+           ORDER BY
+             (SELECT COUNT(*)::int FROM public.courses c WHERE c.topic_id = ct.id) DESC,
+             ct.created_at ASC
+         ) AS rn
+  FROM public.course_topics ct
+  WHERE ct.sort_order IN (10, 20, 30) AND ct.is_active = true
+) ranked
+WHERE t.id = ranked.id AND ranked.rn > 1;
 
 -- Rebind courses by known production IDs.
 UPDATE public.courses

@@ -22,3 +22,16 @@ test("video hub migration seeds three topics and rebinds known courses", async (
 	assert.match(sql, /c40fbe73-08d7-465a-bacd-9b4d8978dfdf/); // A股基础知识 → null
 	assert.match(sql, /is_active\s*=\s*false/);
 });
+
+test("video hub migration is idempotent (UPDATE before INSERT, no title gate)", async () => {
+	const sql = await readFile(new URL(sqlPath, root), "utf8");
+	const updateIdx = sql.indexOf("UPDATE public.course_topics t");
+	const insertIdx = sql.indexOf("INSERT INTO public.course_topics");
+	assert.ok(updateIdx >= 0 && insertIdx > updateIdx, "UPDATE hub rows must run before INSERT");
+	assert.match(
+		sql,
+	 /WHERE NOT EXISTS \(\s*\n\s*SELECT 1 FROM public\.course_topics t\s*\n\s*WHERE t\.sort_order = v\.sort_order AND t\.is_active = true\s*\n\s*\)/,
+	);
+	assert.doesNotMatch(sql, /t\.title\s*=\s*v\.title/);
+	assert.match(sql, /ROW_NUMBER\(\) OVER/);
+});
