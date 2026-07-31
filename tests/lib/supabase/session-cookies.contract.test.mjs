@@ -12,4 +12,5 @@ test("session helper writes chunked base64url sb-* cookies", () => {
 	assert.match(source, /createChunks/);
 	assert.match(source, /stringToBase64URL/);
 	assert.match(source, /sb-\$\{ref\}-auth-token/);
+	assert.match(source, /readAccessTokenFromCookies/);
 });
