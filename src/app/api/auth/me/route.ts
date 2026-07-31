@@ -56,7 +56,9 @@ async function resolveAuthedUser() {
 	const fromStore = cookieStore.getAll();
 	const fromHeader = parseCookieHeader(headerStore.get("cookie") ?? "");
 	const merged = new Map<string, string>();
-	for (const c of fromHeader) merged.set(c.name, c.value);
+	for (const c of fromHeader) {
+		if (typeof c.value === "string") merged.set(c.name, c.value);
+	}
 	for (const c of fromStore) merged.set(c.name, c.value);
 	const accessToken = await readAccessTokenFromCookies(
 		[...merged.entries()].map(([name, value]) => ({ name, value })),
