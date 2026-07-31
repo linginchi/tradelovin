@@ -267,7 +267,16 @@
 		"pending": "审核中",
 		"approved": "已通过",
 		"rejected": "未通过",
-		"back": "← 返回"
+		"back": "← 返回",
+		"hubClassic": "交易经典",
+		"hubRecorded": "录播教学",
+		"hubLive": "课程直播",
+		"hubClassicBlurb": "豹哥与豹叔经典内容",
+		"hubRecordedBlurb": "系统录播课程，支持免费试看",
+		"hubLiveBlurb": "敬请期待",
+		"hubLiveEmpty": "敬请期待",
+		"backToHub": "← 返回分区",
+		"hubLoadError": "分区加载失败"
 	},
 	"CourseDetailPage": {
 		"metaTitle": "课程详情",

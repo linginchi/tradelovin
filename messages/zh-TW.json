@@ -270,7 +270,16 @@
 		"pending": "審核中",
 		"approved": "已通過",
 		"rejected": "未通過",
-		"back": "← 返回"
+		"back": "← 返回",
+		"hubClassic": "交易經典",
+		"hubRecorded": "錄播教學",
+		"hubLive": "課程直播",
+		"hubClassicBlurb": "豹哥與豹叔經典內容",
+		"hubRecordedBlurb": "系統錄播課程，支援免費試看",
+		"hubLiveBlurb": "敬請期待",
+		"hubLiveEmpty": "敬請期待",
+		"backToHub": "← 返回分區",
+		"hubLoadError": "分區載入失敗"
 	},
 	"CourseDetailPage": {
 		"metaTitle": "課程詳情",

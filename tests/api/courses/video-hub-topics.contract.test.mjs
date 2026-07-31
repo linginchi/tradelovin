@@ -21,3 +21,30 @@ test("public courses route supports topicId filter and returns topic_id", async 
 	assert.match(source, /searchParams/);
 	assert.match(source, /z\.string\(\)\.uuid\(\)|uuid\(\)/);
 });
+
+test("CoursesListClient hubs on topics and supports topic query param", async () => {
+	const source = await read("src/components/courses/CoursesListClient.tsx");
+	assert.match(source, /\/api\/course-topics/);
+	assert.match(source, /topicId|searchParams/);
+	assert.match(source, /hubTopicMessageKey|HUB_TOPIC_SORT|isLiveHubTopic/);
+	assert.match(source, /hubLiveEmpty|backToHub/);
+});
+
+test("CoursesPage messages include hub keys", async () => {
+	for (const locale of ["zh", "zh-TW", "en"]) {
+		const json = JSON.parse(await read(`messages/${locale}.json`));
+		const page = json.CoursesPage;
+		for (const key of [
+			"hubClassic",
+			"hubRecorded",
+			"hubLive",
+			"hubClassicBlurb",
+			"hubRecordedBlurb",
+			"hubLiveBlurb",
+			"hubLiveEmpty",
+			"backToHub",
+		]) {
+			assert.equal(typeof page[key], "string", `${locale} missing ${key}`);
+		}
+	}
+});
