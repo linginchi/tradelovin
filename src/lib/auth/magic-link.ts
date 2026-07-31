@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { NextResponse, type NextRequest } from "next/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { createSupabaseRouteClient, randomInternalPassword } from "@/lib/auth/auto-register";
 import { isBootstrapSuperAdminEmail } from "@/lib/auth/bootstrap-super-admin";
@@ -97,27 +97,86 @@ async function ensureTradeUserByEmail(srv: SupabaseClient, emailLower: string): 
 	return userId;
 }
 
-async function signInWithFreshPassword(
-	srv: SupabaseClient,
+/**
+ * Plain anon client (no cookie adapter). On Cloudflare Workers / OpenNext,
+ * `@supabase/ssr` `signInWithPassword` can fail to reach GoTrue even after
+ * admin password rotation succeeds — mint tokens here, then `setSession`.
+ */
+function createEphemeralAnonClient(): SupabaseClient {
+	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+	const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+	if (!url || !anon) {
+		throw new Error("Missing NEXT_PUBLIC Supabase env");
+	}
+	return createClient(url, anon, {
+		auth: {
+			persistSession: false,
+			autoRefreshToken: false,
+			detectSessionInUrl: false,
+		},
+	});
+}
+
+async function attachSessionCookies(
 	request: NextRequest,
 	response: NextResponse,
+	accessToken: string,
+	refreshToken: string,
+): Promise<boolean> {
+	const cookieClient = createSupabaseRouteClient(request, response);
+	const { error } = await cookieClient.auth.setSession({
+		access_token: accessToken,
+		refresh_token: refreshToken,
+	});
+	if (error) {
+		console.error("[magic-link setSession]", error.message);
+		return false;
+	}
+	return true;
+}
+
+async function mintSessionTokens(
+	srv: SupabaseClient,
 	emailLower: string,
 	userId: string,
 ): Promise<{ ok: true; accessToken: string; refreshToken: string } | { ok: false }> {
+	const { data: linkData, error: linkErr } = await srv.auth.admin.generateLink({
+		type: "magiclink",
+		email: emailLower,
+	});
+	const tokenHash = linkData?.properties?.hashed_token;
+	if (!linkErr && tokenHash) {
+		const anon = createEphemeralAnonClient();
+		const { data, error: verifyErr } = await anon.auth.verifyOtp({
+			type: "email",
+			token_hash: tokenHash,
+		});
+		if (!verifyErr && data.session?.access_token && data.session.refresh_token) {
+			return {
+				ok: true,
+				accessToken: data.session.access_token,
+				refreshToken: data.session.refresh_token,
+			};
+		}
+		console.error("[magic-link verifyOtp]", verifyErr?.message ?? "empty session");
+	} else {
+		console.error("[magic-link generateLink]", linkErr?.message ?? "missing hashed_token");
+	}
+
+	// Fallback: rotate password + password grant on the same ephemeral client.
 	const password = randomInternalPassword();
 	const { error: updErr } = await srv.auth.admin.updateUserById(userId, { password });
 	if (updErr) {
-		console.error("[magic-link signInWithFreshPassword updateUserById]", updErr.message);
+		console.error("[magic-link mintSessionTokens updateUserById]", updErr.message);
 		return { ok: false };
 	}
-
-	const cookieClient = createSupabaseRouteClient(request, response);
-	const { data, error: signErr } = await cookieClient.auth.signInWithPassword({
+	const anon = createEphemeralAnonClient();
+	const { data, error: signErr } = await anon.auth.signInWithPassword({
 		email: emailLower,
 		password,
 	});
 	if (signErr || !data.session?.access_token || !data.session.refresh_token) {
-		console.error("[magic-link signInWithFreshPassword signInWithPassword]", signErr?.message ?? "empty session");
+		console.error("[magic-link mintSessionTokens signInWithPassword]", signErr?.message ?? "empty session");
 		return { ok: false };
 	}
 	return {
@@ -125,6 +184,29 @@ async function signInWithFreshPassword(
 		accessToken: data.session.access_token,
 		refreshToken: data.session.refresh_token,
 	};
+}
+
+async function establishMagicLinkSession(
+	srv: SupabaseClient,
+	request: NextRequest,
+	response: NextResponse,
+	emailLower: string,
+	userId: string,
+): Promise<{ ok: true; accessToken: string; refreshToken: string } | { ok: false }> {
+	const minted = await mintSessionTokens(srv, emailLower, userId);
+	if (!minted.ok) return { ok: false };
+
+	const cookiesOk = await attachSessionCookies(
+		request,
+		response,
+		minted.accessToken,
+		minted.refreshToken,
+	);
+	// Tokens are still usable for cross-host handoff even if cookie write fails.
+	if (!cookiesOk) {
+		console.warn("[magic-link] session cookies not written; continuing with tokens");
+	}
+	return minted;
 }
 
 async function ensureSuperAdminProfile(srv: SupabaseClient, userId: string, emailLower: string): Promise<boolean> {
@@ -199,7 +281,7 @@ export async function consumeMagicLink(
 	const adminProfileOk = await ensureSuperAdminProfile(srv, userId, emailLower);
 	if (!adminProfileOk) return { ok: false };
 
-	const signedIn = await signInWithFreshPassword(srv, request, response, emailLower, userId);
+	const signedIn = await establishMagicLinkSession(srv, request, response, emailLower, userId);
 	if (!signedIn.ok) return { ok: false };
 
 	// Only burn the token after the session is established, so a transient
