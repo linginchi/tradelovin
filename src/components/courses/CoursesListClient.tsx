@@ -136,10 +136,6 @@ export function CoursesListClient() {
 		return <p className="text-destructive text-center text-sm">{topicLoadErr}</p>;
 	}
 
-	if (err) {
-		return <p className="text-destructive text-center text-sm">{err}</p>;
-	}
-
 	if (!selectedTopic) {
 		return (
 			<ul className="mx-auto grid max-w-3xl gap-4">
@@ -179,14 +175,16 @@ export function CoursesListClient() {
 		);
 	}
 
-	if (courses === null) return <Loading />;
+	if (courses === null && !err) return <Loading />;
 
 	return (
 		<div>
 			<Link href="/courses" className="text-muted-foreground mx-auto mb-6 block max-w-3xl text-sm hover:underline">
 				{t("backToHub")}
 			</Link>
-			{!courses.length ? (
+			{err ? (
+				<p className="text-destructive text-center text-sm">{err}</p>
+			) : !courses?.length ? (
 				<p className="text-muted-foreground text-center text-sm">{t("empty")}</p>
 			) : (
 				<CourseList courses={courses} myStatus={myStatus} isAuthed={isAuthed} isLoading={isLoading} t={t} />
