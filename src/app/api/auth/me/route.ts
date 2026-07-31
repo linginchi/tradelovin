@@ -77,10 +77,10 @@ async function resolveAuthedUser() {
 	return { supabase, user };
 }
 
-export async function GET(request: Request) {
+export async function GET() {
 	const resolved = await resolveAuthedUser();
 	if (!resolved) {
-		const payload: MeResponse & { debug?: Record<string, unknown> } = {
+		const payload: MeResponse = {
 			success: true,
 			loggedIn: false,
 			userId: null,
@@ -88,41 +88,6 @@ export async function GET(request: Request) {
 			nickname: null,
 			hasEnrollment: false,
 		};
-		// Temporary probe for OpenNext cookie delivery (remove after auth cutover).
-		if (request.headers.get("x-auth-debug") === "1") {
-			const cookieStore = await cookies();
-			const headerStore = await headers();
-			const raw = headerStore.get("cookie") ?? "";
-			const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
-			const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? "";
-			const pairs = cookieStore.getAll();
-			const accessToken = url
-				? await readAccessTokenFromCookies(pairs, url)
-				: null;
-			let getUserError: string | null = null;
-			let getUserOk = false;
-			if (accessToken && url && anon) {
-				const probe = createClient(url, anon, {
-					auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-				});
-				const { data, error } = await probe.auth.getUser(accessToken);
-				getUserOk = Boolean(data.user);
-				getUserError = error?.message ?? null;
-			}
-			payload.debug = {
-				hasUrl: Boolean(url),
-				hasAnon: Boolean(anon),
-				urlHost: url ? new URL(url).hostname : null,
-				cookieHeaderLen: raw.length,
-				cookieHeaderHasSb: raw.includes("sb-"),
-				storeNames: pairs.map((c) => c.name),
-				storeValueLens: pairs.map((c) => c.value.length),
-				requestCookieLen: request.headers.get("cookie")?.length ?? 0,
-				accessTokenLen: accessToken?.length ?? 0,
-				getUserOk,
-				getUserError,
-			};
-		}
 		return NextResponse.json(payload, { status: 200 });
 	}
 	const { supabase, user } = resolved;
