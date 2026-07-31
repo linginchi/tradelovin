@@ -77,10 +77,10 @@ async function resolveAuthedUser() {
 	return { supabase, user };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
 	const resolved = await resolveAuthedUser();
 	if (!resolved) {
-		const payload: MeResponse = {
+		const payload: MeResponse & { debug?: Record<string, unknown> } = {
 			success: true,
 			loggedIn: false,
 			userId: null,
@@ -88,6 +88,20 @@ export async function GET() {
 			nickname: null,
 			hasEnrollment: false,
 		};
+		// Temporary probe for OpenNext cookie delivery (remove after auth cutover).
+		if (request.headers.get("x-auth-debug") === "1") {
+			const cookieStore = await cookies();
+			const headerStore = await headers();
+			const raw = headerStore.get("cookie") ?? "";
+			payload.debug = {
+				hasUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
+				hasAnon: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+				cookieHeaderLen: raw.length,
+				cookieHeaderHasSb: raw.includes("sb-"),
+				storeNames: cookieStore.getAll().map((c) => c.name),
+				requestCookieLen: request.headers.get("cookie")?.length ?? 0,
+			};
+		}
 		return NextResponse.json(payload, { status: 200 });
 	}
 	const { supabase, user } = resolved;
