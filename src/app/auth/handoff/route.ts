@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { decodeJwt } from "jose";
 
-import { createSupabaseRouteClient } from "@/lib/auth/auto-register";
 import { sanitizeNextPath, verifySessionHandoff } from "@/lib/auth/session-handoff";
+import { writeSupabaseSessionCookies } from "@/lib/supabase/session";
 
 export const runtime = "nodejs";
 
@@ -17,15 +19,32 @@ export async function GET(request: NextRequest) {
 		const payload = await verifySessionHandoff(ticket);
 		const destination = sanitizeNextPath(payload.nextPath || nextPath);
 		const response = NextResponse.redirect(new URL(destination, request.url));
-		const supabase = createSupabaseRouteClient(request, response);
-		const { error } = await supabase.auth.setSession({
-			access_token: payload.accessToken,
-			refresh_token: payload.refreshToken,
+
+		const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+		const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+		if (!url || !anon) {
+			throw new Error("Missing NEXT_PUBLIC Supabase env");
+		}
+		const anonClient = createClient(url, anon, {
+			auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
 		});
-		if (error) {
-			console.error("[auth/handoff] setSession failed", error.message);
+		const { data: userData, error: userErr } = await anonClient.auth.getUser(payload.accessToken);
+		if (userErr || !userData.user) {
+			console.error("[auth/handoff] getUser failed", userErr?.message ?? "empty user");
 			return NextResponse.redirect(new URL("/login?error=invalid_link", request.url));
 		}
+
+		const claims = decodeJwt(payload.accessToken);
+		const expiresAt = typeof claims.exp === "number" ? claims.exp : undefined;
+		const now = Math.floor(Date.now() / 1000);
+		writeSupabaseSessionCookies(response, {
+			access_token: payload.accessToken,
+			refresh_token: payload.refreshToken,
+			expires_at: expiresAt,
+			expires_in: expiresAt ? Math.max(0, expiresAt - now) : undefined,
+			token_type: "bearer",
+			user: userData.user,
+		});
 		return response;
 	} catch (error) {
 		console.error("[auth/handoff]", error instanceof Error ? error.message : error);

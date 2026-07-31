@@ -3,12 +3,16 @@ import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { createSupabaseRouteClient, randomInternalPassword } from "@/lib/auth/auto-register";
+import { randomInternalPassword } from "@/lib/auth/auto-register";
 import { isBootstrapSuperAdminEmail } from "@/lib/auth/bootstrap-super-admin";
 import { signAdminToken } from "@/lib/auth/admin-jwt";
 import { ADMIN_TOKEN_COOKIE } from "@/lib/auth/admin-session";
 import { getTradeUserIdByEmail } from "@/lib/auth/profile-resolve";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
+import {
+	writeSupabaseSessionCookies,
+	type WritableAuthSession,
+} from "@/lib/supabase/session";
 
 const TOKEN_BYTES = 32;
 export const MAGIC_LINK_EXPIRE_MINUTES = 30;
@@ -99,8 +103,8 @@ async function ensureTradeUserByEmail(srv: SupabaseClient, emailLower: string): 
 
 /**
  * Plain anon client (no cookie adapter). On Cloudflare Workers / OpenNext,
- * `@supabase/ssr` `signInWithPassword` can fail to reach GoTrue even after
- * admin password rotation succeeds — mint tokens here, then `setSession`.
+ * `@supabase/ssr` auth network calls on the cookie client have been unreliable —
+ * mint tokens here, then write `sb-*` cookies directly onto the response.
  */
 function createEphemeralAnonClient(): SupabaseClient {
 	const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -117,29 +121,41 @@ function createEphemeralAnonClient(): SupabaseClient {
 	});
 }
 
-async function attachSessionCookies(
-	request: NextRequest,
-	response: NextResponse,
-	accessToken: string,
-	refreshToken: string,
-): Promise<boolean> {
-	const cookieClient = createSupabaseRouteClient(request, response);
-	const { error } = await cookieClient.auth.setSession({
-		access_token: accessToken,
-		refresh_token: refreshToken,
-	});
-	if (error) {
-		console.error("[magic-link setSession]", error.message);
-		return false;
-	}
-	return true;
+type MintedSession = {
+	ok: true;
+	accessToken: string;
+	refreshToken: string;
+	session: WritableAuthSession;
+};
+
+function toMintedSession(session: {
+	access_token: string;
+	refresh_token: string;
+	expires_at?: number;
+	expires_in?: number;
+	token_type?: string;
+	user: WritableAuthSession["user"];
+}): MintedSession {
+	return {
+		ok: true,
+		accessToken: session.access_token,
+		refreshToken: session.refresh_token,
+		session: {
+			access_token: session.access_token,
+			refresh_token: session.refresh_token,
+			expires_at: session.expires_at,
+			expires_in: session.expires_in,
+			token_type: session.token_type ?? "bearer",
+			user: session.user,
+		},
+	};
 }
 
 async function mintSessionTokens(
 	srv: SupabaseClient,
 	emailLower: string,
 	userId: string,
-): Promise<{ ok: true; accessToken: string; refreshToken: string } | { ok: false }> {
+): Promise<MintedSession | { ok: false }> {
 	const { data: linkData, error: linkErr } = await srv.auth.admin.generateLink({
 		type: "magiclink",
 		email: emailLower,
@@ -151,12 +167,8 @@ async function mintSessionTokens(
 			type: "email",
 			token_hash: tokenHash,
 		});
-		if (!verifyErr && data.session?.access_token && data.session.refresh_token) {
-			return {
-				ok: true,
-				accessToken: data.session.access_token,
-				refreshToken: data.session.refresh_token,
-			};
+		if (!verifyErr && data.session?.access_token && data.session.refresh_token && data.session.user) {
+			return toMintedSession(data.session);
 		}
 		console.error("[magic-link verifyOtp]", verifyErr?.message ?? "empty session");
 	} else {
@@ -175,20 +187,15 @@ async function mintSessionTokens(
 		email: emailLower,
 		password,
 	});
-	if (signErr || !data.session?.access_token || !data.session.refresh_token) {
+	if (signErr || !data.session?.access_token || !data.session.refresh_token || !data.session.user) {
 		console.error("[magic-link mintSessionTokens signInWithPassword]", signErr?.message ?? "empty session");
 		return { ok: false };
 	}
-	return {
-		ok: true,
-		accessToken: data.session.access_token,
-		refreshToken: data.session.refresh_token,
-	};
+	return toMintedSession(data.session);
 }
 
 async function establishMagicLinkSession(
 	srv: SupabaseClient,
-	request: NextRequest,
 	response: NextResponse,
 	emailLower: string,
 	userId: string,
@@ -196,17 +203,21 @@ async function establishMagicLinkSession(
 	const minted = await mintSessionTokens(srv, emailLower, userId);
 	if (!minted.ok) return { ok: false };
 
-	const cookiesOk = await attachSessionCookies(
-		request,
-		response,
-		minted.accessToken,
-		minted.refreshToken,
-	);
-	// Tokens are still usable for cross-host handoff even if cookie write fails.
-	if (!cookiesOk) {
-		console.warn("[magic-link] session cookies not written; continuing with tokens");
+	try {
+		writeSupabaseSessionCookies(response, minted.session);
+	} catch (error) {
+		console.error(
+			"[magic-link writeSessionCookies]",
+			error instanceof Error ? error.message : error,
+		);
+		return { ok: false };
 	}
-	return minted;
+
+	return {
+		ok: true,
+		accessToken: minted.accessToken,
+		refreshToken: minted.refreshToken,
+	};
 }
 
 async function ensureSuperAdminProfile(srv: SupabaseClient, userId: string, emailLower: string): Promise<boolean> {
@@ -281,7 +292,7 @@ export async function consumeMagicLink(
 	const adminProfileOk = await ensureSuperAdminProfile(srv, userId, emailLower);
 	if (!adminProfileOk) return { ok: false };
 
-	const signedIn = await establishMagicLinkSession(srv, request, response, emailLower, userId);
+	const signedIn = await establishMagicLinkSession(srv, response, emailLower, userId);
 	if (!signedIn.ok) return { ok: false };
 
 	// Only burn the token after the session is established, so a transient
