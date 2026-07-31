@@ -9,8 +9,21 @@ type VideoStorageConfig = {
 
 const DEFAULT_SIGN_TTL_SECONDS = 15 * 60;
 
+/**
+ * Legacy Leo/AI clips (e.g. `leo-004/...mp4`) were uploaded to Supabase Storage.
+ * Admin course uploads use R2 under `videos/{courseId}/...`.
+ */
+export const SUPABASE_VIDEOS_BUCKET = "Videos";
+
 function env(name: string): string {
   return (process.env[name] ?? "").trim();
+}
+
+/** True for storage_key values that are not the admin R2 upload prefix. */
+export function isLegacySupabaseVideoKey(storageKey: string): boolean {
+  const key = storageKey.trim();
+  if (!key) return false;
+  return !key.startsWith("videos/");
 }
 
 function normalizeEndpoint(raw: string): string {
@@ -122,9 +135,29 @@ export async function uploadVideoObject(
   }
 }
 
-export async function createSignedVideoUrl(
+async function createSignedSupabaseVideosUrl(
   storageKey: string,
-  ttlSeconds = DEFAULT_SIGN_TTL_SECONDS,
+  ttlSeconds: number,
+): Promise<string | null> {
+  const { getServiceSupabase } = await import("@/lib/supabase/service");
+  const srv = getServiceSupabase();
+  if (!srv) return null;
+  const { data, error } = await srv.storage
+    .from(SUPABASE_VIDEOS_BUCKET)
+    .createSignedUrl(storageKey, Math.max(1, ttlSeconds));
+  if (error || !data?.signedUrl) {
+    console.warn(
+      "[video-storage] supabase Videos signed URL failed",
+      error?.message ?? "empty signedUrl",
+    );
+    return null;
+  }
+  return data.signedUrl;
+}
+
+async function createSignedObjectStoreUrl(
+  storageKey: string,
+  ttlSeconds: number,
 ): Promise<string | null> {
   const config = getVideoStorageConfig();
   if (!config) return null;
@@ -152,4 +185,25 @@ export async function createSignedVideoUrl(
   } catch {
     return null;
   }
+}
+
+/**
+ * Issues a time-limited playback URL.
+ * Legacy keys (not `videos/...`) are signed from Supabase Storage `Videos`
+ * first — that is where Leo clips such as 豹哥·交易新銳 actually live.
+ * Admin uploads under `videos/` use R2/Aliyun object storage.
+ */
+export async function createSignedVideoUrl(
+  storageKey: string,
+  ttlSeconds = DEFAULT_SIGN_TTL_SECONDS,
+): Promise<string | null> {
+  const key = storageKey.trim();
+  if (!key) return null;
+
+  if (isLegacySupabaseVideoKey(key)) {
+    const supabaseUrl = await createSignedSupabaseVideosUrl(key, ttlSeconds);
+    if (supabaseUrl) return supabaseUrl;
+  }
+
+  return createSignedObjectStoreUrl(key, ttlSeconds);
 }
