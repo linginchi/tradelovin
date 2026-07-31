@@ -28,6 +28,7 @@ test("CoursesListClient hubs on topics and supports topic query param", async ()
 	assert.match(source, /topicId|searchParams/);
 	assert.match(source, /hubTopicMessageKey|HUB_TOPIC_SORT|isLiveHubTopic/);
 	assert.match(source, /hubLiveEmpty|backToHub/);
+	assert.match(source, /setErr\(null\)/);
 });
 
 test("CoursesPage messages include hub keys", async () => {

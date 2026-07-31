@@ -44,6 +44,7 @@ export function CoursesListClient() {
 	const [topics, setTopics] = useState<TopicRow[] | null>(null);
 	const [courses, setCourses] = useState<CourseRow[] | null>(null);
 	const [err, setErr] = useState<string | null>(null);
+	const [topicLoadErr, setTopicLoadErr] = useState<string | null>(null);
 	const [myStatus, setMyStatus] = useState<Record<string, string>>({});
 	const selectedTopic = topics?.find((topic) => topic.id === topicId) ?? null;
 
@@ -55,14 +56,15 @@ export function CoursesListClient() {
 				const json = (await res.json()) as { topics?: TopicRow[]; error?: string };
 				if (!alive) return;
 				if (!res.ok) {
-					setErr(json.error ?? t("hubLoadError"));
+					setTopicLoadErr(json.error ?? t("hubLoadError"));
 					setTopics([]);
 					return;
 				}
+				setTopicLoadErr(null);
 				setTopics(json.topics ?? []);
 			} catch {
 				if (alive) {
-					setErr(t("hubLoadError"));
+					setTopicLoadErr(t("hubLoadError"));
 					setTopics([]);
 				}
 			}
@@ -74,13 +76,12 @@ export function CoursesListClient() {
 	}, [t]);
 
 	useEffect(() => {
-		if (!selectedTopic || isLiveHubTopic(selectedTopic.sort_order)) {
-			return;
-		}
-		const topic = selectedTopic;
 		let alive = true;
 		async function loadCourses() {
+			setErr(null);
 			setCourses(null);
+			if (!selectedTopic || isLiveHubTopic(selectedTopic.sort_order)) return;
+			const topic = selectedTopic;
 			try {
 				const res = await fetch(`/api/courses?topicId=${encodeURIComponent(topic.id)}`);
 				const json = (await res.json()) as { courses?: CourseRow[]; error?: string };
@@ -127,8 +128,12 @@ export function CoursesListClient() {
 		};
 	}, [courses, isAuthed, selectedTopic]);
 
-	if (topics === null && !err) {
+	if (topics === null && !topicLoadErr) {
 		return <Loading />;
+	}
+
+	if (topicLoadErr) {
+		return <p className="text-destructive text-center text-sm">{topicLoadErr}</p>;
 	}
 
 	if (err) {
