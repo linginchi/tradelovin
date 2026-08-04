@@ -91,7 +91,7 @@ export async function POST(request: Request) {
 	const { error: sendErr } = await resend.emails.send({
 		from: resendCfg.from,
 		to: email,
-		subject: "您的豹仔乐园登录链接",
+		subject: "您的新紮學豹登录链接",
 		text: [
 			"点击以下链接登录（30分钟内有效）：",
 			"",
@@ -99,13 +99,13 @@ export async function POST(request: Request) {
 			"",
 			"如果无法点击，请复制链接到浏览器打开。",
 			"",
-			"安全提示：豹仔乐园永远不会要求您输入密码。请确认发件人为 noreply@tradelovin.com。",
+			"安全提示：新紮學豹永远不会要求您输入密码。请确认发件人为 noreply@tradelovin.com。",
 		].join("\n"),
 		html: `
 			<p>点击以下链接登录（30分钟内有效）：</p>
 			<p><a href="${loginUrl}">${loginUrl}</a></p>
 			<p>如果无法点击，请复制链接到浏览器打开。</p>
-			<p><strong>安全提示：</strong>豹仔乐园永远不会要求您输入密码。请确认发件人为 noreply@tradelovin.com。</p>
+			<p><strong>安全提示：</strong>新紮學豹永远不会要求您输入密码。请确认发件人为 noreply@tradelovin.com。</p>
 		`,
 	});
 

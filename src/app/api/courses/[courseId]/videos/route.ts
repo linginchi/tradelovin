@@ -62,29 +62,82 @@ async function queryVideos(
   courseId: string,
   freePreviewOnly: boolean,
   columns: string,
+  publishedOnly: boolean,
 ) {
   const base = srv.from("course_videos").select(columns).eq("course_id", courseId);
-  const filtered = freePreviewOnly ? base.eq("is_free_preview", true) : base;
-  return filtered.order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+  const previewFiltered = freePreviewOnly ? base.eq("is_free_preview", true) : base;
+  const publishedFiltered = publishedOnly
+    ? previewFiltered.lte("published_at", new Date().toISOString())
+    : previewFiltered;
+  return publishedFiltered
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 }
 
-/** Falls back to the pre-popularity column set when marketing_view_count is not deployed yet. */
+function isMissingPublishedAtColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const message = ((error as { message?: string }).message ?? "").toLowerCase();
+  return message.includes("published_at");
+}
+
+/** Falls back when marketing_view_count / published_at are not deployed yet. */
 async function listVideos(
   srv: ServiceClient,
   courseId: string,
   freePreviewOnly: boolean,
 ): Promise<VideoListResult> {
-  const withPopularity = await queryVideos(srv, courseId, freePreviewOnly, COLUMNS_WITH_POPULARITY);
+  const withPopularity = await queryVideos(
+    srv,
+    courseId,
+    freePreviewOnly,
+    COLUMNS_WITH_POPULARITY,
+    true,
+  );
   if (!withPopularity.error) {
     return { videos: withPopularity.data ?? [], error: null, popularityAvailable: true };
   }
+
+  if (isMissingPublishedAtColumnError(withPopularity.error)) {
+    // Pre-migration: do not hide any rows.
+    const legacyPop = await queryVideos(
+      srv,
+      courseId,
+      freePreviewOnly,
+      COLUMNS_WITH_POPULARITY,
+      false,
+    );
+    if (!legacyPop.error) {
+      return { videos: legacyPop.data ?? [], error: null, popularityAvailable: true };
+    }
+    if (isMissingMarketingPopularityError(legacyPop.error)) {
+      const legacyBase = await queryVideos(srv, courseId, freePreviewOnly, BASE_COLUMNS, false);
+      return {
+        videos: legacyBase.error ? null : (legacyBase.data ?? []),
+        error: legacyBase.error,
+        popularityAvailable: false,
+      };
+    }
+    return { videos: null, error: legacyPop.error, popularityAvailable: false };
+  }
+
   if (!isMissingMarketingPopularityError(withPopularity.error)) {
     return { videos: null, error: withPopularity.error, popularityAvailable: false };
   }
 
-  const fallback = await queryVideos(srv, courseId, freePreviewOnly, BASE_COLUMNS);
+  const fallback = await queryVideos(srv, courseId, freePreviewOnly, BASE_COLUMNS, true);
+  if (!fallback.error) {
+    return { videos: fallback.data ?? [], error: null, popularityAvailable: false };
+  }
+  if (isMissingPublishedAtColumnError(fallback.error)) {
+    const legacyBase = await queryVideos(srv, courseId, freePreviewOnly, BASE_COLUMNS, false);
+    return {
+      videos: legacyBase.error ? null : (legacyBase.data ?? []),
+      error: legacyBase.error,
+      popularityAvailable: false,
+    };
+  }
   return {
-    videos: fallback.error ? null : (fallback.data ?? []),
+    videos: null,
     error: fallback.error,
     popularityAvailable: false,
   };

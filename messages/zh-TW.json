@@ -1,8 +1,8 @@
 {
 	"Metadata": {
-		"siteTitle": "豹仔樂園 — 挖掘你的交易天賦",
-		"siteDescription": "遊戲化交易學習：課程、演練與即時反饋，在豹仔樂園挖掘你的交易天賦。",
-		"registerTitle": "註冊 · 開啟模擬交易 · 豹仔樂園",
+		"siteTitle": "新紮學豹 — 跟豹叔豹哥，領略交易高手的成與敗",
+		"siteDescription": "跟豹叔豹哥，領略交易高手的成與敗。課堂式乾貨拆解知名交易員的成敗案例。",
+		"registerTitle": "註冊 · 開啟模擬交易 · 新紮學豹",
 		"registerDescription": "輸入郵箱接收登入連結，點擊即可登入或註冊。"
 	},
 	"Nav": {
@@ -15,7 +15,7 @@
 		"enrollCourses": "報名課程",
 		"career": "求職",
 		"myProfile": "我的",
-		"myLearning": "豹仔課堂",
+		"myLearning": "學習中心",
 		"register": "註冊",
 		"login": "登入",
 		"support": "支援",
@@ -34,7 +34,7 @@
 		"en": "English"
 	},
 	"Common": {
-		"brand": "豹仔樂園",
+		"brand": "新紮學豹",
 		"backHome": "返回首頁",
 		"comingSoon": "待連接"
 	},
@@ -47,7 +47,7 @@
 		}
 	},
 	"Trade": {
-		"title": "豹仔樂園 · 模擬交易",
+		"title": "新紮學豹 · 模擬交易",
 		"subtitle": "查看資產與當日委託成交，限價練習下單（撮合功能將陸續開放）。",
 		"panel": {
 			"placeOrder": "交易區",
@@ -136,21 +136,21 @@
 		}
 	},
 	"Home": {
-		"badge": "豹仔樂園 · 遊戲化交易學習",
-		"title": "你負責交易 我負責保障",
-		"subtitle": "沒有什麼能夠阻擋你對大交易員的嚮往",
+		"badge": "Leo Learns To Trade · Triumphs and disasters of the trading greats",
+		"title": "跟豹叔豹哥，領略交易高手的成與敗",
+		"subtitle": "以原創卡通豹角色講述知名交易員的成敗案例，課堂式乾貨拆解。",
 		"ctaTrading": "模擬交易測試入口",
 		"ctaRegister": "註冊 / 開始交易",
 		"entries": {
 			"video": "訂閱影片",
 			"trade": "TO交易訓練",
 			"lab": "AI量化實驗室",
-			"classroom": "豹仔課堂"
+			"classroom": "學習中心"
 		},
 		"hero": {
-			"classroomButton": "豹仔課堂"
+			"classroomButton": "學習中心"
 		},
-		"honorTitle": "畢業豹仔榮譽榜",
+		"honorTitle": "畢業學員榮譽榜",
 		"honorSubtitle": "畢業學員的優秀出路與崗位（示例展示）",
 		"honorInitial": "豹",
 		"honorGraduates": [
@@ -186,12 +186,12 @@
 			}
 		],
 		"complianceTitle": "合規聲明",
-		"complianceDisclaimer": "本課程基於「小Q教練模擬交易系統」著作權技術開發，旨在透過遊戲化方式挖掘學員的交易天賦，提升交易認知與實操能力。本平台不涉及任何實盤證券交易，不提供投資建議，不推薦股票，不代客理財。所有模擬數據及教學案例僅供學習與訓練使用，使用者應自行承擔決策風險。本平台並非受監管金融機構，亦不從事任何受證券法規監管之業務。"
+		"complianceDisclaimer": "本課程基於「小Q教練模擬交易系統」著作權技術開發，旨在透過教學案例與模擬訓練提升交易認知與實操能力。本平台不涉及任何實盤證券交易，不提供投資建議，不推薦股票，不代客理財。所有模擬數據及教學案例僅供學習與訓練使用，使用者應自行承擔決策風險。本平台並非受監管金融機構，亦不從事任何受證券法規監管之業務。"
 	},
 	"Footer": {
-		"brand": "豹仔樂園",
-		"tagline": "遊戲化交易學習平台。你負責交易 我負責保障。",
-		"copyright": "© {year} 豹仔樂園 · 保留所有權利。",
+		"brand": "新紮學豹",
+		"tagline": "跟豹叔豹哥，領略交易高手的成與敗",
+		"copyright": "© {year} 新紮學豹 · 保留所有權利。",
 		"productTitle": "產品",
 		"resourcesTitle": "資源",
 		"aboutTitle": "關於",
@@ -203,7 +203,7 @@
 		"back": "← 返回首頁"
 	},
 	"MagicLogin": {
-		"metaTitle": "郵箱連結登入 · TradeLovin",
+		"metaTitle": "郵箱連結登入 · 新紮學豹",
 		"metaDescription": "輸入郵箱，接收安全登入連結，點擊即可登入或註冊。",
 		"title": "郵箱連結登入",
 		"intro": "輸入郵箱後，我們會發送一封安全登入郵件給您。",
@@ -233,7 +233,7 @@
 		"sentSuccessWithHint": "登入連結已發送。若未收到郵件，請檢查垃圾郵件箱，並將 noreply@tradelovin.com 加入白名單。",
 		"sendFailed": "發送失敗，請稍後重試",
 		"invalidOrExpired": "連結無效或已過期，請重新發送登入連結。",
-		"noPasswordNote": "豹仔樂園不會要求您輸入密碼。",
+		"noPasswordNote": "新紮學豹不會要求您輸入密碼。",
 		"registerSame": "註冊與登入統一使用本入口。",
 		"devQuickLoginTitle": "開發/測試快捷登入",
 		"devAccountLabel": "測試帳號",
@@ -241,7 +241,7 @@
 		"devLoginButton": "快捷登入"
 	},
 	"EnrollPage": {
-		"metaTitle": "報名課程 · 豹仔樂園",
+		"metaTitle": "報名課程 · 新紮學豹",
 		"metaDescription": "正式學員選課報名，填寫交易背景與學習意向。",
 		"back": "← 返回首頁",
 		"title": "報名課程",
@@ -256,7 +256,7 @@
 		"needLogin": "請先登錄並完成註冊。"
 	},
 	"CoursesPage": {
-		"metaTitle": "課程 · 豹仔樂園",
+		"metaTitle": "課程 · 新紮學豹",
 		"metaDescription": "查看課程並提交報名申請。",
 		"title": "課程",
 		"intro": "選擇課程報名，審核通過後即可跟進學習安排。",
@@ -337,7 +337,7 @@
 		"scoreNotApplicable": "暫無成績"
 	},
 	"CareerPage": {
-		"metaTitle": "求職意向 · 豹仔樂園",
+		"metaTitle": "求職意向 · 新紮學豹",
 		"metaDescription": "提交目標機構與崗位信息，教務將與你聯繫。",
 		"back": "← 返回首頁",
 		"title": "求職意向",
@@ -447,9 +447,9 @@
 		]
 	},
 	"About": {
-		"kicker": "豹仔樂園",
+		"kicker": "新紮學豹",
 		"title": "關於我們",
-		"p1Before": "豹仔樂園專注",
+		"p1Before": "新紮學豹專注",
 		"p1Strong": "日內交易培訓",
 		"p1After": "，把枯燥的行情與規則做成可闖關、可量化的學習路徑。我們相信交易能力可以像遊戲一樣「練級」——通過結構化課程、情境演練與即時反饋，幫助學員在低風險環境中形成穩定執行與風控習慣。",
 		"p2Before": "平臺強調",
@@ -746,6 +746,7 @@
 		"addUserEmailExists": "該信箱已註冊。",
 		"addUserValidation": "請填寫信箱與暱稱。",
 		"navReviews": "報名審核",
+		"navVideoPublish": "審片發佈",
 		"navCourses": "課程",
 		"navCourseRegs": "課程報名審核",
 		"navJobApps": "求職管理",

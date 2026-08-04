@@ -147,21 +147,39 @@ export async function POST(request: Request, { params }: RouteContext) {
     return NextResponse.json({ error: upload.error }, { status: 500 });
   }
 
-  const { data, error } = await srv
+  const nowIso = new Date().toISOString();
+  const insertRow = {
+    course_id: courseId,
+    title: parsed.data.title,
+    description: parsed.data.description ?? null,
+    duration: parsed.data.duration ?? null,
+    sort_order: parsed.data.sort_order ?? 0,
+    storage_key: storageKey,
+    is_free_preview: parsed.data.is_free_preview ?? false,
+    // Admin uploads are live by default (pipeline drafts use published_at=null).
+    published_at: nowIso,
+  };
+
+  let { data, error } = await srv
     .from("course_videos")
-    .insert({
-      course_id: courseId,
-      title: parsed.data.title,
-      description: parsed.data.description ?? null,
-      duration: parsed.data.duration ?? null,
-      sort_order: parsed.data.sort_order ?? 0,
-      storage_key: storageKey,
-      is_free_preview: parsed.data.is_free_preview ?? false,
-    })
+    .insert(insertRow)
     .select(
-      "id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at, view_count, marketing_view_count",
+      "id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at, view_count, marketing_view_count, published_at",
     )
     .maybeSingle();
+
+  if (error && /published_at/i.test(error.message)) {
+    const { published_at: _drop, ...legacyRow } = insertRow;
+    const legacy = await srv
+      .from("course_videos")
+      .insert(legacyRow)
+      .select(
+        "id, course_id, title, description, duration, sort_order, storage_key, is_free_preview, created_at, view_count, marketing_view_count",
+      )
+      .maybeSingle();
+    data = legacy.data as typeof data;
+    error = legacy.error;
+  }
 
   if (error) {
     if (isMissingRelationError(error, "course_videos")) {

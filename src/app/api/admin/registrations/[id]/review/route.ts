@@ -83,7 +83,7 @@ export async function POST(req: Request, ctx: RouteContext) {
 		if (to) {
 			const sent = await sendAdminEmail({
 				to,
-				subject: "报名审核未通过 · 豹仔乐园",
+				subject: "报名审核未通过 · 新紮學豹",
 				text: `您好，\n\n很抱歉，您的课程报名未通过审核。\n\n原因：${parsed.data.reason}\n\n如有疑问请回复本邮件联系工作人员。\n`,
 			});
 			if (!sent.ok) {
