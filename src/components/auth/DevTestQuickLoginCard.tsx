@@ -72,7 +72,8 @@ export function DevTestQuickLoginCard({
 			return;
 		}
 
-		router.replace("/trade");
+		// 快捷登录卡位于首页；登录后留在首页，展示完整产品入口。
+		router.replace("/");
 		router.refresh();
 	};
 

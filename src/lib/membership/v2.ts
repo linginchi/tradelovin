@@ -70,6 +70,11 @@ export function canUseTqReport(membership: CurrentMembership): boolean {
   return membership.status === "active" && Number.isFinite(periodEndMs) && periodEndMs >= nowMs();
 }
 
+/** AI量化实验室：T2/T3 且 active（与 TQ 报告同级门槛） */
+export function canUseLabAccess(membership: CurrentMembership): boolean {
+  return canUseTqReport(membership);
+}
+
 export async function getCurrentMembership(
   supabase: SupabaseClient,
   userId: string,

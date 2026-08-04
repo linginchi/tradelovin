@@ -48,6 +48,7 @@ function readTierCapabilities(
 			tqReport: false,
 			l2Market: false,
 			advancedOrderBundle: false,
+			labAccess: false,
 		};
 	}
 	if (tier === "T2") {
@@ -56,6 +57,7 @@ function readTierCapabilities(
 			tqReport: true,
 			l2Market: false,
 			advancedOrderBundle: false,
+			labAccess: true,
 		};
 	}
 	// T3 到期后回落为 T2 权益；未到期则全开
@@ -65,6 +67,7 @@ function readTierCapabilities(
 			tqReport: true,
 			l2Market: false,
 			advancedOrderBundle: false,
+			labAccess: true,
 		};
 	}
 	return {
@@ -72,6 +75,7 @@ function readTierCapabilities(
 		tqReport: true,
 		l2Market: true,
 		advancedOrderBundle: true,
+		labAccess: true,
 	};
 }
 
@@ -127,6 +131,7 @@ export async function getMembershipSnapshot(
 					tqReport: true,
 					l2Market: false,
 					advancedOrderBundle: false,
+					labAccess: true,
 				},
 			};
 		}

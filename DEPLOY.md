@@ -107,24 +107,24 @@ npm run deploy:cloudflare
 
 ---
 
-## 4. 自定义域名（`tradelovin.com`）
+## 4. 自定义域名（`leolearnstotrade.com`）
 
 当前仓库内的 [`wrangler.jsonc`](wrangler.jsonc) **未提交 `routes`**；自定义域名路由由 **Cloudflare Dashboard** 托管（避免本地/测试分支误覆盖生产路由）。
 
-首次绑定或变更仍需在 **Cloudflare Dashboard** 中完成 DNS 与路由生效（以控制台提示为准）。
+首次绑定或变更仍需在 **Cloudflare Dashboard** 中完成 DNS 与路由生效（以控制台提示为准）。`leolearnstotrade.com` 是唯一主站；`tradelovin.com` 仅保留为跳转入口。
 
 ### 与 Pages 的切换（domain-cutover）
 
 1. 打开 **Workers & Pages** → 原 **Pages** 项目 `tradelovin`。
-2. **自定义域**：从该 Pages 项目移除 **`tradelovin.com`**（以及不打算再给 Pages 用的主机名），避免与 Worker 路由争抢。
-3. 打开 **Workers** → 脚本 `tradelovin`（或你部署后的 Worker 名称）→ **自定义域 / 触发器**，按引导将 **`tradelovin.com`** 绑定到该 Worker。
-4. 等待 DNS/证书生效后，用浏览器与 `curl` 验证 `https://tradelovin.com` 与 `https://www.tradelovin.com`（若使用）均返回 200。
+2. **自定义域**：从该 Pages 项目移除 `leolearnstotrade.com`、`tradelovin.com`（以及不打算再给 Pages 用的主机名），避免与 Worker 路由争抢。
+3. 打开 **Workers** → 脚本 `tradelovin`（或你部署后的 Worker 名称）→ **自定义域 / 触发器**，按引导将 `leolearnstotrade.com`、`www.leolearnstotrade.com`、`tradelovin.com` 和 `www.tradelovin.com` 绑定到该 Worker。
+4. 等待 DNS/证书生效后，验证 `https://leolearnstotrade.com` 返回 200；`https://tradelovin.com` 与 `https://www.tradelovin.com` 均以 308 跳转到同路径的新主域名。
 
 ---
 
 ## 5. 验证 Worker 正常后再处理 Pages（verify-delete-pages）
 
-1. 确认 `workers.dev` 子域与 **`tradelovin.com`** 访问均为 **200**，且无 `ChunkLoadError` 等（可用 `npx wrangler tail tradelovin` 看实时日志）。
+1. 确认 `workers.dev` 子域与 **`leolearnstotrade.com`** 访问均为 **200**，且无 `ChunkLoadError` 等（可用 `npx wrangler tail tradelovin` 看实时日志）。
 2. 在 Pages 项目内 **停止自动部署**（或断开 Git 连接），避免误发旧版静态站。
 3. 确认 **不再需要** `*.pages.dev` 预览后，可 **删除** Pages 项目（可先在设置里重命名/停用观察一段时间）。
 
@@ -157,6 +157,9 @@ npm run deploy:cloudflare
 | 构建期（可选） | `NEXT_ASSET_PREFIX` | 仅 Cloudflare 构建时设置静态资源绝对前缀 | GitHub Actions Variables / 部署命令前设置 |
 | 运行期（Worker Secret） | `SUPABASE_SERVICE_ROLE_KEY` | 服务端 API 写库、后台管理、受保护流程 | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `ADMIN_JWT_SECRET` | 管理后台 JWT 签发与校验 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `LAB_SSO_SECRET` | AI 实验室授权码 / session JWT 签名（与 VPS 共享） | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `LAB_DOJO_SERVER_KEY` | Dojo/VPS 调用主站 lab API 的服务端密钥 | Cloudflare Worker Secrets |
+| 运行期（Worker Var） | `LAB_PUBLIC_BASE_URL` | 实验室公网入口（未接 VPS 可暂空） | Cloudflare Worker Variables |
 | 运行期（Worker Secret） | `RESEND_API_KEY` | 邮件验证码与通知邮件 | Cloudflare Worker Secrets |
 | 运行期（Worker Var/Secret） | `RESEND_FROM_EMAIL` | 发件人地址 | Cloudflare Worker Variables/Secrets |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP` | 开启后台固定码登录（仅开发/测试建议） | Cloudflare Worker Variables / 本地 `.env` |

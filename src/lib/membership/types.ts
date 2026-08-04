@@ -4,7 +4,8 @@ export type MembershipCapability =
 	| "sim_trading"
 	| "tq_report"
 	| "l2_market"
-	| "advanced_order_bundle";
+	| "advanced_order_bundle"
+	| "lab_access";
 
 export type MembershipSnapshot = {
 	userId: string;
@@ -21,5 +22,6 @@ export type MembershipSnapshot = {
 		tqReport: boolean;
 		l2Market: boolean;
 		advancedOrderBundle: boolean;
+		labAccess: boolean;
 	};
 };

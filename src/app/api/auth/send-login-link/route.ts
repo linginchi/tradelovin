@@ -22,7 +22,7 @@ function getMagicLinkBaseUrl(request: Request): string {
 	const preferred =
 		process.env.MAGIC_LINK_ORIGIN?.trim() ||
 		process.env.APP_ORIGIN?.trim() ||
-		"https://xeoaxis.com";
+		"https://leolearnstotrade.com";
 	if (/^https?:\/\//i.test(preferred)) return preferred.replace(/\/+$/, "");
 	const reqUrl = new URL(request.url);
 	return `${reqUrl.protocol}//${preferred}`.replace(/\/+$/, "");

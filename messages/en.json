@@ -11,7 +11,8 @@
 		"about": "About",
 		"courses": "Courses",
 		"myScores": "My Scores",
-		"trade": "Trading",
+		"trade": "TO Trading Training",
+		"lab": "AI Quant Lab",
 		"enrollCourses": "Course enrollment",
 		"career": "Careers",
 		"myProfile": "Profile",
@@ -46,8 +47,12 @@
 		}
 	},
 	"Trade": {
-		"title": "Simulated Trading",
+		"title": "Leo Academy · TO Trading Training",
 		"subtitle": "Review balances, today's orders/fills; limit-order practice (matching engine rollout in progress).",
+		"entryName": "TO Trading Training · Execution practice",
+		"entryTagline": "Practice orders, discipline, and challenges in a simulated matching engine. No strategy backtests or portfolio diagnosis here.",
+		"entryCompliance": "No stock tips · No live trading · Education only",
+		"goLab": "Want research practice? → Open AI Quant Lab",
 		"panel": {
 			"placeOrder": "Order panel",
 			"placeHint": "Fill symbol, limit price & quantity; last price placeholder.",
@@ -142,7 +147,8 @@
 		"ctaRegister": "Register / Start trading",
 		"entries": {
 			"video": "Video courses",
-			"trade": "Simulated trading",
+			"trade": "TO Trading Training",
+			"lab": "AI Quant Lab",
 			"classroom": "Leopard Classroom"
 		},
 		"hero": {
@@ -185,6 +191,34 @@
 		],
 		"complianceTitle": "Compliance notice",
 		"complianceDisclaimer": "This course is developed based on the copyrighted technology of \"Coach Xiao Q Simulation Trading System\". It aims to uncover users' trading talents through gamification, improving trading cognition and practical skills. This platform does NOT involve any real securities trading, provide investment advice, recommend stocks, or manage assets on behalf of clients. All simulated data and teaching cases are for learning and training purposes only. Users bear their own decision-making risks. This platform is not a regulated financial institution and does not engage in any business regulated by securities laws."
+	},
+	"Lab": {
+		"kicker": "Quant research lab",
+		"title": "AI Quant Lab",
+		"tagline": "Upload a holdings screenshot for de-tickerized risk structure and teaching Q&A—practice research and attribution.",
+		"globalNarrative": "Leo Academy is a learning platform for trading practice and quant research experiments. Online foundations + offline mentorship + execution drills + research lab. No stock tips. No live trading.",
+		"doesTitle": "What this entry is for",
+		"does1": "Portfolio diagnosis from a holdings screenshot (educational)",
+		"does2": "Risk themes, sector exposure, and teaching questions",
+		"does3": "Saved diagnosis history for review",
+		"doesNotTitle": "What this entry is not",
+		"doesNot1": "Not a substitute for T0 order practice",
+		"doesNot2": "No buy/sell instructions or stock tips",
+		"doesNot3": "No live trading or real asset management",
+		"compliance": "No stock tips · No live trading · Education only. Screenshots are sent to a multimodal model—do not upload personally identifiable screenshots.",
+		"enterCta": "Enter lab",
+		"entering": "Issuing pass…",
+		"lockedCta": "Requires P2 Cloud Leopard+",
+		"upgradeLink": "Upgrade membership",
+		"goTrade": "Want order practice? → Open TO Trading Training",
+		"enterFailed": "Could not enter the lab. Try again later.",
+		"labNotConfigured": "Lab service is not configured yet (LAB_PUBLIC_BASE_URL). The entry is ready; connect the VPS to enable redirect.",
+		"loadHistoryFailed": "Failed to load diagnosis history",
+		"historyTitle": "Recent diagnoses",
+		"historyLocked": "Upgrade to T2 to view diagnosis history.",
+		"historyLoading": "Loading…",
+		"historyEmpty": "No diagnoses yet. Your first screenshot session will appear here.",
+		"historyItemFallback": "Portfolio diagnosis"
 	},
 	"Footer": {
 		"brand": "Tradelovin",

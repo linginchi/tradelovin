@@ -10,7 +10,7 @@
 		"binding": "ASSETS"
 	},
 	"vars": {
-		"NEXT_PUBLIC_APP_URL": "https://tradelovin.com",
+		"NEXT_PUBLIC_APP_URL": "https://leolearnstotrade.com",
 		"NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY": "pk_live_xxx",
 		"NEXT_PUBLIC_STRIPE_PUBLIC_KEY": "pk_live_xxx",
 		"PRICE_T1_MONTHLY": "price_1TXLGa35N2e3I4kYd3wRxpxQ",

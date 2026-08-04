@@ -178,6 +178,7 @@ function resolveEventFailureScore(event: TriggerEvent): number {
 }
 
 export function TradeV2PageClient() {
+	const t = useTranslations("Trade");
 	const tMembership = useTranslations("membership");
 	const locale = useLocale();
 	const searchParams = useSearchParams();
@@ -1053,6 +1054,18 @@ export function TradeV2PageClient() {
 				dontShowAgain={guideDontShowAgain}
 				onDontShowAgainChange={onGuideDontShowAgainChange}
 			/>
+
+			<section className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 text-sm">
+				<p className="font-medium text-foreground">{t("entryName")}</p>
+				<p className="mt-1 text-muted-foreground">{t("entryTagline")}</p>
+				<p className="mt-2 text-xs text-muted-foreground">{t("entryCompliance")}</p>
+				<Link
+					href="/lab"
+					className="mt-2 inline-block text-xs text-cyan-300 underline underline-offset-4"
+				>
+					{t("goLab")}
+				</Link>
+			</section>
 
 			<Card className="sticky top-2 z-10">
 				<CardHeader className="pb-2">

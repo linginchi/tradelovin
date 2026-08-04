@@ -20,6 +20,7 @@ export function SiteFooter() {
 			links: [
 				{ label: tHome("entries.video"), href: "/courses" },
 				{ label: tHome("entries.trade"), href: "/trade" },
+				{ label: tHome("entries.lab"), href: "/lab" },
 				{ label: tHome("entries.classroom"), href: "/my-learning" },
 			],
 		},

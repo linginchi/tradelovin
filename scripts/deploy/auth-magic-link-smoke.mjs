@@ -6,7 +6,7 @@ const token = (process.env.MAGIC_LINK_TOKEN ?? "").trim();
 const nextPathRaw = (process.env.MAGIC_LINK_NEXT ?? "/my-learning").trim();
 
 if (!baseUrl) {
-	console.error("Missing BASE_URL. Example: BASE_URL=https://tradelovin.com node scripts/deploy/auth-magic-link-smoke.mjs");
+	console.error("Missing BASE_URL. Example: BASE_URL=https://leolearnstotrade.com node scripts/deploy/auth-magic-link-smoke.mjs");
 	process.exit(1);
 }
 

@@ -109,6 +109,19 @@ export function SiteTopBar({ className }: Props) {
 
 					<span className="bg-border/60 h-4 w-px" aria-hidden />
 
+					<Link
+						href="/trade"
+						className="text-muted-foreground hover:text-foreground transition-colors"
+					>
+						{tNav("trade")}
+					</Link>
+					<Link
+						href="/lab"
+						className="text-muted-foreground hover:text-foreground transition-colors"
+					>
+						{tNav("lab")}
+					</Link>
+
 					{isAuthed ? (
 						<>
 							<Link
@@ -220,6 +233,21 @@ export function SiteTopBar({ className }: Props) {
 								))}
 
 								<span className="bg-border/60 my-2 h-px w-full" aria-hidden />
+
+								<Link
+									href="/trade"
+									onClick={() => setMenuOpen(false)}
+									className="text-foreground hover:bg-white/5 rounded-lg px-3 py-2.5 text-sm transition-colors"
+								>
+									{tNav("trade")}
+								</Link>
+								<Link
+									href="/lab"
+									onClick={() => setMenuOpen(false)}
+									className="text-foreground hover:bg-white/5 rounded-lg px-3 py-2.5 text-sm transition-colors"
+								>
+									{tNav("lab")}
+								</Link>
 
 								{isAuthed ? (
 									<>

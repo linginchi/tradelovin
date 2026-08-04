@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
-import { GraduationCap, LineChart, PlaySquare, ShieldAlert } from "lucide-react";
+import { FlaskConical, GraduationCap, LineChart, PlaySquare, ShieldAlert } from "lucide-react";
 import { motion } from "framer-motion";
 import { useTranslations } from "next-intl";
 import { Toaster } from "sonner";
@@ -36,7 +36,6 @@ type HeroEntry = {
 	href: string;
 	label: string;
 	icon: typeof PlaySquare;
-	primary?: boolean;
 };
 
 export default function Home() {
@@ -55,7 +54,8 @@ export default function Home() {
 
 	const entries: HeroEntry[] = [
 		{ href: "/courses", label: t("entries.video"), icon: PlaySquare },
-		{ href: "/trade", label: t("entries.trade"), icon: LineChart, primary: true },
+		{ href: "/trade", label: t("entries.trade"), icon: LineChart },
+		{ href: "/lab", label: t("entries.lab"), icon: FlaskConical },
 		{ href: "/my-learning", label: t("entries.classroom"), icon: GraduationCap },
 	];
 
@@ -101,15 +101,12 @@ export default function Home() {
 					</p>
 
 					<div className="mt-2 flex flex-col flex-wrap items-stretch justify-center gap-3 sm:flex-row sm:items-center">
-						{entries.map(({ href, label, icon: Icon, primary }) => (
+						{entries.map(({ href, label, icon: Icon }) => (
 							<Link
 								key={href}
 								href={href}
 								className={cn(
-									"inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold tracking-tight transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 md:text-base",
-									primary
-										? "bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white shadow-[0_12px_28px_-12px_rgba(251,146,60,0.8)] hover:from-orange-500 hover:via-orange-500 hover:to-amber-500 focus-visible:ring-orange-300/70"
-										: "border border-white/35 bg-white/10 text-white backdrop-blur-md hover:border-white/60 hover:bg-white/20 focus-visible:ring-white/60",
+									"inline-flex min-h-12 items-center justify-center gap-2 rounded-full border border-white/35 bg-white/10 px-6 py-3 text-sm font-semibold tracking-tight text-white backdrop-blur-md transition-all duration-200 outline-none hover:border-white/60 hover:bg-white/20 focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black/40 md:text-base",
 								)}
 							>
 								<Icon className="size-5 shrink-0" aria-hidden />

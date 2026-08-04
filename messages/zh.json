@@ -11,7 +11,8 @@
 		"about": "关于我们",
 		"courses": "课程",
 		"myScores": "我的成绩",
-		"trade": "模拟交易",
+		"trade": "TO交易训练",
+		"lab": "AI量化实验室",
 		"enrollCourses": "报名课程",
 		"career": "求职",
 		"myProfile": "我的",
@@ -46,8 +47,12 @@
 		}
 	},
 	"Trade": {
-		"title": "豹仔乐园 · 模拟交易",
+		"title": "豹仔学堂 · TO交易训练",
 		"subtitle": "查看资产与当日委托成交，限价练习下单（撮合功能陆续开放）。",
+		"entryName": "TO交易训练 · 执行练习",
+		"entryTagline": "在模拟撮合里练下单、纪律与挑战，用 TQ 看见交易天赋。不做策略回测、不做组合诊断。",
+		"entryCompliance": "不荐股 · 无实盘 · 仅供学习训练",
+		"goLab": "想练研究思维？→ 进入 AI量化实验室",
 		"panel": {
 			"placeOrder": "交易区",
 			"placeHint": "填入代码与价格数量后选择方向；当前价为占位展示。",
@@ -142,7 +147,8 @@
 		"ctaRegister": "注册 / 开始交易",
 		"entries": {
 			"video": "订阅视频",
-			"trade": "模拟交易",
+			"trade": "TO交易训练",
+			"lab": "AI量化实验室",
 			"classroom": "豹仔课堂"
 		},
 		"hero": {
@@ -185,6 +191,34 @@
 		],
 		"complianceTitle": "合规声明",
 		"complianceDisclaimer": "本课程基于「小Q教练模拟交易系统」著作权技术开发，旨在通过游戏化方式挖掘学员的交易天赋，提升交易认知与实操能力。本平台不涉及任何实盘证券交易，不提供投资建议，不推荐股票，不代客理财。所有模拟数据及教学案例仅供学习与训练使用，使用者应自行承担决策风险。本平台并非受监管金融机构，亦不从事任何受证券法规监管之业务。"
+	},
+	"Lab": {
+		"kicker": "量化投研实验",
+		"title": "AI量化实验室",
+		"tagline": "上传持仓截图，获得去标的化的风险结构与教学解读——练研究、练归因。",
+		"globalNarrative": "豹仔学堂是交易训练和量化投资实验的学习平台。基础课程（线上）+ 高阶导师亲授（线下）+ 执行练习 + 量化投研实验。不荐股、无实盘。",
+		"doesTitle": "本入口做什么",
+		"does1": "持仓截图组合诊断（教学向）",
+		"does2": "风险结构、行业暴露与教学问题",
+		"does3": "保存诊断历史，便于复盘",
+		"doesNotTitle": "本入口不做什么",
+		"doesNot1": "不替代 T0 下单与撮合练习",
+		"doesNot2": "不给出买卖指令或荐股",
+		"doesNot3": "不接实盘、不管理真实资产",
+		"compliance": "不荐股 · 无实盘 · 仅供学习训练。截图将送至多模态模型处理，请勿上传含真实身份信息的画面。",
+		"enterCta": "进入实验室",
+		"entering": "正在签发通行…",
+		"lockedCta": "需 P2 · 云豹及以上",
+		"upgradeLink": "升级会员",
+		"goTrade": "想练下单手感？→ 进入 TO交易训练",
+		"enterFailed": "无法进入实验室，请稍后重试",
+		"labNotConfigured": "实验室服务尚未配置（LAB_PUBLIC_BASE_URL）。主站入口已就绪，待 VPS 接通后即可跳转。",
+		"loadHistoryFailed": "加载诊断历史失败",
+		"historyTitle": "最近诊断",
+		"historyLocked": "升级至 T2 后可查看诊断历史。",
+		"historyLoading": "加载中…",
+		"historyEmpty": "暂无诊断记录。完成首次截图诊断后将显示在此。",
+		"historyItemFallback": "组合诊断"
 	},
 	"Footer": {
 		"brand": "豹仔乐园",

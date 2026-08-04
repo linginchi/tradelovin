@@ -16,6 +16,7 @@ export type MembershipCurrent = {
 	plan: MembershipPlan;
 	status?: string;
 	trialEnd?: string | null;
+	currentPeriodEnd?: string | null;
 	trialDaysLeft?: number;
 };
 

@@ -7,7 +7,7 @@ import { INVOKE_PATH_HEADER } from "@/lib/invoke-path-header";
 import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
-const PROTECTED_PATHS = ["/courses", "/my-learning", "/membership", "/trade", "/trade-v2"] as const;
+const PROTECTED_PATHS = ["/courses", "/my-learning", "/membership", "/trade", "/trade-v2", "/lab"] as const;
 
 const LEGACY_LEARNING = [
 	{ from: "my-courses", to: "my-learning" },
@@ -15,6 +15,8 @@ const LEGACY_LEARNING = [
 ] as const;
 
 const LOCALES = ["zh", "zh-TW", "en"] as const;
+const CANONICAL_HOSTNAME = "leolearnstotrade.com";
+const LEGACY_HOSTNAMES = ["tradelovin.com", "www.tradelovin.com"] as const;
 const HTTPS_ONLY_HOST_SUFFIXES = ["xeoaxis.com", "tradelovin.com"] as const;
 
 /** 供根 layout 设置 `<html lang>`（须写入 request headers，Server Components 才可读） */
@@ -69,14 +71,32 @@ function isProtectedPath(pathname: string): boolean {
 
 function buildLoginRedirect(request: NextRequest): NextResponse {
 	const url = request.nextUrl.clone();
+	const nextPath = request.nextUrl.pathname + request.nextUrl.search;
 	url.pathname = "/login";
-	url.searchParams.set("next", "/my-learning");
+	url.search = "";
+	/* 简体默认无 /zh 前缀；避免把 /zh/lab 留给登录后造成 404 */
+	const normalizedNext =
+		nextPath === "/zh" || nextPath.startsWith("/zh/")
+			? nextPath.replace(/^\/zh(?=\/|$)/, "") || "/"
+			: nextPath;
+	url.searchParams.set("next", normalizedNext || "/my-learning");
 	return NextResponse.redirect(url);
 }
 
 function isHttpsOnlyHost(hostname: string): boolean {
 	const host = hostname.toLowerCase();
 	return HTTPS_ONLY_HOST_SUFFIXES.some((suffix) => host === suffix || host.endsWith(`.${suffix}`));
+}
+
+function redirectLegacyDomain(request: NextRequest, hostname: string): NextResponse | null {
+	if (!LEGACY_HOSTNAMES.includes(hostname.toLowerCase() as (typeof LEGACY_HOSTNAMES)[number])) {
+		return null;
+	}
+
+	const url = request.nextUrl.clone();
+	url.protocol = "https:";
+	url.host = CANONICAL_HOSTNAME;
+	return NextResponse.redirect(url, 308);
 }
 
 async function enforceAuth(request: NextRequest): Promise<NextResponse | null> {
@@ -123,6 +143,9 @@ async function middlewareAsync(request: NextRequest) {
 	const hostname = host.split(":")[0] ?? "";
 
 	if (process.env.NODE_ENV === "production") {
+		const legacyDomain = redirectLegacyDomain(request, hostname);
+		if (legacyDomain) return legacyDomain;
+
 		const forwardedProto = request.headers.get("x-forwarded-proto");
 		const protocol = request.nextUrl.protocol;
 		const shouldForceHttps = isHttpsOnlyHost(hostname);
@@ -146,6 +169,15 @@ async function middlewareAsync(request: NextRequest) {
 
 	if (pathname === "/cjkzt" || pathname.startsWith("/cjkzt/")) {
 		return withInvokePath(request);
+	}
+
+	/* localePrefix=as-needed：默认简体不应带 /zh 前缀，否则易出现 404 */
+	if (pathname === "/zh" || pathname === "/zh/" || pathname.startsWith("/zh/")) {
+		const url = request.nextUrl.clone();
+		const tail =
+			pathname === "/zh" || pathname === "/zh/" ? "" : pathname.slice("/zh".length);
+		url.pathname = tail === "" ? "/" : tail;
+		return NextResponse.redirect(url, 308);
 	}
 
 	const legacyLearning = redirectLegacyLearningPaths(request);
