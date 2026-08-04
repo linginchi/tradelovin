@@ -270,7 +270,16 @@
 		"pending": "Pending",
 		"approved": "Approved",
 		"rejected": "Rejected",
-		"back": "← Back"
+		"back": "← Back",
+		"hubClassic": "Trading Classics",
+		"hubRecorded": "Recorded Lessons",
+		"hubLive": "Live Classes",
+		"hubClassicBlurb": "Classics from Baoge and Baoshu",
+		"hubRecordedBlurb": "Recorded courses with free preview",
+		"hubLiveBlurb": "Coming soon",
+		"hubLiveEmpty": "Coming soon",
+		"backToHub": "← Back to topics",
+		"hubLoadError": "Failed to load topics"
 	},
 	"CourseDetailPage": {
 		"metaTitle": "Course details",
