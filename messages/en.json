@@ -1,8 +1,8 @@
 {
 	"Metadata": {
-		"siteTitle": "Tradelovin — Unlock Your Trading Talent",
-		"siteDescription": "Gamified trading education: courses, drills, and instant feedback to help you grow.",
-		"registerTitle": "Sign up · Simulated trading · Tradelovin",
+		"siteTitle": "Leo Learns To Trade — Triumphs and disasters of the trading greats",
+		"siteDescription": "Learn the triumphs and disasters of trading's greatest, with Uncle Bao & Bro Bao.",
+		"registerTitle": "Sign up · Simulated trading · Leo Learns To Trade",
 		"registerDescription": "Enter your email and sign in with a secure link—new emails are auto-registered."
 	},
 	"Nav": {
@@ -15,7 +15,7 @@
 		"enrollCourses": "Course enrollment",
 		"career": "Careers",
 		"myProfile": "Profile",
-		"myLearning": "Leopard Classroom",
+		"myLearning": "Learning hub",
 		"register": "Sign up",
 		"login": "Log in",
 		"support": "Support",
@@ -34,7 +34,7 @@
 		"en": "English"
 	},
 	"Common": {
-		"brand": "Tradelovin",
+		"brand": "Leo Learns To Trade",
 		"backHome": "Back to home",
 		"comingSoon": "Coming soon"
 	},
@@ -136,19 +136,19 @@
 		}
 	},
 	"Home": {
-		"badge": "Baozi Paradise · Gamified Trading",
-		"title": "You trade. We've got you covered.",
-		"subtitle": "Nothing can stop your aspiration to become a great trader",
+		"badge": "Leo Learns To Trade · Triumphs and disasters of the trading greats",
+		"title": "Learn the triumphs and disasters of trading's greatest",
+		"subtitle": "With Uncle Bao & Bro Bao — classroom breakdowns of famous traders' wins and failures.",
 		"ctaTrading": "Sim trading test entry",
 		"ctaRegister": "Register / Start trading",
 		"entries": {
 			"video": "Video courses",
 			"trade": "TO Trading Training",
 			"lab": "AI Quant Lab",
-			"classroom": "Leopard Classroom"
+			"classroom": "Learning hub"
 		},
 		"hero": {
-			"classroomButton": "Leopard Classroom"
+			"classroomButton": "Learning hub"
 		},
 		"honorTitle": "Alumni spotlight",
 		"honorSubtitle": "Sample outcomes and roles (demo content)",
@@ -189,9 +189,9 @@
 		"complianceDisclaimer": "This course is developed based on the copyrighted technology of \"Coach Xiao Q Simulation Trading System\". It aims to uncover users' trading talents through gamification, improving trading cognition and practical skills. This platform does NOT involve any real securities trading, provide investment advice, recommend stocks, or manage assets on behalf of clients. All simulated data and teaching cases are for learning and training purposes only. Users bear their own decision-making risks. This platform is not a regulated financial institution and does not engage in any business regulated by securities laws."
 	},
 	"Footer": {
-		"brand": "Tradelovin",
-		"tagline": "Gamified trading education. You trade. We've got you covered.",
-		"copyright": "© {year} Tradelovin · All rights reserved.",
+		"brand": "Leo Learns To Trade",
+		"tagline": "Learn the triumphs and disasters of trading's greatest, with Uncle Bao & Bro Bao",
+		"copyright": "© {year} Leo Learns To Trade · All rights reserved.",
 		"productTitle": "Product",
 		"resourcesTitle": "Resources",
 		"aboutTitle": "About",
@@ -203,7 +203,7 @@
 		"back": "← Back to home"
 	},
 	"MagicLogin": {
-		"metaTitle": "Email Link Sign-In · TradeLovin",
+		"metaTitle": "Email Link Sign-In · Leo Learns To Trade",
 		"metaDescription": "Enter your email and get a secure sign-in link. Click to sign in or create your account.",
 		"title": "Email Link Sign-In",
 		"intro": "Enter your email and we will send a secure sign-in link.",
@@ -233,7 +233,7 @@
 		"sentSuccessWithHint": "Login link sent. If not received, check spam and add noreply@tradelovin.com to your allowlist.",
 		"sendFailed": "Failed to send link. Please try again later.",
 		"invalidOrExpired": "This link is invalid or expired. Please request a new one.",
-		"noPasswordNote": "TradeLovin will never ask for your password.",
+		"noPasswordNote": "Leo Learns To Trade will never ask for your password.",
 		"registerSame": "Use this same entry for both sign-in and registration.",
 		"devQuickLoginTitle": "Dev/Test quick login",
 		"devAccountLabel": "Test account",
@@ -241,7 +241,7 @@
 		"devLoginButton": "Quick login"
 	},
 	"EnrollPage": {
-		"metaTitle": "Course enrollment · Tradelovin",
+		"metaTitle": "Course enrollment · Leo Learns To Trade",
 		"metaDescription": "Enroll as an official student—share trading background and learning intent for review.",
 		"back": "← Back to home",
 		"title": "Course enrollment",
@@ -256,7 +256,7 @@
 		"needLogin": "Please sign in and complete onboarding first."
 	},
 	"CoursesPage": {
-		"metaTitle": "Courses · Tradelovin",
+		"metaTitle": "Courses · Leo Learns To Trade",
 		"metaDescription": "Browse courses and request enrollment.",
 		"title": "Courses",
 		"intro": "Apply for a cohort; our team will review your request.",
@@ -337,7 +337,7 @@
 		"scoreNotApplicable": "No grade"
 	},
 	"CareerPage": {
-		"metaTitle": "Career preferences · Tradelovin",
+		"metaTitle": "Career preferences · Leo Learns To Trade",
 		"metaDescription": "Share target firms and roles; our team follows up manually.",
 		"back": "← Back to home",
 		"title": "Career preferences",
@@ -447,9 +447,9 @@
 		]
 	},
 	"About": {
-		"kicker": "Tradelovin",
+		"kicker": "Leo Learns To Trade",
 		"title": "About us",
-		"p1Before": "Tradelovin focuses on ",
+		"p1Before": "Leo Learns To Trade focuses on ",
 		"p1Strong": "intraday trading education",
 		"p1After": "—turning charts and rules into leveled, measurable learning. We believe trading skill can be “leveled up” like a game—through structured lessons, drills, and instant feedback, learners build execution and risk habits in a low‑risk environment.",
 		"p2Before": "We emphasize a ",
@@ -746,6 +746,7 @@
 		"addUserEmailExists": "This email is already registered.",
 		"addUserValidation": "Email and nickname are required.",
 		"navReviews": "Reviews",
+		"navVideoPublish": "Video publish",
 		"navCourses": "Courses",
 		"navCourseRegs": "Course enrollments",
 		"navJobApps": "Job applications",

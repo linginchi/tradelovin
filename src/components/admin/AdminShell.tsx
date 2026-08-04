@@ -24,6 +24,7 @@ import {
 	UserRoundPlus,
 	Users,
 	WalletCards,
+	Clapperboard,
 } from "lucide-react";
 
 import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
@@ -64,6 +65,7 @@ export function AdminShell({ role, email, children }: Props) {
 
 	items.push(
 		{ href: `${ADMIN_BASE_PATH}/reviews`, label: t("navReviews"), icon: ClipboardList },
+		{ href: `${ADMIN_BASE_PATH}/video-publish`, label: t("navVideoPublish"), icon: Clapperboard },
 		{ href: `${ADMIN_BASE_PATH}/students`, label: t("navStudents"), icon: Users },
 		{ href: `${ADMIN_BASE_PATH}/courses`, label: t("navCourses"), icon: BookOpen },
 		{ href: `${ADMIN_BASE_PATH}/course-registrations`, label: t("navCourseRegs"), icon: UserPlus },

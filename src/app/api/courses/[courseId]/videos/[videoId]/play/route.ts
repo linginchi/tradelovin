@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { recordVideoView } from "@/lib/analytics/video-views";
+import { getAdminSession } from "@/lib/auth/admin-session";
 import { isSuperUserById } from "@/lib/auth/super-user";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
-import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
 import { isMissingRelationError } from "@/lib/video/db";
+import { isPublishedAtLive } from "@/lib/video/publish-status";
+import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
 
 export const runtime = "nodejs";
 
@@ -24,6 +26,7 @@ type VideoRow = {
   course_id: string;
   storage_key: string;
   is_free_preview: boolean;
+  published_at?: string | null;
 };
 
 type PreviewPolicy = {
@@ -52,12 +55,30 @@ async function loadVideo(
   courseId: string,
   videoId: string,
 ): Promise<VideoRow | NextResponse> {
-  const { data: video, error: videoErr } = await srv
+  const primary = await srv
     .from("course_videos")
-    .select("id, course_id, storage_key, is_free_preview")
+    .select("id, course_id, storage_key, is_free_preview, published_at")
     .eq("id", videoId)
     .eq("course_id", courseId)
     .maybeSingle();
+
+  let video = primary.data;
+  let videoErr = primary.error;
+
+  if (videoErr && /published_at/i.test(videoErr.message)) {
+    const legacy = await srv
+      .from("course_videos")
+      .select("id, course_id, storage_key, is_free_preview")
+      .eq("id", videoId)
+      .eq("course_id", courseId)
+      .maybeSingle();
+    // Treat missing column as already-live so pre-migration clips keep playing.
+    video = legacy.data
+      ? { ...(legacy.data as VideoRow), published_at: new Date(0).toISOString() }
+      : null;
+    videoErr = legacy.error;
+  }
+
   if (videoErr) {
     if (isMissingRelationError(videoErr, "course_videos")) {
       return NextResponse.json(
@@ -71,6 +92,11 @@ async function loadVideo(
     return NextResponse.json({ error: "视频不存在" }, { status: 404 });
   }
   return video as VideoRow;
+}
+
+async function isAdminPreviewAllowed(): Promise<boolean> {
+  const session = await getAdminSession();
+  return Boolean(session && (session.role === "admin" || session.role === "super_admin"));
 }
 
 /**
@@ -158,6 +184,24 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const video = await loadVideo(srv, courseId, videoId);
   if (video instanceof NextResponse) return video;
 
+  const adminPreview = await isAdminPreviewAllowed();
+  if (!adminPreview && !isPublishedAtLive(video.published_at ?? null)) {
+    return NextResponse.json({ error: "视频不存在或尚未发布" }, { status: 404 });
+  }
+
+  if (adminPreview) {
+    const playUrl = await createSignedVideoUrl(String(video.storage_key), 15 * 60);
+    if (!playUrl) {
+      return NextResponse.json({ error: "播放地址生成失败" }, { status: 500 });
+    }
+    return NextResponse.json({
+      playUrl,
+      expiresIn: 15 * 60,
+      preview: { limited: false, maxSeconds: null },
+      adminPreview: true,
+    });
+  }
+
   const viewer = await authorizeViewer(srv, video, courseId);
   if (viewer instanceof NextResponse) return viewer;
 
@@ -189,6 +233,10 @@ export async function POST(_request: Request, { params }: RouteContext) {
 
   const video = await loadVideo(srv, courseId, videoId);
   if (video instanceof NextResponse) return video;
+
+  if (!isPublishedAtLive(video.published_at ?? null)) {
+    return NextResponse.json({ error: "视频不存在或尚未发布" }, { status: 404 });
+  }
 
   const viewer = await authorizeViewer(srv, video, courseId);
   if (viewer instanceof NextResponse) return viewer;

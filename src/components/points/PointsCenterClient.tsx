@@ -179,7 +179,7 @@ export function PointsCenterClient() {
       </section>
 
       <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-4 text-sm font-semibold text-amber-100">
-        积分仅限本平台使用，不可兑换现金，不可转让，最终解释权归豹仔乐园所有。
+        积分仅限本平台使用，不可兑换现金，不可转让，最终解释权归新紮學豹所有。
       </p>
 
       {error ? <p className="text-sm text-amber-300">{error}</p> : null}

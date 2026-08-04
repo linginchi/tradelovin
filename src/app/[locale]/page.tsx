@@ -63,25 +63,14 @@ export default function Home() {
 		<main className="relative flex min-h-full flex-1 flex-col overflow-x-hidden">
 			{/* Full-bleed immersive hero */}
 			<section className="relative flex min-h-[78svh] w-full flex-col items-center justify-center overflow-hidden px-6 py-20 text-center md:min-h-[82svh] md:py-28">
-				{/* Background media: static image always present; looping video on top (hidden when reduced-motion or absent) */}
+				{/* Full-bleed hero: home_hero_v1 (21:9 pack); center-biased crop keeps faces on mobile */}
 				<div className="absolute inset-0 -z-10" aria-hidden>
 					{/* eslint-disable-next-line @next/next/no-img-element */}
 					<img
-						src="/hero/leopards.jpg"
+						src="https://bpuqqyqmrtchaqfouygm.supabase.co/storage/v1/object/public/assets/home_hero_v1.png"
 						alt=""
-						className="absolute inset-0 size-full object-cover"
+						className="absolute inset-0 size-full object-cover object-[center_35%]"
 					/>
-					<video
-						className="absolute inset-0 size-full object-cover motion-reduce:hidden"
-						poster="/hero/leopards.jpg"
-						autoPlay
-						muted
-						loop
-						playsInline
-						preload="none"
-					>
-						<source src="/hero/leopards-loop.mp4" type="video/mp4" />
-					</video>
 					{/* Legibility scrim */}
 					<div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-black/80" />
 					<div className="absolute inset-0 bg-black/30" />
