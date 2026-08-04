@@ -62,18 +62,18 @@ export async function GET(request: Request) {
 			const retryWithId = await runQuery(noTopicWithId, undefined);
 			if (retryWithId.error) {
 				const retryBase = await runQuery(noTopicBase, undefined);
-				data = retryBase.data as Record<string, unknown>[] | null;
+				data = retryBase.data as unknown as Record<string, unknown>[] | null;
 				error = retryBase.error;
 			} else {
-				data = retryWithId.data as Record<string, unknown>[] | null;
+				data = retryWithId.data as unknown as Record<string, unknown>[] | null;
 				error = retryWithId.error;
 			}
 		} else {
-			data = fallbackRes.data as Record<string, unknown>[] | null;
+			data = fallbackRes.data as unknown as Record<string, unknown>[] | null;
 			error = fallbackRes.error;
 		}
 	} else {
-		data = withIdRes.data as Record<string, unknown>[] | null;
+		data = withIdRes.data as unknown as Record<string, unknown>[] | null;
 		error = withIdRes.error;
 	}
 
