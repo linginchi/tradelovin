@@ -5,6 +5,9 @@
 
 import { createHash } from "node:crypto";
 
+export const BOOSTED_MARKETING_VIDEO_ID = "7e742344-5a40-471e-b2ea-53e8553702df";
+export const BOOSTED_MARKETING_INCREMENT_MULT = 1.2;
+
 /** @param {number} baseline @param {boolean} isWeekend */
 export function computeDailyIncrement(baseline, isWeekend) {
 	const n = Number(baseline);
@@ -91,6 +94,37 @@ export function getHongKongDateTimeParts(now = new Date()) {
 export function buildDailyGrowthPlan(input) {
 	const baseline = Math.max(0, Math.floor(Number(input.baseline) || 0));
 	const dailyIncrement = computeDailyIncrement(baseline, input.isWeekend);
+	const seed = planSeed(input.videoId, input.planDate);
+	const hourAllocations = allocateHourlyIncrements(dailyIncrement, seed);
+	return {
+		baseline,
+		dailyIncrement,
+		rateBps: input.isWeekend ? 200 : 100,
+		seed,
+		hourAllocations,
+	};
+}
+
+/**
+ * @param {number} maxOtherDaily max daily_increment among non-boosted videos for the same HK day
+ * @param {number} baseline current marketing_view_count
+ * @param {boolean} isWeekend
+ */
+export function computeBoostedDailyIncrement(maxOtherDaily, baseline, isWeekend) {
+	const peerMax = Math.max(0, Math.floor(Number(maxOtherDaily) || 0));
+	if (peerMax > 0) {
+		return Math.ceil(peerMax * BOOSTED_MARKETING_INCREMENT_MULT);
+	}
+	return computeDailyIncrement(baseline, isWeekend);
+}
+
+/**
+ * @param {{ baseline: number, videoId: string, planDate: string, isWeekend: boolean }} input
+ * @param {number} maxOtherDaily
+ */
+export function buildBoostedDailyGrowthPlan(input, maxOtherDaily) {
+	const baseline = Math.max(0, Math.floor(Number(input.baseline) || 0));
+	const dailyIncrement = computeBoostedDailyIncrement(maxOtherDaily, baseline, input.isWeekend);
 	const seed = planSeed(input.videoId, input.planDate);
 	const hourAllocations = allocateHourlyIncrements(dailyIncrement, seed);
 	return {
