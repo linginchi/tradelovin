@@ -232,10 +232,18 @@ export function TradeV2PageClient() {
 			setFetchError("");
 			try {
 				const res = await fetch(
-					`/api/market/quote?symbol=${encodeURIComponent(clean)}&locale=${encodeURIComponent(locale)}&mode=${sourceMode}`,
-					{ credentials: "include" }
+					`/api/market/quote?symbol=${encodeURIComponent(clean)}&locale=${encodeURIComponent(locale)}`,
+					{ credentials: "include" },
 				);
-				const json = await parseJson<TradeV2QuoteApiResponse>(res);
+				const json = await parseJson<
+					TradeV2QuoteApiResponse & {
+						data?: TradeV2QuoteData & {
+							dataSources?: string[];
+							isTradeDay?: boolean | null;
+							isTradeDaySource?: string;
+						};
+					}
+				>(res);
 				if (!json.success || !json.data) {
 					throw new Error(json.error ?? "行情暂不可用");
 				}
@@ -245,7 +253,7 @@ export function TradeV2PageClient() {
 				setFetchError(error instanceof Error ? error.message : "行情加载失败");
 			}
 		},
-		[locale, price, sourceMode]
+		[locale, price],
 	);
 
 	const loadTradeData = useCallback(async () => {
@@ -407,7 +415,15 @@ export function TradeV2PageClient() {
 
 	const marketSourceLabel = useMemo(() => {
 		if (!quote) return "—";
-		return quote.source === "sina" ? "L1-Fallback" : "L1-Tushare";
+		const labels: Record<string, string> = {
+			tushare: "Tushare",
+			sina: "新浪",
+			tencent: "腾讯",
+			eastmoney: "东财",
+		};
+		const extended = quote as TradeV2QuoteData & { dataSources?: string[] };
+		const chain = extended.dataSources?.length ? extended.dataSources : [quote.source];
+		return chain.map((source) => labels[source] ?? source.toUpperCase()).join(" → ");
 	}, [quote]);
 
 	const watchPendingCount = useMemo(
