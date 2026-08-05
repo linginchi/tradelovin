@@ -3,7 +3,11 @@ import test from "node:test";
 
 import {
 	allocateHourlyIncrements,
+	BOOSTED_MARKETING_INCREMENT_MULT,
+	BOOSTED_MARKETING_VIDEO_ID,
+	buildBoostedDailyGrowthPlan,
 	buildDailyGrowthPlan,
+	computeBoostedDailyIncrement,
 	computeDailyIncrement,
 	dueHourSlots,
 	getHongKongDateTimeParts,
@@ -82,4 +86,26 @@ test("Hong Kong weekend detection uses Asia/Hong_Kong", () => {
 	assert.equal(fri.date, "2026-07-24");
 	assert.equal(fri.isWeekend, false);
 	assert.equal(fri.hour, 16);
+});
+
+test("boosted video daily increment is ceil(max(other) * 1.2) with Leo id constant", () => {
+	assert.equal(BOOSTED_MARKETING_VIDEO_ID, "7e742344-5a40-471e-b2ea-53e8553702df");
+	assert.equal(BOOSTED_MARKETING_INCREMENT_MULT, 1.2);
+	assert.equal(computeBoostedDailyIncrement(10, 3589, false), 12);
+	assert.equal(computeBoostedDailyIncrement(0, 3589, false), computeDailyIncrement(3589, false));
+
+	const plan = buildBoostedDailyGrowthPlan(
+		{
+			baseline: 3589,
+			videoId: BOOSTED_MARKETING_VIDEO_ID,
+			planDate: "2026-08-05",
+			isWeekend: false,
+		},
+		25,
+	);
+	assert.equal(plan.dailyIncrement, 30);
+	assert.equal(
+		plan.hourAllocations.reduce((sum, n) => sum + n, 0),
+		plan.dailyIncrement,
+	);
 });

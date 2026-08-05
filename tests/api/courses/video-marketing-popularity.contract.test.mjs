@@ -9,8 +9,10 @@ const PUBLIC_LIST = "src/app/api/courses/[courseId]/videos/route.ts";
 const ADMIN_LIST = "src/app/api/admin/courses/[courseId]/videos/route.ts";
 const ADMIN_VIDEO = "src/app/api/admin/courses/[courseId]/videos/[videoId]/route.ts";
 const CRON_ROUTE = "src/app/api/cron/video-marketing-growth/route.ts";
-const GROWTH_SERVICE = "src/lib/video/marketing-growth-service.ts";
 const GROWTH_MATH = "src/lib/video/marketing-growth.mjs";
+const GROWTH_SERVICE = "src/lib/video/marketing-growth-service.ts";
+const POPULARITY = "src/lib/video/marketing-popularity.ts";
+const SEED_SQL = "supabase/seed/marketing_view_count_floor_seed.sql";
 const COURSE_DETAIL = "src/components/courses/CourseDetailClient.tsx";
 const ADMIN_UI = "src/components/admin/AdminCourseDetailClient.tsx";
 const OPENNEXT_WF = ".github/workflows/opennext-build.yml";
@@ -77,8 +79,10 @@ test("admin UI labels distinguish real views vs popularity", async () => {
 test("course detail shows popularity copy in all three locales", async () => {
 	const source = await read(COURSE_DETAIL);
 	assert.match(source, /marketing_view_count/);
+	assert.match(source, /formatMarketingViewCount/);
 	assert.match(source, /useTranslations\("CourseDetailPage"\)/);
 	assert.match(source, /t\("popularity"\)/);
+	assert.match(source, /marketing_view_count > 0/);
 
 	const en = JSON.parse(await read("messages/en.json"));
 	const zh = JSON.parse(await read("messages/zh.json"));
@@ -86,6 +90,49 @@ test("course detail shows popularity copy in all three locales", async () => {
 	assert.equal(en.CourseDetailPage.popularity, "Popularity");
 	assert.equal(zh.CourseDetailPage.popularity, "人气");
 	assert.equal(zhTW.CourseDetailPage.popularity, "人氣");
+});
+
+test("formatMarketingViewCount uses compact K / 万 labels", async () => {
+	const { formatMarketingViewCount } = await import("../../../src/lib/video/marketing-popularity-display.ts");
+	assert.equal(formatMarketingViewCount(999), "999");
+	assert.equal(formatMarketingViewCount(1500), "1.5K");
+	assert.equal(formatMarketingViewCount(12000), "1.2万");
+});
+
+test("marketing view count seed floors follow hub topic partitions", async () => {
+	const {
+		BOOSTED_MARKETING_VIDEO_ID,
+		computeMarketingViewCountSeed,
+	} = await import("../../../src/lib/video/marketing-popularity.ts");
+	assert.equal(computeMarketingViewCountSeed(500, 10, "other-id"), 1800);
+	assert.equal(computeMarketingViewCountSeed(2000, 10, "other-id"), 2000);
+	assert.equal(computeMarketingViewCountSeed(900, 20, "other-id"), 1200);
+	assert.equal(computeMarketingViewCountSeed(700, null, "other-id"), 800);
+	assert.equal(computeMarketingViewCountSeed(0, 10, BOOSTED_MARKETING_VIDEO_ID), 3589);
+});
+
+test("growth service applies boosted plan after regular videos", async () => {
+	const math = await read(GROWTH_MATH);
+	assert.match(math, /BOOSTED_MARKETING_VIDEO_ID/);
+	assert.match(math, /BOOSTED_MARKETING_INCREMENT_MULT\s*=\s*1\.2/);
+	assert.match(math, /buildBoostedDailyGrowthPlan/);
+
+	const service = await read(GROWTH_SERVICE);
+	assert.match(service, /BOOSTED_MARKETING_VIDEO_ID/);
+	assert.match(service, /ensureBoostedPlan/);
+	assert.match(service, /maxOtherDaily/);
+});
+
+test("review seed SQL documents floor partitions and HK plan reset", async () => {
+	const sql = await read(SEED_SQL);
+	assert.match(sql, /GREATEST\(cv\.view_count/);
+	assert.match(sql, /1800/);
+	assert.match(sql, /1200/);
+	assert.match(sql, /800/);
+	assert.match(sql, /3589/);
+	assert.match(sql, /7e742344-5a40-471e-b2ea-53e8553702df/);
+	assert.match(sql, /course_video_marketing_growth_plans/);
+	assert.match(sql, /:hk_today/);
 });
 
 test("marketing migration adds column, plan/apply tables, and atomic hour apply", async () => {
@@ -123,7 +170,7 @@ test("growth math avoids Math.random and uses Hong Kong timezone", async () => {
 	assert.ok(!/\bMath\.random\s*\(/.test(service), "growth service must not call Math.random()");
 	assert.match(service, /apply_course_video_marketing_growth_hour/);
 	assert.match(service, /course_video_marketing_growth_plans/);
-	assert.match(service, /dueHourSlots|hourAllocations/);
+	assert.match(service, /dueHourSlots|hourAllocations|hour_allocations/);
 });
 
 test("cron endpoint requires VIDEO_MARKETING_GROWTH_CRON_KEY", async () => {

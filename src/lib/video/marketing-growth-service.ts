@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+	BOOSTED_MARKETING_VIDEO_ID,
+	buildBoostedDailyGrowthPlan,
 	buildDailyGrowthPlan,
 	dueHourSlots,
 	getHongKongDateTimeParts,
@@ -42,6 +44,46 @@ function parseAllocations(raw: PlanRow["hour_allocations"]): number[] {
 	return Array.from({ length: 24 }, () => 0);
 }
 
+type BuiltPlan = ReturnType<typeof buildDailyGrowthPlan>;
+
+async function insertPlan(
+	srv: SupabaseClient,
+	videoId: string,
+	planDate: string,
+	built: BuiltPlan,
+): Promise<PlanRow> {
+	const insertPayload = {
+		video_id: videoId,
+		plan_date: planDate,
+		baseline_count: built.baseline,
+		daily_increment: built.dailyIncrement,
+		rate_bps: built.rateBps,
+		hour_allocations: built.hourAllocations,
+	};
+
+	const { data: inserted, error } = await srv
+		.from("course_video_marketing_growth_plans")
+		.insert(insertPayload)
+		.select("video_id, plan_date, baseline_count, daily_increment, rate_bps, hour_allocations")
+		.maybeSingle();
+
+	if (!error && inserted) {
+		return inserted as PlanRow;
+	}
+
+	const { data: raced, error: readError } = await srv
+		.from("course_video_marketing_growth_plans")
+		.select("video_id, plan_date, baseline_count, daily_increment, rate_bps, hour_allocations")
+		.eq("video_id", videoId)
+		.eq("plan_date", planDate)
+		.maybeSingle();
+
+	if (readError || !raced) {
+		throw new Error(error?.message ?? readError?.message ?? "无法创建人气成长计划");
+	}
+	return raced as PlanRow;
+}
+
 async function ensurePlan(
 	srv: SupabaseClient,
 	video: VideoRow,
@@ -67,37 +109,41 @@ async function ensurePlan(
 		isWeekend,
 	});
 
-	const insertPayload = {
-		video_id: video.id,
-		plan_date: planDate,
-		baseline_count: built.baseline,
-		daily_increment: built.dailyIncrement,
-		rate_bps: built.rateBps,
-		hour_allocations: built.hourAllocations,
-	};
+	const plan = await insertPlan(srv, video.id, planDate, built);
+	return { plan, created: true };
+}
 
-	const { data: inserted, error } = await srv
-		.from("course_video_marketing_growth_plans")
-		.insert(insertPayload)
-		.select("video_id, plan_date, baseline_count, daily_increment, rate_bps, hour_allocations")
-		.maybeSingle();
-
-	if (!error && inserted) {
-		return { plan: inserted as PlanRow, created: true };
-	}
-
-	// Concurrent create: re-read the winner.
-	const { data: raced, error: readError } = await srv
+async function ensureBoostedPlan(
+	srv: SupabaseClient,
+	video: VideoRow,
+	planDate: string,
+	isWeekend: boolean,
+	maxOtherDaily: number,
+): Promise<{ plan: PlanRow; created: boolean }> {
+	const { data: existing } = await srv
 		.from("course_video_marketing_growth_plans")
 		.select("video_id, plan_date, baseline_count, daily_increment, rate_bps, hour_allocations")
 		.eq("video_id", video.id)
 		.eq("plan_date", planDate)
 		.maybeSingle();
 
-	if (readError || !raced) {
-		throw new Error(error?.message ?? readError?.message ?? "无法创建人气成长计划");
+	if (existing) {
+		return { plan: existing as PlanRow, created: false };
 	}
-	return { plan: raced as PlanRow, created: false };
+
+	const baseline = Math.max(0, Math.floor(Number(video.marketing_view_count) || 0));
+	const built = buildBoostedDailyGrowthPlan(
+		{
+			baseline,
+			videoId: video.id,
+			planDate,
+			isWeekend,
+		},
+		maxOtherDaily,
+	);
+
+	const plan = await insertPlan(srv, video.id, planDate, built);
+	return { plan, created: true };
 }
 
 async function applyHour(
@@ -145,14 +191,41 @@ export async function runMarketingGrowthCatchUp(
 	}
 
 	const rows = (videos ?? []) as VideoRow[];
+	const planByVideoId = new Map<string, PlanRow>();
 	let plansCreated = 0;
+
+	const regularVideos = rows.filter((video) => video.id !== BOOSTED_MARKETING_VIDEO_ID);
+	for (const video of regularVideos) {
+		const { plan, created } = await ensurePlan(srv, video, hk.date, hk.isWeekend);
+		planByVideoId.set(video.id, plan);
+		if (created) plansCreated += 1;
+	}
+
+	const maxOtherDaily = Math.max(
+		0,
+		...Array.from(planByVideoId.values()).map((plan) => Math.floor(Number(plan.daily_increment) || 0)),
+	);
+
+	const boostedVideo = rows.find((video) => video.id === BOOSTED_MARKETING_VIDEO_ID);
+	if (boostedVideo) {
+		const { plan, created } = await ensureBoostedPlan(
+			srv,
+			boostedVideo,
+			hk.date,
+			hk.isWeekend,
+			maxOtherDaily,
+		);
+		planByVideoId.set(boostedVideo.id, plan);
+		if (created) plansCreated += 1;
+	}
+
 	let hoursApplied = 0;
 	let hoursSkipped = 0;
 	let incrementTotal = 0;
 
 	for (const video of rows) {
-		const { plan, created } = await ensurePlan(srv, video, hk.date, hk.isWeekend);
-		if (created) plansCreated += 1;
+		const plan = planByVideoId.get(video.id);
+		if (!plan) continue;
 
 		const allocations = parseAllocations(plan.hour_allocations);
 		for (const hourSlot of hourSlots) {

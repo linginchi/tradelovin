@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import { useAuth } from "@/lib/auth/use-auth";
+import { formatMarketingViewCount } from "@/lib/video/marketing-popularity-display";
 import type { CourseRow } from "@/components/courses/CoursesListClient";
 
 type Props = { courseId: string };
@@ -161,8 +162,8 @@ export function CourseDetailClient({ courseId }: Props) {
 									<p className="text-muted-foreground text-xs">
 										{video.duration ? `${video.duration}s` : "时长未知"} ·{" "}
 										{video.is_free_preview ? "免费预览" : "付费视频"}
-										{typeof video.marketing_view_count === "number"
-											? ` · ${t("popularity")} ${video.marketing_view_count}`
+										{typeof video.marketing_view_count === "number" && video.marketing_view_count > 0
+											? ` · ${t("popularity")} ${formatMarketingViewCount(video.marketing_view_count)}`
 											: ""}
 									</p>
 								</div>
