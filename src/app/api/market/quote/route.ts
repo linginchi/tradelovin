@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { getMarketQuote } from "@/lib/market/market-domain";
+import { getMarketQuote, type MarketDataSource } from "@/lib/market/market-domain";
 import { getInstrumentRule } from "@/lib/trade/instrument-rules";
 import type { ApiErrorResponse, TradeV2QuoteApiResponse, TradeV2QuoteData } from "@/lib/trade-v2/api-types";
 
@@ -17,6 +17,13 @@ type L1Print = {
 	quantity: number;
 	side: "buy" | "sell";
 	trade_time: string;
+};
+
+type QuoteResponseData = Omit<TradeV2QuoteData, "source"> & {
+	isTradeDay: boolean | null;
+	isTradeDaySource: string;
+	dataSources: MarketDataSource[];
+	source: MarketDataSource;
 };
 
 function readLocale(v: string | null): "zh" | "zh-TW" | "en" {
@@ -80,6 +87,8 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json<ApiErrorResponse>({ success: false, error: "symbol 不能为空" }, { status: 400 });
 	}
 	const locale = readLocale(request.nextUrl.searchParams.get("locale"));
+	// mode 参数保留兼容；行情链路由服务端按 tushare→新浪→腾讯→东财 自动兜底
+	void request.nextUrl.searchParams.get("mode");
 
 	const quote = await getMarketQuote(symbol, locale);
 	if (!quote) {
@@ -91,8 +100,15 @@ export async function GET(request: NextRequest) {
 	const l1 = buildL1Depth(quote.price, tick, seeded);
 	const prints = buildL1Prints(quote.price, tick, seeded);
 
-	const data: TradeV2QuoteData = {
-		...quote,
+	const data: QuoteResponseData = {
+		symbol: quote.symbol,
+		name: quote.name,
+		price: quote.price,
+		instrument: quote.instrument,
+		source: quote.source,
+		dataSources: quote.dataSources,
+		isTradeDay: quote.isTradeDay,
+		isTradeDaySource: quote.isTradeDaySource,
 		lot_size: rule.lotSize,
 		limit_band_ratio: rule.limitBandRatio,
 		market_mode: "l1",
@@ -100,8 +116,8 @@ export async function GET(request: NextRequest) {
 		recent_trades: prints,
 		snapshot_time: new Date().toISOString(),
 	};
-	return NextResponse.json<TradeV2QuoteApiResponse>({
+	return NextResponse.json({
 		success: true,
 		data,
-	});
+	} as TradeV2QuoteApiResponse);
 }

@@ -180,7 +180,7 @@ function parseCsvPrice(cols: string[], isHk: boolean): number | null {
 	return null;
 }
 
-/** 新浪财经行情；不可用返回 null（由调用方提示「暂时无法获取行情」）；可用 SIM_QUOTE_PRICE_OVERRIDE 覆盖 */
+/** 新浪财经行情（market 链路的 sina 兜底）；不可用返回 null */
 export async function getCurrentPrice(rawSymbol: string, locale = "zh"): Promise<QuoteResult | null> {
 	const mapped = mapUserSymbolToSina(rawSymbol);
 	if (!mapped) return null;
