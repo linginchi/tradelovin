@@ -85,9 +85,6 @@ export default function Home() {
 					<h1 className="w-full text-3xl font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_12px_rgba(0,0,0,0.55)] md:text-5xl md:leading-[1.1]">
 						{t("title")}
 					</h1>
-					<p className="w-full max-w-2xl text-pretty text-sm leading-relaxed text-white/85 drop-shadow-[0_1px_8px_rgba(0,0,0,0.6)] md:text-lg">
-						{t("subtitle")}
-					</p>
 
 					<div className="mt-2 flex flex-col flex-wrap items-stretch justify-center gap-3 sm:flex-row sm:items-center">
 						{entries.map(({ href, label, icon: Icon }) => (

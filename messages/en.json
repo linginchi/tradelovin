@@ -1,6 +1,6 @@
 {
 	"Metadata": {
-		"siteTitle": "Leo Learns To Trade — Triumphs and disasters of the trading greats",
+		"siteTitle": "Leo Learns To Trade",
 		"siteDescription": "Learn the triumphs and disasters of trading's greatest, with Uncle Bao & Bro Bao.",
 		"registerTitle": "Sign up · Simulated trading · Leo Learns To Trade",
 		"registerDescription": "Enter your email and sign in with a secure link—new emails are auto-registered."
@@ -136,8 +136,8 @@
 		}
 	},
 	"Home": {
-		"badge": "Leo Learns To Trade · Triumphs and disasters of the trading greats",
-		"title": "Learn the triumphs and disasters of trading's greatest",
+		"badge": "Leo Learns To Trade",
+		"title": "Leo Learns To Trade",
 		"subtitle": "With Uncle Bao & Bro Bao — classroom breakdowns of famous traders' wins and failures.",
 		"ctaTrading": "Sim trading test entry",
 		"ctaRegister": "Register / Start trading",
