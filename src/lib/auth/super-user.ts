@@ -8,6 +8,7 @@ export const SUPER_USER_EMAILS = [
 	"549516157@qq.com",
 	"william.hu@hkcas.org",
 	"lin@hkcas.org",
+	"mark@hkfac.com",
 ] as const;
 
 export type SuperUserEmail = (typeof SUPER_USER_EMAILS)[number];
