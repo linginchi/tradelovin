@@ -8,7 +8,12 @@ import type { MembershipCapability, MembershipSnapshot } from "@/lib/membership/
 import {
 	LEGACY_TRADE_ACCESS_DENIED_CODES,
 } from "@/lib/trade-v2/api-types";
-import { canUseSimTrading, canUseTqReport, ensureCurrentMembership } from "@/lib/membership/v2";
+import {
+	canUseLabAccess,
+	canUseSimTrading,
+	canUseTqReport,
+	ensureCurrentMembership,
+} from "@/lib/membership/v2";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 function buildSuperUserMembershipSnapshot(userId: string): MembershipSnapshot {
@@ -31,6 +36,7 @@ function buildSuperUserMembershipSnapshot(userId: string): MembershipSnapshot {
 			tqReport: true,
 			l2Market: true,
 			advancedOrderBundle: true,
+			labAccess: true,
 		},
 	};
 }
@@ -40,6 +46,15 @@ export type MembershipGuardOk = { membership: MembershipSnapshot };
 function capabilityAllowed(snapshot: MembershipSnapshot, capability: MembershipCapability): boolean {
 	if (capability === "sim_trading") return snapshot.effective.simTrading;
 	if (capability === "tq_report") return snapshot.effective.tqReport;
+	if (capability === "lab_access") {
+		// The lab's external SSO must never grant access based on a stale legacy
+		// entitlement. Its product rule is explicitly T2+ *and active*.
+		return (
+			(snapshot.tier === "T2" || snapshot.tier === "T3") &&
+			snapshot.status === "active" &&
+			Boolean(snapshot.currentPeriodEnd && new Date(snapshot.currentPeriodEnd).getTime() >= Date.now())
+		);
+	}
 	if (capability === "l2_market") return snapshot.effective.l2Market;
 	return snapshot.effective.advancedOrderBundle;
 }
@@ -87,14 +102,13 @@ export async function requireMembershipCapability(
 
 	const v2Membership = await ensureCurrentMembership(supabase, userId);
 	if (v2Membership) {
-		const allowed =
-			capability === "sim_trading"
-				? canUseSimTrading(v2Membership)
-				: capability === "tq_report"
-					? canUseTqReport(v2Membership)
-					: capability === "l2_market"
-						? v2Membership.plan === "T3" && v2Membership.status === "active"
-						: v2Membership.plan === "T3" && v2Membership.status === "active";
+		let allowed = false;
+		if (capability === "sim_trading") allowed = canUseSimTrading(v2Membership);
+		else if (capability === "tq_report") allowed = canUseTqReport(v2Membership);
+		else if (capability === "lab_access") allowed = canUseLabAccess(v2Membership);
+		else if (capability === "l2_market" || capability === "advanced_order_bundle") {
+			allowed = v2Membership.plan === "T3" && v2Membership.status === "active";
+		}
 		if (!allowed) {
 			if (capability === "sim_trading" && (v2Membership.plan === "T0_trial" || v2Membership.plan === "T0_paid")) {
 				return NextResponse.json(
@@ -114,6 +128,29 @@ export async function requireMembershipCapability(
 				},
 				{ status: 403 },
 			);
+		}
+		if (capability === "lab_access") {
+			const tier = v2Membership.plan === "T3" ? "T3" : "T2";
+			return {
+				membership: {
+					userId,
+					tier,
+					status: "active",
+					trialStartAt: v2Membership.createdAt,
+					trialEndAt: v2Membership.trialEnd ?? v2Membership.currentPeriodEnd,
+					currentPeriodStart: v2Membership.currentPeriodStart,
+					currentPeriodEnd: v2Membership.currentPeriodEnd,
+					lastPaidAt: v2Membership.updatedAt,
+					pointsBalance: 0,
+					effective: {
+						simTrading: canUseSimTrading(v2Membership),
+						tqReport: canUseTqReport(v2Membership),
+						l2Market: false,
+						advancedOrderBundle: false,
+						labAccess: true,
+					},
+				},
+			};
 		}
 	}
 
