@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+const MAX_SCREENSHOT_BYTES = 3 * 1024 * 1024;
+
 type FeedbackButtonProps = {
 	defaultContext?: string;
 	collectDiagnostics?: () => string;
@@ -33,6 +35,7 @@ export function FeedbackButton({
 	const [diagnostics, setDiagnostics] = useState("");
 	const [screenshotName, setScreenshotName] = useState("");
 	const [screenshotDataUrl, setScreenshotDataUrl] = useState("");
+	const [screenshotReading, setScreenshotReading] = useState(false);
 
 	const resetForm = () => {
 		setDescription("");
@@ -40,6 +43,7 @@ export function FeedbackButton({
 		setDiagnostics("");
 		setScreenshotName("");
 		setScreenshotDataUrl("");
+		setScreenshotReading(false);
 	};
 
 	const openDialog = () => {
@@ -51,6 +55,12 @@ export function FeedbackButton({
 		if (!description.trim()) {
 			toast.error("请先填写你遇到的问题", {
 				description: "下一步：用自己的话写下刚才做了什么、期望是什么、实际看到什么。",
+			});
+			return;
+		}
+		if (screenshotReading || (screenshotName && !screenshotDataUrl)) {
+			toast.error("截图还在读取", {
+				description: "下一步：等图片读完后再点提交，或重新选择一张 3MB 以内的图片。",
 			});
 			return;
 		}
@@ -147,17 +157,44 @@ export function FeedbackButton({
 									if (!file) {
 										setScreenshotName("");
 										setScreenshotDataUrl("");
+										setScreenshotReading(false);
+										return;
+									}
+									if (file.size > MAX_SCREENSHOT_BYTES) {
+										setScreenshotName("");
+										setScreenshotDataUrl("");
+										setScreenshotReading(false);
+										e.target.value = "";
+										toast.error("截图过大", {
+											description: "下一步：请选择不超过 3MB 的图片后再提交。",
+										});
 										return;
 									}
 									setScreenshotName(file.name);
+									setScreenshotDataUrl("");
+									setScreenshotReading(true);
 									const reader = new FileReader();
 									reader.onload = () => {
 										const value = typeof reader.result === "string" ? reader.result : "";
 										setScreenshotDataUrl(value);
+										setScreenshotReading(false);
+									};
+									reader.onerror = () => {
+										setScreenshotName("");
+										setScreenshotDataUrl("");
+										setScreenshotReading(false);
+										toast.error("截图读取失败", {
+											description: "下一步：换一张图片再试。",
+										});
 									};
 									reader.readAsDataURL(file);
 								}}
 							/>
+							{screenshotReading ? (
+								<p className="text-muted-foreground text-xs">正在读取截图…</p>
+							) : screenshotName && screenshotDataUrl ? (
+								<p className="text-muted-foreground text-xs">已选：{screenshotName}</p>
+							) : null}
 						</div>
 						<div className="space-y-1.5">
 							<div className="flex items-center justify-between gap-2">
@@ -186,7 +223,11 @@ export function FeedbackButton({
 						<Button type="button" variant="outline" disabled={submitting} onClick={() => setOpen(false)}>
 							取消
 						</Button>
-						<Button type="button" disabled={submitting} onClick={() => void handleSubmit()}>
+						<Button
+							type="button"
+							disabled={submitting || screenshotReading}
+							onClick={() => void handleSubmit()}
+						>
 							{submitting ? "提交中..." : "提交反馈"}
 						</Button>
 					</DialogFooter>

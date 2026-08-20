@@ -74,7 +74,7 @@ test("existing protected pages still require login (including locale prefixes)",
 	const source = await read(MIDDLEWARE);
 	const protectedPaths = extractProtectedPaths(source);
 
-	for (const required of ["/my-learning", "/membership", "/trade", "/trade-v2", "/lab"]) {
+	for (const required of ["/my-learning", "/membership", "/trade", "/trade-v2", "/lab", "/coach"]) {
 		assert.ok(
 			protectedPaths.includes(required),
 			`PROTECTED_PATHS must still include ${required}`,
@@ -90,6 +90,8 @@ test("existing protected pages still require login (including locale prefixes)",
 		"/zh/my-learning",
 		"/zh/trade",
 		"/zh/lab",
+		"/coach",
+		"/zh/coach",
 		"/zh-TW/my-learning",
 		"/zh-TW/trade",
 		"/zh-TW/lab",

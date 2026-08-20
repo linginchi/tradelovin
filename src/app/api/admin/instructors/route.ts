@@ -27,7 +27,7 @@ export async function GET() {
 
 	const { data, error } = await supabase
 		.from("profiles")
-		.select("id, real_name, nickname, avatar_url, bio")
+		.select("id, real_name, nickname, avatar_url, bio, is_coach")
 		.eq("role", "instructor")
 		.order("created_at", { ascending: true });
 
@@ -44,6 +44,7 @@ export async function GET() {
 		email: emailMap.get(row.id as string) ?? null,
 		avatar_url: (row.avatar_url as string | null) ?? null,
 		bio: row.bio as string | null,
+		is_coach: Boolean((row as { is_coach?: boolean }).is_coach),
 	}));
 
 	return NextResponse.json({ instructors });

@@ -3,6 +3,10 @@ import { Resend } from "resend";
 import { z } from "zod";
 
 import { resolveResendEnv } from "@/lib/email/resend-config";
+import {
+	MAX_SCREENSHOT_DATA_URL_LENGTH,
+	parseScreenshotDataUrl,
+} from "@/lib/email/screenshot-attachment";
 
 export const runtime = "nodejs";
 
@@ -13,7 +17,7 @@ const bodySchema = z.object({
 	contact: z.string().trim().max(200).optional(),
 	diagnostics: z.string().trim().max(12000).optional(),
 	screenshotName: z.string().trim().optional(),
-	screenshotDataUrl: z.string().trim().optional(),
+	screenshotDataUrl: z.string().trim().max(MAX_SCREENSHOT_DATA_URL_LENGTH).optional(),
 });
 
 function escapeHtml(value: string): string {
@@ -61,6 +65,11 @@ export async function POST(request: Request) {
 	}
 
 	const data = parsed.data;
+	const parsedShot = parseScreenshotDataUrl(data.screenshotDataUrl, data.screenshotName);
+	if (!parsedShot.ok) {
+		return NextResponse.json({ success: false, error: parsedShot.error }, { status: 400 });
+	}
+	const attachment = parsedShot.attachment;
 	const receiver = resolveFeedbackReceiver();
 	const resend = new Resend(resendCfg.apiKey);
 
@@ -68,26 +77,30 @@ export async function POST(request: Request) {
 		"收到新的用户反馈：",
 		`场景: ${data.context ?? "未提供"}`,
 		`联系方式: ${data.contact ?? data.contactEmail ?? "未提供"}`,
-		`截图文件名: ${data.screenshotName ?? "未提供"}`,
+		`截图文件名: ${attachment?.filename ?? data.screenshotName ?? "未提供"}`,
+		`截图附件: ${attachment ? "已附上" : "无"}`,
 		"",
 		"用户描述：",
 		data.description,
 		"",
 		"自动诊断：",
 		data.diagnostics ?? "未提供",
-		"",
-		data.screenshotDataUrl ? `截图数据(前200字符): ${data.screenshotDataUrl.slice(0, 200)}...` : "截图数据: 无",
 	].join("\n");
+
+	const screenshotHtml =
+		attachment && data.screenshotDataUrl?.startsWith("data:image/")
+			? `<p><strong>截图：</strong>${escapeHtml(attachment.filename)}（见附件，正文亦可预览）</p><p><img src="${data.screenshotDataUrl}" alt="${escapeHtml(attachment.filename)}" style="max-width:100%;height:auto;border:1px solid #ddd" /></p>`
+			: "";
 
 	const html = `
 		<h3>收到新的用户反馈</h3>
 		<p><strong>场景：</strong>${escapeHtml(data.context ?? "未提供")}</p>
 		<p><strong>联系方式：</strong>${escapeHtml(data.contact ?? data.contactEmail ?? "未提供")}</p>
-		<p><strong>截图文件名：</strong>${escapeHtml(data.screenshotName ?? "未提供")}</p>
 		<p><strong>用户描述：</strong></p>
 		<pre>${escapeHtml(data.description)}</pre>
 		<p><strong>自动诊断：</strong></p>
 		<pre>${escapeHtml(data.diagnostics ?? "未提供")}</pre>
+		${screenshotHtml}
 	`;
 
 	const { error } = await resend.emails.send({
@@ -96,6 +109,15 @@ export async function POST(request: Request) {
 		subject: "[TradeLovin] 测试反馈 / 问题反馈",
 		text,
 		html,
+		attachments: attachment
+			? [
+					{
+						filename: attachment.filename,
+						content: attachment.content,
+						contentType: attachment.contentType,
+					},
+				]
+			: undefined,
 	});
 
 	if (error) {

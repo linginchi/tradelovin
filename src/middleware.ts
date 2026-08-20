@@ -10,7 +10,7 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 /* /courses 与 /video-player 对访客公开，供免费预览播放；其余学习/交易/实验室路径仍需登录 */
-const PROTECTED_PATHS = ["/my-learning", "/membership", "/trade", "/trade-v2", "/lab"] as const;
+const PROTECTED_PATHS = ["/my-learning", "/membership", "/trade", "/trade-v2", "/lab", "/coach"] as const;
 
 const LEGACY_LEARNING = [
 	{ from: "my-courses", to: "my-learning" },

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast, Toaster } from "sonner";
 
 import { FeedbackButton } from "@/components/common/FeedbackButton";
+import { CoachBadge } from "@/components/coach/CoachBadge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -66,7 +67,6 @@ import type {
 	TradeV2PersonalResourcesApiResponse,
 	TradeV2PositionListItem,
 	TradeV2PositionsApiResponse,
-	TradeV2PublicResourcesApiResponse,
 	TradeV2PublicResourceItem,
 	TradeV2ResourceMutationApiResponse,
 	TradeV2RiskMessagesReadApiResponse,
@@ -88,6 +88,10 @@ type PositionRow = TradeV2PositionListItem;
 type PublicResourceRow = TradeV2PublicResourceItem;
 type PersonalResourceRow = TradeV2PersonalResourceItem;
 type WatchlistRow = TradeV2WatchlistItem;
+type CoachOption = { id: string; name: string };
+type CoachBindingView = { coachId: string; status: string; coachName: string };
+type MyCoachView = { id: string; name: string };
+type PendingRequestView = { id: string; symbol: string; side: string; quantity: number; status: string };
 type ConditionRow = TradeV2ConditionItem;
 
 type TriggerEvent = {
@@ -180,6 +184,9 @@ function formatRiskDiagnostic(event: TriggerEvent): string {
 
 function scrollToResourcesPanel() {
 	document.getElementById("panel-resources")?.scrollIntoView({ behavior: "smooth", block: "start" });
+	window.setTimeout(() => {
+		document.getElementById("applyQty")?.focus();
+	}, 250);
 }
 
 function toastFail(message: string) {
@@ -216,11 +223,18 @@ export function TradeV2PageClient() {
 	const [positions, setPositions] = useState<PositionRow[]>([]);
 	const [publicResources, setPublicResources] = useState<PublicResourceRow[]>([]);
 	const [personalResources, setPersonalResources] = useState<PersonalResourceRow[]>([]);
+	const [coachBinding, setCoachBinding] = useState<CoachBindingView | null>(null);
+	const [myCoach, setMyCoach] = useState<MyCoachView | null>(null);
+	const [coachDirectory, setCoachDirectory] = useState<CoachOption[]>([]);
+	const [pendingRequests, setPendingRequests] = useState<PendingRequestView[]>([]);
+	const [selfIsCoach, setSelfIsCoach] = useState(false);
+	const [bindCoachId, setBindCoachId] = useState("");
 	const [riskMessages, setRiskMessages] = useState<RiskMessageRow[]>([]);
 	const [watchlistItems, setWatchlistItems] = useState<WatchlistRow[]>([]);
 	const [conditionItems, setConditionItems] = useState<ConditionRow[]>([]);
 	const [fetchError, setFetchError] = useState("");
 	const [qty, setQty] = useState("100");
+	const [applyQty, setApplyQty] = useState("100");
 	const [price, setPrice] = useState("");
 	const [sourceMode, setSourceMode] = useState<"normal" | "fast">("normal");
 	const [accountType, setAccountType] = useState<"normal" | "credit">("normal");
@@ -304,22 +318,39 @@ export function TradeV2PageClient() {
 	const loadResources = useCallback(async () => {
 		setResourceLoading(true);
 		try {
-			const [publicRes, personalRes] = await Promise.all([
-				fetch("/api/resources/public", { credentials: "include" }),
+			const [coachRes, personalRes, meRes] = await Promise.all([
+				fetch("/api/resources/coach", { credentials: "include" }),
 				fetch("/api/resources/personal", { credentials: "include" }),
+				fetch("/api/coach/me", { credentials: "include" }),
 			]);
-			const [publicJson, personalJson] = await Promise.all([
-				parseJson<TradeV2PublicResourcesApiResponse>(publicRes),
+			const [coachJson, personalJson, meJson] = await Promise.all([
+				parseJson<{
+					success?: boolean;
+					error?: string;
+					data?: {
+						binding?: CoachBindingView | null;
+						coach?: MyCoachView | null;
+						directory?: CoachOption[];
+						inventory?: PublicResourceRow[];
+						requests?: PendingRequestView[];
+					};
+				}>(coachRes),
 				parseJson<TradeV2PersonalResourcesApiResponse>(personalRes),
+				parseJson<{ data?: { isCoach?: boolean } }>(meRes),
 			]);
-			if (!publicJson.success || publicJson.data === undefined) {
-				throw new Error(publicJson.error ?? "公共资源读取失败");
+			if (!coachJson.success || !coachJson.data) {
+				throw new Error(coachJson.error ?? "教练资源读取失败");
 			}
 			if (!personalJson.success || personalJson.data === undefined) {
 				throw new Error(personalJson.error ?? "个人资源读取失败");
 			}
-			setPublicResources(publicJson.data);
+			setPublicResources(coachJson.data.inventory ?? []);
+			setCoachBinding(coachJson.data.binding ?? null);
+			setMyCoach(coachJson.data.coach ?? null);
+			setCoachDirectory(coachJson.data.directory ?? []);
+			setPendingRequests((coachJson.data.requests ?? []).filter((row) => row.status === "pending"));
 			setPersonalResources(personalJson.data);
+			setSelfIsCoach(Boolean(meJson.data?.isCoach));
 		} finally {
 			setResourceLoading(false);
 		}
@@ -591,6 +622,21 @@ export function TradeV2PageClient() {
 		updateSymbolInQuery(clean);
 		void loadQuote(clean);
 	}, [clearSymbolSelection, loadQuote, symbolInput, updateSymbolInQuery]);
+	const selectPublicPoolSymbol = useCallback(
+		(symbol: string) => {
+			const clean = normalizeCnSymbol(symbol);
+			if (!isCanonicalCnSymbol(clean)) {
+				toastFail(SYMBOL_INPUT_HINT_MESSAGE);
+				return;
+			}
+			setSymbolInput(stripExchangeSuffix(clean));
+			setResolvedSymbol(clean);
+			updateSymbolInQuery(clean);
+			void loadQuote(clean);
+			scrollToResourcesPanel();
+		},
+		[loadQuote, updateSymbolInQuery],
+	);
 	const debouncedSearchSymbol = useDebouncedCallback((rawSymbol: string) => {
 		if (!shouldAutoSwitchCnSymbolInput(rawSymbol)) return;
 		const clean = normalizeCnSymbol(rawSymbol);
@@ -927,7 +973,7 @@ export function TradeV2PageClient() {
 			focusSymbolInput();
 			return;
 		}
-		const quantity = Number(qty);
+		const quantity = Number(applyQty);
 		if (!Number.isInteger(quantity) || quantity <= 0) {
 			toastFail("申请数量必须为正整数");
 			return;
@@ -948,15 +994,43 @@ export function TradeV2PageClient() {
 				toastFail(json.error ?? "申请资源失败");
 				return;
 			}
-			toast.success(`${side === "long" ? "多头" : "空头"}资源申请成功`);
+			toast.success(
+				json.data && typeof json.data === "object" && "pending" in json.data && json.data.pending
+					? `${side === "long" ? "多头" : "空头"}申请已提交，等待教练批准`
+					: `${side === "long" ? "多头" : "空头"}资源申请成功`,
+			);
 			await loadResources();
 		} catch (error) {
 			toastFail(error instanceof Error ? error.message : "申请资源失败");
 		}
-	}, [focusSymbolInput, loadResources, qty, resolvedSymbol]);
+	}, [applyQty, focusSymbolInput, loadResources, resolvedSymbol]);
+
+	const bindCoach = useCallback(async () => {
+		if (!bindCoachId) {
+			toastFail("请先选择金钱豹教练");
+			return;
+		}
+		try {
+			const res = await fetch("/api/resources/coach", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ coachId: bindCoachId }),
+			});
+			const json = await parseJson<{ success?: boolean; error?: string }>(res);
+			if (!json.success) {
+				toastFail(json.error ?? "绑定失败");
+				return;
+			}
+			toast.success("绑定申请已提交，等待教练接受");
+			await loadResources();
+		} catch (error) {
+			toastFail(error instanceof Error ? error.message : "绑定失败");
+		}
+	}, [bindCoachId, loadResources]);
 
 	const returnResourceBack = useCallback(async (side: "long" | "short") => {
-		const quantity = Number(qty);
+		const quantity = Number(applyQty);
 		if (!Number.isInteger(quantity) || quantity <= 0) {
 			toastFail("退回数量必须为正整数");
 			return;
@@ -982,7 +1056,7 @@ export function TradeV2PageClient() {
 		} catch (error) {
 			toastFail(error instanceof Error ? error.message : "退回资源失败");
 		}
-	}, [loadResources, qty, resolvedSymbol]);
+	}, [applyQty, loadResources, resolvedSymbol]);
 
 	const forceCloseNow = useCallback(async () => {
 		try {
@@ -1087,6 +1161,9 @@ export function TradeV2PageClient() {
 		{ id: "panel-monitor", label: "监控总览" },
 	] as const;
 	const hasResolvedSymbol = Boolean(resolvedSymbol);
+	const hasSymbolInPublicPool = publicResources.some(
+		(row) => row.symbol.trim().toUpperCase() === resolvedSymbol.trim().toUpperCase(),
+	);
 	const jumpToPanel = (panelId: (typeof workbenchPanels)[number]["id"]) => {
 		const el = document.getElementById(panelId);
 		el?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1106,6 +1183,7 @@ export function TradeV2PageClient() {
 			positionMode,
 			accountType,
 			qty,
+			applyQty,
 			price: isTypingPrice ? draftPrice : price,
 			fetchError,
 			plan: membership?.plan ?? "",
@@ -1131,6 +1209,7 @@ export function TradeV2PageClient() {
 		personalResources,
 		positionMode,
 		price,
+		applyQty,
 		qty,
 		resolvedSymbol,
 	]);
@@ -1149,7 +1228,10 @@ export function TradeV2PageClient() {
 				<CardHeader className="pb-2">
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<div className="min-w-0 space-y-1">
-							<CardTitle className="text-base">考核盘（模拟）</CardTitle>
+							<div className="flex flex-wrap items-center gap-2">
+								<CardTitle className="text-base">考核盘（模拟）</CardTitle>
+								{selfIsCoach ? <CoachBadge /> : null}
+							</div>
 							<p className="text-muted-foreground text-xs">
 								本页成交计入 TQ 考核。右上角「操作练习」不扣额度、不计入考核。
 							</p>
@@ -1745,22 +1827,88 @@ export function TradeV2PageClient() {
 				</TabsList>
 				<TabsContent id="panel-resources" value="resources" className="space-y-3 rounded-md border p-3">
 					<p className="text-muted-foreground text-xs">
-						公共池是可申请库存，不是账户可交易额度。请先选标的，再用下单区数量申请个人多头或空头额度。
+						额度由金钱豹教练设置并批准。点教练库存行选标的，填写申请数量后提交；到账前不能开仓。
 					</p>
-					<p className="text-sm">
-						当前申请：
-						<span className="font-medium">
-							{hasResolvedSymbol ? `${resolvedSymbol} × ${qty}` : "尚未选择标的"}
-						</span>
-					</p>
+					<div className="rounded-md border p-3 space-y-2">
+						<p className="text-sm font-medium">我的教练</p>
+						{myCoach ? (
+							<div className="flex flex-wrap items-center gap-2 text-sm">
+								<span>{myCoach.name}</span>
+								<CoachBadge />
+							</div>
+						) : coachBinding?.status === "pending" ? (
+							<p className="text-xs">已申请绑定 {coachBinding.coachName || "教练"}，等待对方接受。</p>
+						) : (
+							<div className="flex flex-wrap items-end gap-2">
+								<div className="min-w-48 space-y-1">
+									<Label htmlFor="bindCoach">选择金钱豹教练</Label>
+									<select
+										id="bindCoach"
+										className="bg-background w-full rounded-md border px-3 py-2 text-sm"
+										value={bindCoachId}
+										onChange={(e) => setBindCoachId(e.target.value)}
+									>
+										<option value="">请选择</option>
+										{coachDirectory.map((coach) => (
+											<option key={coach.id} value={coach.id}>
+												{coach.name}
+											</option>
+										))}
+									</select>
+								</div>
+								<Button type="button" variant="outline" onClick={() => void bindCoach()}>
+									申请绑定
+								</Button>
+							</div>
+						)}
+						{coachDirectory.length === 0 && !myCoach ? (
+							<p className="text-destructive text-xs">还没有已任命的金钱豹教练。请管理员在后台讲师页任命。</p>
+						) : null}
+					</div>
+					<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px] sm:items-end">
+						<div className="space-y-1.5">
+							<p className="text-sm">
+								当前申请：
+								<span className="font-medium">
+									{hasResolvedSymbol ? `${resolvedSymbol} × ${applyQty}` : "尚未选择标的"}
+								</span>
+							</p>
+							{!myCoach ? (
+								<p className="text-destructive text-xs">先绑定教练后才能申请额度。</p>
+							) : null}
+							{myCoach && publicResources.length === 0 ? (
+								<p className="text-destructive text-xs">教练尚未设置可发放库存。请教练到「教练工作台」加入标的。</p>
+							) : null}
+							{hasResolvedSymbol && publicResources.length > 0 && !hasSymbolInPublicPool ? (
+								<p className="text-destructive text-xs">
+									教练库存没有该标的。请点左侧列表已有代码。
+								</p>
+							) : null}
+						</div>
+						<div className="space-y-1.5">
+							<Label htmlFor="applyQty">申请数量（股）</Label>
+							<Input
+								id="applyQty"
+								value={applyQty}
+								onChange={(e) => setApplyQty(e.target.value)}
+								placeholder="100"
+							/>
+						</div>
+					</div>
+					{pendingRequests.length > 0 ? (
+						<p className="text-xs">
+							待批准：
+							{pendingRequests.map((row) => `${row.symbol} ${row.side === "short" ? "空头" : "多头"}×${row.quantity}`).join("；")}
+						</p>
+					) : null}
 					<div className="flex flex-wrap items-center gap-2">
-						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void applyResource("long")}>
+						<Button variant="outline" disabled={!hasResolvedSymbol || !myCoach} onClick={() => void applyResource("long")}>
 							申请多头额度
 						</Button>
 						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("long")}>
 							退回多头额度
 						</Button>
-						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void applyResource("short")}>
+						<Button variant="outline" disabled={!hasResolvedSymbol || !myCoach} onClick={() => void applyResource("short")}>
 							申请空头额度
 						</Button>
 						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("short")}>
@@ -1770,7 +1918,7 @@ export function TradeV2PageClient() {
 					</div>
 					<div className="grid gap-3 lg:grid-cols-2">
 						<div>
-							<p className="mb-2 text-sm font-medium">公共资源池</p>
+							<p className="mb-2 text-sm font-medium">教练可发放库存</p>
 							<Table>
 								<TableHeader>
 									<TableRow>
@@ -1783,13 +1931,20 @@ export function TradeV2PageClient() {
 									{publicResources.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={3} className="text-center text-muted-foreground">
-												暂无公共资源
+												暂无教练库存
 											</TableCell>
 										</TableRow>
 									) : (
 										publicResources.map((row) => (
-											<TableRow key={row.id}>
-												<TableCell>{row.symbol}</TableCell>
+											<TableRow
+												key={row.id}
+												className="cursor-pointer hover:bg-muted/60"
+												onClick={() => selectPublicPoolSymbol(row.symbol)}
+											>
+												<TableCell>
+													{row.symbol}
+													{row.name ? <span className="text-muted-foreground ml-1 text-xs">{row.name}</span> : null}
+												</TableCell>
 												<TableCell className="text-end">{row.long_limit}</TableCell>
 												<TableCell className="text-end">{row.short_limit}</TableCell>
 											</TableRow>
@@ -1813,7 +1968,7 @@ export function TradeV2PageClient() {
 									{personalResources.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={4} className="text-center text-muted-foreground">
-												暂无个人资源。公共池有股也不能直接下单，请先申请对应多头或空头额度。
+												暂无个人资源。请向金钱豹教练申请额度，批准到账后再开仓。
 											</TableCell>
 										</TableRow>
 									) : (

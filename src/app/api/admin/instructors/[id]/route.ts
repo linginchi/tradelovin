@@ -10,6 +10,7 @@ const patchSchema = z
 		name: z.string().min(1).optional(),
 		email: z.string().email().nullable().optional(),
 		bio: z.string().nullable().optional(),
+		is_coach: z.boolean().optional(),
 	})
 	.strict();
 
@@ -44,6 +45,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
 	const updates: Record<string, unknown> = {};
 	if (parsed.data.name !== undefined) updates.real_name = parsed.data.name.trim();
 	if (parsed.data.bio !== undefined) updates.bio = parsed.data.bio === "" ? null : parsed.data.bio;
+	if (parsed.data.is_coach !== undefined) updates.is_coach = parsed.data.is_coach;
 
 	Object.keys(updates).forEach((k) => {
 		if (updates[k] === undefined) delete updates[k];

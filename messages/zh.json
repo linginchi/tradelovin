@@ -25,7 +25,8 @@
 		"logout": "退出",
 		"loggingOut": "退出中...",
 		"userFallback": "用户",
-		"lab": "AI量化实验室"
+		"lab": "AI量化实验室",
+		"coachDesk": "教练工作台"
 	},
 	"LanguageSwitcher": {
 		"label": "语言",

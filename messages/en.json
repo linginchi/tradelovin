@@ -25,7 +25,8 @@
 		"logout": "Log out",
 		"loggingOut": "Logging out...",
 		"userFallback": "User",
-		"lab": "AI Quant Lab"
+		"lab": "AI Quant Lab",
+		"coachDesk": "Coach desk"
 	},
 	"LanguageSwitcher": {
 		"label": "Language",

@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 
+import { returnToCoachPool } from "@/lib/coach/service";
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { isCanonicalCnSymbol, normalizeCnSymbol } from "@/lib/trade/symbol-normalizer";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { normalizeTradeApiError, SYMBOL_FORMAT_ERROR_MESSAGE } from "@/lib/trade-v2/api-error";
 import type { ApiErrorResponse, TradeV2ResourceMutationApiResponse } from "@/lib/trade-v2/api-types";
-import { returnResource, type ResourceSide } from "@/lib/trade-v2/resources";
+import type { ResourceSide } from "@/lib/trade-v2/resources";
 
 export const runtime = "nodejs";
 
@@ -48,10 +49,10 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const data = await returnResource(service, userId, symbol, side, quantity);
+		const data = await returnToCoachPool(service, userId, symbol, side, quantity);
 		return NextResponse.json<TradeV2ResourceMutationApiResponse>({
 			success: true,
-			data: data ?? null,
+			data: (data as Record<string, unknown> | null) ?? null,
 		});
 	} catch (error) {
 		return NextResponse.json(

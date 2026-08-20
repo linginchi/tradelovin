@@ -32,6 +32,7 @@ type InstructorRow = {
 	email: string | null;
 	avatar_url: string | null;
 	bio: string | null;
+	is_coach: boolean;
 };
 
 type CourseRow = {
@@ -57,6 +58,7 @@ export function AdminInstructorsPanel() {
 	const [assignFor, setAssignFor] = useState<InstructorRow | null>(null);
 	const [courses, setCourses] = useState<CourseRow[]>([]);
 	const [coursePick, setCoursePick] = useState<Set<string>>(new Set());
+	const [coachEmail, setCoachEmail] = useState("");
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -115,6 +117,54 @@ export function AdminInstructorsPanel() {
 		setCourses(list);
 		const initial = new Set(list.filter((c) => c.instructor_id === r.id).map((c) => c.id));
 		setCoursePick(initial);
+	}
+
+	async function toggleCoach(row: InstructorRow, next: boolean) {
+		setSaving(true);
+		setError(null);
+		try {
+			const res = await fetch(`/api/admin/instructors/${row.id}`, {
+				method: "PATCH",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ is_coach: next }),
+			});
+			const j = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setError(j.error ?? t("saveError"));
+				return;
+			}
+			void load();
+		} catch {
+			setError(t("saveError"));
+		} finally {
+			setSaving(false);
+		}
+	}
+
+	async function appointCoachByEmail() {
+		if (!coachEmail.trim()) return;
+		setSaving(true);
+		setError(null);
+		try {
+			const res = await fetch("/api/admin/coaches", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({ email: coachEmail.trim().toLowerCase(), isCoach: true }),
+			});
+			const j = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setError(j.error ?? t("saveError"));
+				return;
+			}
+			setCoachEmail("");
+			void load();
+		} catch {
+			setError(t("saveError"));
+		} finally {
+			setSaving(false);
+		}
 	}
 
 	function toggleCourse(cid: string) {
@@ -236,6 +286,25 @@ export function AdminInstructorsPanel() {
 				</CardHeader>
 			</Card>
 
+			<div className="flex flex-wrap items-end gap-2 rounded-xl border border-border/60 bg-card/25 p-3">
+				<div className="min-w-56 flex-1 space-y-1">
+					<Label htmlFor="appoint-coach-email">任命现有账号为金钱豹教练</Label>
+					<Input
+						id="appoint-coach-email"
+						type="email"
+						value={coachEmail}
+						onChange={(e) => setCoachEmail(e.target.value)}
+						placeholder="学员或讲师邮箱"
+					/>
+				</div>
+				<Button type="button" variant="outline" disabled={saving || !coachEmail.trim()} onClick={() => void appointCoachByEmail()}>
+					任命教练
+				</Button>
+				<p className="text-muted-foreground w-full text-xs">
+					只任命身份，不审批额度。日常库存与批准在学员站「教练工作台」。使用工作台还需有效 T3 会员。
+				</p>
+			</div>
+
 			{error && <p className="text-destructive text-sm">{error}</p>}
 
 			<div className="rounded-xl border border-border/60 bg-card/25 ring-1 ring-foreground/5 overflow-x-auto">
@@ -246,19 +315,20 @@ export function AdminInstructorsPanel() {
 							<TableHead>{t("instructorName")}</TableHead>
 							<TableHead className="hidden md:table-cell">{t("instructorEmail")}</TableHead>
 							<TableHead className="hidden md:table-cell">{t("instructorBio")}</TableHead>
+							<TableHead>金钱豹教练</TableHead>
 							<TableHead className="text-right">{t("actions")}</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{loading ? (
 							<TableRow>
-								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
 									?
 								</TableCell>
 							</TableRow>
 						) : rows.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={5} className="text-muted-foreground py-10 text-center">
+								<TableCell colSpan={6} className="text-muted-foreground py-10 text-center">
 									{t("empty")}
 								</TableCell>
 							</TableRow>
@@ -283,6 +353,15 @@ export function AdminInstructorsPanel() {
 									<TableCell className="hidden font-mono text-xs md:table-cell">{r.email ?? "�"}</TableCell>
 									<TableCell className="text-muted-foreground hidden max-w-xs truncate md:table-cell">
 										{r.bio ?? "�"}
+									</TableCell>
+									<TableCell>
+										<label className="flex items-center gap-2 text-sm">
+											<Checkbox
+												checked={r.is_coach}
+												onCheckedChange={(checked) => void toggleCoach(r, Boolean(checked))}
+											/>
+											{r.is_coach ? "已任命" : "未任命"}
+										</label>
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex flex-wrap justify-end gap-1">

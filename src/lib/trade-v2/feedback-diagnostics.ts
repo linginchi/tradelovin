@@ -18,6 +18,7 @@ export type TradeFeedbackSnapshotInput = {
 	positionMode: string;
 	accountType: string;
 	qty: string;
+	applyQty?: string;
 	price: string;
 	fetchError: string;
 	plan: string;
@@ -56,6 +57,7 @@ export function buildTradeFeedbackDiagnostics(input: TradeFeedbackSnapshotInput)
 		`positionMode: ${input.positionMode}`,
 		`accountType: ${input.accountType}`,
 		`qty: ${input.qty}`,
+		`applyQty: ${input.applyQty ?? "(n/a)"}`,
 		`price: ${input.price || "(empty)"}`,
 		`plan: ${input.plan || "(unknown)"}`,
 		`membershipStatus: ${input.membershipStatus || "(unknown)"}`,

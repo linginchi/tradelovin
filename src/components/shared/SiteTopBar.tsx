@@ -6,6 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { NavDropdown } from "@/components/shared/NavDropdown";
+import { CoachDeskNavLink } from "@/components/coach/CoachDeskNavLink";
 import {
 	Sheet,
 	SheetContent,
@@ -121,6 +122,7 @@ export function SiteTopBar({ className }: Props) {
 					>
 						{tNav("lab")}
 					</Link>
+					<CoachDeskNavLink />
 
 					{isAuthed ? (
 						<>
@@ -248,6 +250,10 @@ export function SiteTopBar({ className }: Props) {
 								>
 									{tNav("lab")}
 								</Link>
+								<CoachDeskNavLink
+									className="hover:bg-white/5 rounded-lg px-3 py-2.5 text-sm"
+									onNavigate={() => setMenuOpen(false)}
+								/>
 
 								{isAuthed ? (
 									<>

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
 
+import { CoachDeskNavLink } from "@/components/coach/CoachDeskNavLink";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
 import {
@@ -256,7 +257,10 @@ export function MembershipCenterClient() {
   return (
     <main className="mx-auto w-full max-w-5xl space-y-6 px-4 py-8">
       <section className="rounded-2xl border border-border/70 bg-card/35 p-6">
-        <h1 className="text-2xl font-semibold">会员中心</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold">会员中心</h1>
+          <CoachDeskNavLink />
+        </div>
         <p className="mt-2 text-sm text-muted-foreground">
           14天试用结束后，需升级会员继续使用模拟交易和 TQ 评分。
         </p>

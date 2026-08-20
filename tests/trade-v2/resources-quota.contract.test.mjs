@@ -97,6 +97,14 @@ test("trade workbench labels exam desk, prechecks quota, and closes with positio
 	assert.match(src, /explainOperationFailure/);
 	assert.match(src, /collectTradeDiagnostics/);
 	assert.match(src, /测试反馈|FeedbackButton/);
+	assert.match(src, /id="applyQty"/);
+	assert.match(src, /selectPublicPoolSymbol/);
+	assert.match(src, /hasSymbolInPublicPool/);
+	assert.match(src, /Number\(applyQty\)/);
+	assert.match(src, /\/api\/resources\/coach/);
+	assert.match(src, /bindCoach/);
+	assert.match(src, /CoachBadge/);
+	assert.doesNotMatch(src, /再用下单区数量申请/);
 });
 
 test("order API normalizes string errors from placeV2Order", () => {
@@ -143,7 +151,126 @@ test("feedback API and button collect tester diagnostics", () => {
 	const api = readFileSync(join(root, "src/app/api/feedback/route.ts"), "utf8");
 	const button = readFileSync(join(root, "src/components/common/FeedbackButton.tsx"), "utf8");
 	assert.match(api, /diagnostics/);
+	assert.match(api, /attachments/);
+	assert.match(api, /parseScreenshotDataUrl/);
+	assert.doesNotMatch(api, /截图数据\(前200字符\)/);
 	assert.match(button, /测试反馈/);
 	assert.match(button, /collectDiagnostics/);
 	assert.match(button, /你遇到的问题/);
+	assert.match(button, /screenshotReading/);
+	assert.match(button, /MAX_SCREENSHOT_BYTES/);
+});
+
+test("missing coach inventory symbol tells tester to use coach desk", async () => {
+	const { explainOperationFailure } = await loadTsModule("../../src/lib/trade-v2/operation-guidance.ts");
+	const text = explainOperationFailure("教练库存中不存在该标的");
+	assert.match(text, /教练/);
+	assert.match(text, /工作台/);
+	const unbound = explainOperationFailure("请先选择金钱豹教练并等待对方接受");
+	assert.match(unbound, /绑定/);
+});
+
+test("admin public resource upsert rejects illegal symbol and negative limits", async () => {
+	const { parsePublicResourceUpsert, personalQuotaBlocksDelete } = await loadTsModule(
+		"../../src/lib/trade-v2/admin-public-resources.ts",
+	);
+	assert.equal(parsePublicResourceUpsert({ symbol: "not-a-stock", long_limit: 1, short_limit: 1 }).ok, false);
+	assert.equal(parsePublicResourceUpsert({ symbol: "600519", long_limit: -1, short_limit: 0 }).ok, false);
+	const ok = parsePublicResourceUpsert({
+		symbol: "600519",
+		name: "茅台",
+		long_limit: 100000,
+		short_limit: "200000",
+	});
+	assert.equal(ok.ok, true);
+	if (ok.ok) {
+		assert.equal(ok.data.symbol, "600519.SH");
+		assert.equal(ok.data.short_limit, 200000);
+	}
+	assert.equal(personalQuotaBlocksDelete([{ long_quota: 0, short_quota: 0 }], 0), false);
+	assert.equal(personalQuotaBlocksDelete([{ long_quota: 0, short_quota: 100 }], 0), true);
+	assert.equal(personalQuotaBlocksDelete([], 50), true);
+});
+
+test("admin public resources API guards writes and blocks occupied deletes", () => {
+	const api = readFileSync(join(root, "src/app/api/admin/resources/public/route.ts"), "utf8");
+	const nav = readFileSync(join(root, "src/components/admin/AdminShell.tsx"), "utf8");
+	assert.match(api, /requireAdminSession\(\)/);
+	assert.match(api, /export async function GET/);
+	assert.match(api, /export async function PUT/);
+	assert.match(api, /export async function DELETE/);
+	assert.match(api, /personalQuotaBlocksDelete/);
+	assert.match(nav, /模拟盘资源/);
+	assert.match(nav, /\/resources/);
+});
+
+test("screenshot data URL is parsed into a real email attachment payload", async () => {
+	const { parseScreenshotDataUrl, MAX_SCREENSHOT_BYTES } = await loadTsModule(
+		"../../src/lib/email/screenshot-attachment.ts",
+	);
+	const empty = parseScreenshotDataUrl(undefined);
+	assert.equal(empty.ok, true);
+	if (empty.ok) assert.equal(empty.attachment, null);
+	const png = parseScreenshotDataUrl("data:image/png;base64,iVBORw0KGgo=", "shot.png");
+	assert.equal(png.ok, true);
+	if (png.ok && png.attachment) {
+		assert.equal(png.attachment.filename, "shot.png");
+		assert.equal(png.attachment.contentType, "image/png");
+		assert.ok(png.attachment.content.length > 0);
+	}
+	assert.equal(parseScreenshotDataUrl("not-a-data-url").ok, false);
+	assert.ok(MAX_SCREENSHOT_BYTES >= 3 * 1024 * 1024);
+});
+
+test("student apply creates a pending request instead of granting from the public pool", () => {
+	const apply = readFileSync(join(root, "src/app/api/resources/apply/route.ts"), "utf8");
+	assert.match(apply, /createResourceRequest/);
+	assert.match(apply, /pending/);
+	assert.doesNotMatch(apply, /applyResource\(/);
+	assert.doesNotMatch(apply, /tq_apply_resource/);
+});
+
+test("coach grant RPC deducts coach inventory not the public pool", () => {
+	const sql = readFileSync(join(root, "supabase/migrations/20260820120000_golden_leopard_coach_quota.sql"), "utf8");
+	assert.match(sql, /CREATE TABLE IF NOT EXISTS public.coach_students/);
+	assert.match(sql, /CREATE TABLE IF NOT EXISTS public.tq_coach_resources/);
+	assert.match(sql, /CREATE TABLE IF NOT EXISTS public.tq_resource_requests/);
+	assert.match(sql, /is_coach BOOLEAN/);
+	assert.match(sql, /tq_coach_grant_resource/);
+	assert.match(sql, /tq_coach_return_resource/);
+	assert.match(sql, /FROM public.tq_coach_resources/);
+	assert.doesNotMatch(sql, /UPDATE public.tq_public_resources/);
+	assert.doesNotMatch(sql, /INSERT INTO public.tq_public_resources/);
+});
+
+test("coach desk requires is_coach and active T3", async () => {
+	const { isActiveT3Plan } = await loadTsModule("../../src/lib/coach/types.ts");
+	assert.equal(isActiveT3Plan("T3", "active", new Date(Date.now() + 86400000).toISOString()), true);
+	assert.equal(isActiveT3Plan("T2", "active", new Date(Date.now() + 86400000).toISOString()), false);
+	assert.equal(isActiveT3Plan("T3", "expired", new Date(Date.now() + 86400000).toISOString()), false);
+	const guard = readFileSync(join(root, "src/lib/coach/guard.ts"), "utf8");
+	assert.match(guard, /requireCoachDesk/);
+	assert.match(guard, /canOpenCoachDesk/);
+	const desk = readFileSync(join(root, "src/app/[locale]/coach/page.tsx"), "utf8");
+	assert.match(desk, /CoachDeskClient/);
+	const nav = readFileSync(join(root, "src/components/shared/SiteTopBar.tsx"), "utf8");
+	assert.match(nav, /CoachDeskNavLink/);
+});
+
+test("admin can appoint golden leopard coaches without approving each quota", () => {
+	const coaches = readFileSync(join(root, "src/app/api/admin/coaches/route.ts"), "utf8");
+	assert.match(coaches, /is_coach/);
+	assert.match(coaches, /requireAdminSession/);
+	const panel = readFileSync(join(root, "src/components/admin/AdminInstructorsPanel.tsx"), "utf8");
+	assert.match(panel, /金钱豹教练/);
+	assert.match(panel, /\/api\/admin\/coaches/);
+	const badges = readFileSync(join(root, "src/app/api/public/badges/route.ts"), "utf8");
+	assert.match(badges, /GOLDEN_LEOPARD_COACH_BADGE/);
+	const guide = readFileSync(join(root, "docs/trade/t0-sim-exam-guide.zh.md"), "utf8");
+	assert.match(guide, /金钱豹教练/);
+	assert.match(guide, /\/coach/);
+	assert.doesNotMatch(guide, /配置公共资源池。学员只能申请这里已有的标的/);
+	const requests = readFileSync(join(root, "src/app/api/coach/requests/route.ts"), "utf8");
+	assert.match(requests, /rejectReason/);
+	assert.match(requests, /tq_coach_grant_resource|grantCoachResource/);
 });

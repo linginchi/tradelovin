@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 
+import { createResourceRequest, getStudentBinding } from "@/lib/coach/service";
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { isCanonicalCnSymbol, normalizeCnSymbol } from "@/lib/trade/symbol-normalizer";
 import { normalizeTradeApiError, SYMBOL_FORMAT_ERROR_MESSAGE } from "@/lib/trade-v2/api-error";
-import type { ApiErrorResponse, TradeV2ResourceMutationApiResponse } from "@/lib/trade-v2/api-types";
-import { applyResource, type ResourceSide } from "@/lib/trade-v2/resources";
+import type { ApiErrorResponse } from "@/lib/trade-v2/api-types";
+import type { ResourceSide } from "@/lib/trade-v2/resources";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -48,10 +49,29 @@ export async function POST(request: Request) {
 	}
 
 	try {
-		const data = await applyResource(service, userId, symbol, side, quantity);
-		return NextResponse.json<TradeV2ResourceMutationApiResponse>({
+		const binding = await getStudentBinding(service, userId);
+		if (!binding || binding.status !== "accepted") {
+			return NextResponse.json(
+				{
+					success: false,
+					error: "请先选择金钱豹教练并等待对方接受。下一步：在「资源」面板选择教练并提交绑定。",
+				} satisfies ApiErrorResponse,
+				{ status: 400 },
+			);
+		}
+		const data = await createResourceRequest(service, {
+			studentId: userId,
+			coachId: binding.coach_id,
+			symbol,
+			side,
+			quantity,
+		});
+		return NextResponse.json({
 			success: true,
-			data: data ?? null,
+			data: {
+				...data,
+				pending: true,
+			},
 		});
 	} catch (error) {
 		return NextResponse.json(
