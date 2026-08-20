@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { registerUserAndSession, signInExistingUserWithFreshPassword } from "@/lib/auth/auto-register";
 import { isDevTestLoginEnabled } from "@/lib/auth/dev-test-login-enabled.mjs";
+import { DEV_TEST_ACCOUNT_EMAIL } from "@/lib/auth/seed-accounts";
 import { getTradeUserIdByEmail } from "@/lib/auth/profile-resolve";
 import type { RegisterPayload } from "@/lib/auth/register-payload";
 import { getOrCreateSimAccount } from "@/lib/trade/sim-account";
@@ -16,12 +17,6 @@ const bodySchema = z.object({
 });
 
 const DEV_TEST_PASSWORD = "123456";
-
-const DEV_TEST_ACCOUNT_EMAIL: Record<"kk" | "william" | "mark", string> = {
-	kk: "kk@hkfac.com",
-	william: "william@hkfac.com",
-	mark: "mark@hkfac.com",
-};
 
 export async function GET() {
 	return NextResponse.json({

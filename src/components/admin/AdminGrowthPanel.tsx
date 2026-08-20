@@ -12,6 +12,15 @@ type MembershipRow = {
   status: string;
   current_period_end: string;
   cancel_at_period_end: boolean;
+  student_id?: string | null;
+  name?: string;
+  email?: string | null;
+  level_label?: string;
+  is_seed?: boolean;
+  is_admin?: boolean;
+  admin_role?: string | null;
+  is_super_user?: boolean;
+  is_coach?: boolean;
 };
 
 type PointRow = {
@@ -20,6 +29,11 @@ type PointRow = {
   total_earned: number;
   total_spent: number;
   updated_at: string;
+  student_id?: string | null;
+  name?: string;
+  email?: string | null;
+  is_seed?: boolean;
+  is_admin?: boolean;
 };
 
 type PaymentRow = {
@@ -54,6 +68,8 @@ export function AdminGrowthPanel() {
   const [payments, setPayments] = useState<PaymentRow[]>([]);
   const [referrals, setReferrals] = useState<ReferralSummary | null>(null);
   const [adjusting, setAdjusting] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [query, setQuery] = useState("");
   const [adjustForm, setAdjustForm] = useState({ userId: "", delta: "", reason: "" });
 
   async function load() {
@@ -120,6 +136,37 @@ export function AdminGrowthPanel() {
     }
   }
 
+  async function assignMissingStudentCodes() {
+    setAssigning(true);
+    setError("");
+    try {
+      const res = await fetch("/api/admin/membership/student-codes", {
+        method: "POST",
+        credentials: "include",
+      });
+      const json = (await res.json()) as { success?: boolean; error?: string; data?: { assigned?: number } };
+      if (!res.ok || !json.success) {
+        setError(json.error ?? "补发学号失败");
+        return;
+      }
+      await load();
+    } catch {
+      setError("补发学号失败");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
+  const q = query.trim().toLowerCase();
+  const visibleMemberships = memberships.filter((row) => {
+    if (!q) return true;
+    const hay = [row.student_id, row.name, row.email, row.user_id, row.level_label, row.plan, row.status]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return hay.includes(q);
+  });
+
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-border/70 bg-card/35 p-4">
@@ -145,36 +192,78 @@ export function AdminGrowthPanel() {
       </section>
 
       <section className="rounded-xl border border-border/70 bg-card/35 p-4">
-        <h2 className="text-lg font-semibold">会员管理</h2>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">会员管理</h2>
+            <p className="text-muted-foreground mt-1 max-w-3xl text-xs">
+              学号：课程报读审批仍发 <span className="font-mono">BD0001</span>；平台会员用{" "}
+              <span className="font-mono">TL + 年份后两位 + 4 位流水</span>（如 TL260001）。已有学号不改。Seed
+              表示测试快捷登录或超管白名单账号。
+            </p>
+          </div>
+          <Button variant="outline" disabled={assigning} onClick={() => void assignMissingStudentCodes()}>
+            {assigning ? "补发中..." : "为无学号会员补发"}
+          </Button>
+        </div>
+        <div className="mt-3">
+          <input
+            className="w-full max-w-md rounded-md border border-border bg-background px-3 py-2 text-sm"
+            placeholder="搜索学号、姓名、邮箱、用户ID"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border/60">
-                <th className="py-2">用户ID</th>
-                <th className="py-2">计划</th>
+                <th className="py-2">学号</th>
+                <th className="py-2">姓名</th>
+                <th className="py-2">邮箱</th>
+                <th className="py-2">级别</th>
                 <th className="py-2">状态</th>
+                <th className="py-2">Seed</th>
+                <th className="py-2">管理员</th>
                 <th className="py-2">到期时间</th>
-                <th className="py-2">周期末取消</th>
+                <th className="py-2">用户ID</th>
               </tr>
             </thead>
             <tbody>
-              {memberships.slice(0, 100).map((row) => (
-                <tr key={row.id} className="border-b border-border/40">
-                  <td className="py-2 font-mono text-xs">{row.user_id}</td>
+              {visibleMemberships.slice(0, 200).map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b border-border/40 cursor-pointer hover:bg-muted/40"
+                  onClick={() => setAdjustForm((v) => ({ ...v, userId: row.user_id }))}
+                >
+                  <td className="py-2 font-mono text-xs">{row.student_id ?? "未分配"}</td>
                   <td className="py-2">
-                    {(() => {
-                      const level = getDisplayLevel(row.plan);
-                      return `${level.code} · ${level.nameZh}`;
-                    })()}
+                    {row.name ?? "未建档"}
+                    {row.is_coach ? <span className="ml-1 text-[11px] text-amber-300">教练</span> : null}
+                  </td>
+                  <td className="py-2 font-mono text-xs">{row.email ?? "—"}</td>
+                  <td className="py-2">
+                    {row.level_label ??
+                      (() => {
+                        const level = getDisplayLevel(row.plan);
+                        return `${level.code} · ${level.nameZh}`;
+                      })()}
                   </td>
                   <td className="py-2">{row.status}</td>
+                  <td className="py-2">{row.is_seed ? "是" : "否"}</td>
+                  <td className="py-2">
+                    {row.is_admin ? (row.admin_role === "super_admin" ? "超管" : "管理员") : "否"}
+                    {row.is_super_user && !row.is_admin ? <span className="ml-1 text-[11px]">白名单</span> : null}
+                  </td>
                   <td className="py-2">{new Date(row.current_period_end).toLocaleString()}</td>
-                  <td className="py-2">{row.cancel_at_period_end ? "是" : "否"}</td>
+                  <td className="text-muted-foreground py-2 font-mono text-[11px]">{row.user_id}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="text-muted-foreground mt-2 text-xs">
+          共 {memberships.length} 人，当前显示 {Math.min(visibleMemberships.length, 200)} 人。点击行可填入下方积分调整的用户ID。
+        </p>
       </section>
 
       <section className="rounded-xl border border-border/70 bg-card/35 p-4">
@@ -206,7 +295,9 @@ export function AdminGrowthPanel() {
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="border-b border-border/60">
-                <th className="py-2">用户ID</th>
+                <th className="py-2">学号</th>
+                <th className="py-2">姓名</th>
+                <th className="py-2">邮箱</th>
                 <th className="py-2">余额</th>
                 <th className="py-2">累计获得</th>
                 <th className="py-2">累计消耗</th>
@@ -214,8 +305,18 @@ export function AdminGrowthPanel() {
             </thead>
             <tbody>
               {points.slice(0, 100).map((row) => (
-                <tr key={row.user_id} className="border-b border-border/40">
-                  <td className="py-2 font-mono text-xs">{row.user_id}</td>
+                <tr
+                  key={row.user_id}
+                  className="border-b border-border/40 cursor-pointer hover:bg-muted/40"
+                  onClick={() => setAdjustForm((v) => ({ ...v, userId: row.user_id }))}
+                >
+                  <td className="py-2 font-mono text-xs">{row.student_id ?? "未分配"}</td>
+                  <td className="py-2">
+                    {row.name ?? "未建档"}
+                    {row.is_seed ? <span className="ml-1 text-[11px] text-amber-300">Seed</span> : null}
+                    {row.is_admin ? <span className="ml-1 text-[11px]">管理员</span> : null}
+                  </td>
+                  <td className="py-2 font-mono text-xs">{row.email ?? "—"}</td>
                   <td className="py-2">{row.balance}</td>
                   <td className="py-2">{row.total_earned}</td>
                   <td className="py-2">{row.total_spent}</td>
