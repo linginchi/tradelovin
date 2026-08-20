@@ -8,6 +8,7 @@ import { toast, Toaster } from "sonner";
 
 import { FeedbackButton } from "@/components/common/FeedbackButton";
 import { CoachBadge } from "@/components/coach/CoachBadge";
+import { CoachExamResourcePanel } from "@/components/coach/CoachExamResourcePanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { PracticeButton } from "@/components/practice/PracticeButton";
 import { TradeGuideModal } from "@/components/trade/TradeGuideModal";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import type { CoachExamDeskPayload } from "@/lib/coach/types";
 import { useMembershipCurrent } from "@/lib/membership/client";
 import {
 	getOpeningQuotaSide,
@@ -91,7 +93,15 @@ type WatchlistRow = TradeV2WatchlistItem;
 type CoachOption = { id: string; name: string };
 type CoachBindingView = { coachId: string; status: string; coachName: string };
 type MyCoachView = { id: string; name: string };
-type PendingRequestView = { id: string; symbol: string; side: string; quantity: number; status: string };
+type PendingRequestView = {
+	id: string;
+	symbol: string;
+	side: string;
+	quantity: number;
+	status: string;
+	reviewed_by?: string | null;
+	reviewed_by_name?: string | null;
+};
 type ConditionRow = TradeV2ConditionItem;
 
 type TriggerEvent = {
@@ -228,7 +238,12 @@ export function TradeV2PageClient() {
 	const [coachDirectory, setCoachDirectory] = useState<CoachOption[]>([]);
 	const [pendingRequests, setPendingRequests] = useState<PendingRequestView[]>([]);
 	const [selfIsCoach, setSelfIsCoach] = useState(false);
+	const [canOpenDesk, setCanOpenDesk] = useState(false);
+	const [coachDesk, setCoachDesk] = useState<CoachExamDeskPayload | null>(null);
 	const [bindCoachId, setBindCoachId] = useState("");
+	const [applySymbol, setApplySymbol] = useState(
+		defaultSymbol ? stripExchangeSuffix(defaultSymbol) : "",
+	);
 	const [riskMessages, setRiskMessages] = useState<RiskMessageRow[]>([]);
 	const [watchlistItems, setWatchlistItems] = useState<WatchlistRow[]>([]);
 	const [conditionItems, setConditionItems] = useState<ConditionRow[]>([]);
@@ -333,10 +348,12 @@ export function TradeV2PageClient() {
 						directory?: CoachOption[];
 						inventory?: PublicResourceRow[];
 						requests?: PendingRequestView[];
+						canOpenDesk?: boolean;
+						desk?: CoachExamDeskPayload | null;
 					};
 				}>(coachRes),
 				parseJson<TradeV2PersonalResourcesApiResponse>(personalRes),
-				parseJson<{ data?: { isCoach?: boolean } }>(meRes),
+				parseJson<{ data?: { isCoach?: boolean; canOpenDesk?: boolean } }>(meRes),
 			]);
 			if (!coachJson.success || !coachJson.data) {
 				throw new Error(coachJson.error ?? "教练资源读取失败");
@@ -351,6 +368,8 @@ export function TradeV2PageClient() {
 			setPendingRequests((coachJson.data.requests ?? []).filter((row) => row.status === "pending"));
 			setPersonalResources(personalJson.data);
 			setSelfIsCoach(Boolean(meJson.data?.isCoach));
+			setCanOpenDesk(Boolean(coachJson.data.canOpenDesk ?? meJson.data?.canOpenDesk));
+			setCoachDesk(coachJson.data.desk ?? null);
 		} finally {
 			setResourceLoading(false);
 		}
@@ -422,6 +441,11 @@ export function TradeV2PageClient() {
 		}, 0);
 		return () => window.clearTimeout(init);
 	}, [loadAll]);
+
+	useEffect(() => {
+		if (!resolvedSymbol) return;
+		setApplySymbol((prev) => prev || stripExchangeSuffix(resolvedSymbol));
+	}, [resolvedSymbol]);
 
 	useEffect(() => {
 		const timer = window.setInterval(() => {
@@ -631,6 +655,7 @@ export function TradeV2PageClient() {
 			}
 			setSymbolInput(stripExchangeSuffix(clean));
 			setResolvedSymbol(clean);
+			setApplySymbol(stripExchangeSuffix(clean));
 			updateSymbolInQuery(clean);
 			void loadQuote(clean);
 			scrollToResourcesPanel();
@@ -968,9 +993,9 @@ export function TradeV2PageClient() {
 	]);
 
 	const applyResource = useCallback(async (side: "long" | "short") => {
-		if (!resolvedSymbol || !isCanonicalCnSymbol(resolvedSymbol)) {
-			toastFail("请先在顶部输入标的代码，再申请额度");
-			focusSymbolInput();
+		const symbol = normalizeCnSymbol(applySymbol.trim() || resolvedSymbol);
+		if (!symbol || !isCanonicalCnSymbol(symbol)) {
+			toastFail("请先输入要申请的标的代码");
 			return;
 		}
 		const quantity = Number(applyQty);
@@ -984,7 +1009,7 @@ export function TradeV2PageClient() {
 				headers: { "Content-Type": "application/json" },
 				credentials: "include",
 				body: JSON.stringify({
-					symbol: resolvedSymbol,
+					symbol,
 					side,
 					quantity,
 				}),
@@ -996,14 +1021,14 @@ export function TradeV2PageClient() {
 			}
 			toast.success(
 				json.data && typeof json.data === "object" && "pending" in json.data && json.data.pending
-					? `${side === "long" ? "多头" : "空头"}申请已提交，等待教练批准`
+					? `${side === "long" ? "多头" : "空头"}申请已提交，状态为审核中`
 					: `${side === "long" ? "多头" : "空头"}资源申请成功`,
 			);
 			await loadResources();
 		} catch (error) {
 			toastFail(error instanceof Error ? error.message : "申请资源失败");
 		}
-	}, [applyQty, focusSymbolInput, loadResources, resolvedSymbol]);
+	}, [applyQty, applySymbol, loadResources, resolvedSymbol]);
 
 	const bindCoach = useCallback(async () => {
 		if (!bindCoachId) {
@@ -1161,8 +1186,10 @@ export function TradeV2PageClient() {
 		{ id: "panel-monitor", label: "监控总览" },
 	] as const;
 	const hasResolvedSymbol = Boolean(resolvedSymbol);
+	const applyTargetSymbol = normalizeCnSymbol(applySymbol.trim() || resolvedSymbol);
+	const hasApplySymbol = isCanonicalCnSymbol(applyTargetSymbol);
 	const hasSymbolInPublicPool = publicResources.some(
-		(row) => row.symbol.trim().toUpperCase() === resolvedSymbol.trim().toUpperCase(),
+		(row) => row.symbol.trim().toUpperCase() === applyTargetSymbol.trim().toUpperCase(),
 	);
 	const jumpToPanel = (panelId: (typeof workbenchPanels)[number]["id"]) => {
 		const el = document.getElementById(panelId);
@@ -1827,8 +1854,11 @@ export function TradeV2PageClient() {
 				</TabsList>
 				<TabsContent id="panel-resources" value="resources" className="space-y-3 rounded-md border p-3">
 					<p className="text-muted-foreground text-xs">
-						额度由金钱豹教练设置并批准。点教练库存行选标的，填写申请数量后提交；到账前不能开仓。
+						额度由金钱豹教练在本栏设置并批准。输入标的和数量提出添加，状态为「审核中」；到账前不能开仓。
 					</p>
+					{canOpenDesk && coachDesk ? (
+						<CoachExamResourcePanel desk={coachDesk} busy={resourceLoading} onChanged={loadResources} />
+					) : null}
 					<div className="rounded-md border p-3 space-y-2">
 						<p className="text-sm font-medium">我的教练</p>
 						{myCoach ? (
@@ -1865,23 +1895,32 @@ export function TradeV2PageClient() {
 							<p className="text-destructive text-xs">还没有已任命的金钱豹教练。请管理员在后台讲师页任命。</p>
 						) : null}
 					</div>
-					<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px] sm:items-end">
+					<div className="grid gap-3 sm:grid-cols-2 sm:items-end">
 						<div className="space-y-1.5">
+							<Label htmlFor="applySymbol">申请标的</Label>
+							<Input
+								id="applySymbol"
+								value={applySymbol}
+								onChange={(e) => setApplySymbol(e.target.value)}
+								placeholder={resolvedSymbol ? stripExchangeSuffix(resolvedSymbol) : "600519"}
+							/>
 							<p className="text-sm">
 								当前申请：
 								<span className="font-medium">
-									{hasResolvedSymbol ? `${resolvedSymbol} × ${applyQty}` : "尚未选择标的"}
+									{hasApplySymbol ? `${applyTargetSymbol} × ${applyQty}` : "尚未输入标的"}
 								</span>
 							</p>
 							{!myCoach ? (
 								<p className="text-destructive text-xs">先绑定教练后才能申请额度。</p>
 							) : null}
 							{myCoach && publicResources.length === 0 ? (
-								<p className="text-destructive text-xs">教练尚未设置可发放库存。请教练到「教练工作台」加入标的。</p>
+								<p className="text-xs">
+									教练库存里还没有标的。仍可在本栏输入代码提出添加，提交后为审核中。
+								</p>
 							) : null}
-							{hasResolvedSymbol && publicResources.length > 0 && !hasSymbolInPublicPool ? (
-								<p className="text-destructive text-xs">
-									教练库存没有该标的。请点左侧列表已有代码。
+							{myCoach && hasApplySymbol && publicResources.length > 0 && !hasSymbolInPublicPool ? (
+								<p className="text-xs">
+									教练库存暂无该标的，也可以申请；提交后为审核中，教练批准时会按数量补库存。
 								</p>
 							) : null}
 						</div>
@@ -1897,18 +1936,20 @@ export function TradeV2PageClient() {
 					</div>
 					{pendingRequests.length > 0 ? (
 						<p className="text-xs">
-							待批准：
-							{pendingRequests.map((row) => `${row.symbol} ${row.side === "short" ? "空头" : "多头"}×${row.quantity}`).join("；")}
+							审核中：
+							{pendingRequests
+								.map((row) => `${row.symbol} ${row.side === "short" ? "空头" : "多头"}×${row.quantity}`)
+								.join("；")}
 						</p>
 					) : null}
 					<div className="flex flex-wrap items-center gap-2">
-						<Button variant="outline" disabled={!hasResolvedSymbol || !myCoach} onClick={() => void applyResource("long")}>
+						<Button variant="outline" disabled={!hasApplySymbol || !myCoach} onClick={() => void applyResource("long")}>
 							申请多头额度
 						</Button>
 						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("long")}>
 							退回多头额度
 						</Button>
-						<Button variant="outline" disabled={!hasResolvedSymbol || !myCoach} onClick={() => void applyResource("short")}>
+						<Button variant="outline" disabled={!hasApplySymbol || !myCoach} onClick={() => void applyResource("short")}>
 							申请空头额度
 						</Button>
 						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("short")}>
@@ -1931,7 +1972,7 @@ export function TradeV2PageClient() {
 									{publicResources.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={3} className="text-center text-muted-foreground">
-												暂无教练库存
+												暂无教练库存。可直接输入代码申请，状态为审核中。
 											</TableCell>
 										</TableRow>
 									) : (
@@ -1968,7 +2009,7 @@ export function TradeV2PageClient() {
 									{personalResources.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={4} className="text-center text-muted-foreground">
-												暂无个人资源。请向金钱豹教练申请额度，批准到账后再开仓。
+												暂无个人资源。请向金钱豹教练申请额度，审核通过到账后再开仓。
 											</TableCell>
 										</TableRow>
 									) : (

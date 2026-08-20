@@ -73,7 +73,7 @@ export function AdminPublicResourcesPanel() {
 				toast.error(json.error ?? "保存失败");
 				return;
 			}
-			toast.success("已保存为全站应急模板。学员日常请向金钱豹教练申请额度。");
+			toast.success("已保存为全站应急模板。日常请在考核盘资源栏加库存，不要在这里发学员额度。");
 			setForm(EMPTY_FORM);
 			await load();
 		} catch {

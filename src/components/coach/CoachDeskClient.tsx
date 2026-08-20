@@ -197,7 +197,7 @@ export function CoachDeskClient() {
 				<CoachBadge />
 			</header>
 			<p className="text-muted-foreground text-sm">
-				在这里设置可发放库存、直接给学员额度，或批准学员在考核盘提交的申请。后台不再逐笔审批。
+				日常请在考核盘「资源」栏加库存、批准审核中申请或直接发放。本页是备份工作台。
 			</p>
 
 			<section className="space-y-3 rounded-xl border p-4">
@@ -354,9 +354,9 @@ export function CoachDeskClient() {
 			</section>
 
 			<section className="space-y-3 rounded-xl border p-4">
-				<h2 className="text-sm font-medium">待批准申请（{pendingRequests.length}）</h2>
+				<h2 className="text-sm font-medium">审核中申请（{pendingRequests.length}）</h2>
 				{pendingRequests.length === 0 ? (
-					<p className="text-muted-foreground text-sm">没有待批申请。</p>
+					<p className="text-muted-foreground text-sm">没有审核中的申请。</p>
 				) : (
 					pendingRequests.map((row) => (
 						<div key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm">

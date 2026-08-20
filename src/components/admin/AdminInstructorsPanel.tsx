@@ -301,7 +301,7 @@ export function AdminInstructorsPanel() {
 					任命教练
 				</Button>
 				<p className="text-muted-foreground w-full text-xs">
-					只任命身份，不审批额度。日常库存与批准在学员站「教练工作台」。使用工作台还需有效 T3 会员。
+					只任命身份，不审批额度。日常库存、审核与发放都在考核盘「资源」栏完成。教练需有效 T3 会员。
 				</p>
 			</div>
 

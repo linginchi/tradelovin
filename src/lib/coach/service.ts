@@ -93,6 +93,26 @@ export async function listCoachStudents(
 	return (data ?? []) as CoachStudentRow[];
 }
 
+export async function attachStudentNames(
+	service: SupabaseClient,
+	rows: CoachStudentRow[],
+): Promise<Array<CoachStudentRow & { student_name: string }>> {
+	if (rows.length === 0) return [];
+	const ids = [...new Set(rows.map((row) => row.student_id))];
+	const { data, error } = await service.from("profiles").select("id, real_name, nickname").in("id", ids);
+	if (error) throw new Error(error.message);
+	const nameMap = new Map(
+		((data ?? []) as Array<{ id: string; real_name: string | null; nickname?: string | null }>).map((row) => [
+			row.id,
+			displayNameFromProfile(row),
+		]),
+	);
+	return rows.map((row) => ({
+		...row,
+		student_name: nameMap.get(row.student_id) ?? "学员",
+	}));
+}
+
 export async function listCoachRequests(
 	service: SupabaseClient,
 	coachId: string,
@@ -138,21 +158,6 @@ export async function createResourceRequest(
 	if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
 		throw new Error("申请数量必须为正整数");
 	}
-	const { data: inventory, error: invErr } = await service
-		.from("tq_coach_resources")
-		.select("id, long_limit, short_limit")
-		.eq("coach_id", input.coachId)
-		.eq("symbol", symbol)
-		.maybeSingle();
-	if (invErr) throw new Error(invErr.message);
-	if (!inventory) throw new Error("教练库存中不存在该标的");
-	const remaining =
-		input.side === "long"
-			? Number((inventory as { long_limit?: number }).long_limit ?? 0)
-			: Number((inventory as { short_limit?: number }).short_limit ?? 0);
-	if (remaining < input.quantity) {
-		throw new Error(input.side === "long" ? "教练可做多库存不足" : "教练可做空库存不足");
-	}
 
 	const { data: existingPending, error: pendingErr } = await service
 		.from("tq_resource_requests")
@@ -164,7 +169,7 @@ export async function createResourceRequest(
 		.maybeSingle();
 	if (pendingErr) throw new Error(pendingErr.message);
 	if (existingPending) {
-		throw new Error("该标的已有待批准申请。下一步：等待教练批准，或先取消后再重新申请。");
+		throw new Error("该标的已有审核中的申请。下一步：等待教练在考核盘资源栏批准，或请教练拒绝后再重新申请。");
 	}
 
 	const { data, error } = await service
@@ -181,6 +186,107 @@ export async function createResourceRequest(
 		.single();
 	if (error) throw new Error(error.message);
 	return data as ResourceRequestRow;
+}
+
+export async function ensureCoachInventoryForGrant(
+	service: SupabaseClient,
+	coachId: string,
+	symbol: string,
+	side: ResourceSide,
+	quantity: number,
+): Promise<void> {
+	const normalized = normalizeCnSymbol(symbol);
+	if (!isCanonicalCnSymbol(normalized)) throw new Error(SYMBOL_FORMAT_ERROR_MESSAGE);
+	if (!Number.isInteger(quantity) || quantity <= 0) {
+		throw new Error("quantity 必须为正整数");
+	}
+	const { data, error } = await service
+		.from("tq_coach_resources")
+		.select("id, long_limit, short_limit, name")
+		.eq("coach_id", coachId)
+		.eq("symbol", normalized)
+		.maybeSingle();
+	if (error) throw new Error(error.message);
+	const currentLong = Number((data as { long_limit?: number } | null)?.long_limit ?? 0);
+	const currentShort = Number((data as { short_limit?: number } | null)?.short_limit ?? 0);
+	const long_limit = side === "long" ? Math.max(currentLong, quantity) : currentLong;
+	const short_limit = side === "short" ? Math.max(currentShort, quantity) : currentShort;
+	await upsertCoachInventory(service, coachId, {
+		symbol: normalized,
+		name: ((data as { name?: string | null } | null)?.name ?? normalized) || normalized,
+		long_limit,
+		short_limit,
+	});
+}
+
+export async function markResourceRequestReviewed(
+	service: SupabaseClient,
+	requestId: string,
+	input: {
+		status: "approved" | "rejected";
+		reviewedBy: string;
+		rejectReason?: string | null;
+	},
+): Promise<void> {
+	const { error } = await service
+		.from("tq_resource_requests")
+		.update({
+			status: input.status,
+			reviewed_by: input.reviewedBy,
+			reject_reason: input.status === "rejected" ? input.rejectReason || "教练已拒绝" : null,
+			reviewed_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
+		})
+		.eq("id", requestId);
+	if (error) throw new Error(error.message);
+}
+
+export async function recordDirectGrant(
+	service: SupabaseClient,
+	input: {
+		coachId: string;
+		studentId: string;
+		symbol: string;
+		side: ResourceSide;
+		quantity: number;
+		reviewedBy: string;
+	},
+): Promise<void> {
+	const symbol = normalizeCnSymbol(input.symbol);
+	const { error } = await service.from("tq_resource_requests").insert({
+		student_id: input.studentId,
+		coach_id: input.coachId,
+		symbol,
+		side: input.side,
+		quantity: input.quantity,
+		status: "approved",
+		reviewed_by: input.reviewedBy,
+		reviewed_at: new Date().toISOString(),
+	});
+	if (error) throw new Error(error.message);
+}
+
+export async function attachRequestNames(
+	service: SupabaseClient,
+	rows: ResourceRequestRow[],
+): Promise<Array<ResourceRequestRow & { student_name: string; reviewed_by_name: string | null }>> {
+	if (rows.length === 0) return [];
+	const ids = [
+		...new Set(rows.flatMap((row) => [row.student_id, row.reviewed_by].filter((id): id is string => Boolean(id)))),
+	];
+	const { data, error } = await service.from("profiles").select("id, real_name, nickname").in("id", ids);
+	if (error) throw new Error(error.message);
+	const nameMap = new Map(
+		((data ?? []) as Array<{ id: string; real_name: string | null; nickname: string | null }>).map((row) => [
+			row.id,
+			displayNameFromProfile(row),
+		]),
+	);
+	return rows.map((row) => ({
+		...row,
+		student_name: nameMap.get(row.student_id) ?? "学员",
+		reviewed_by_name: row.reviewed_by ? nameMap.get(row.reviewed_by) ?? "教练" : null,
+	}));
 }
 
 export async function grantCoachResource(

@@ -98,13 +98,18 @@ test("trade workbench labels exam desk, prechecks quota, and closes with positio
 	assert.match(src, /collectTradeDiagnostics/);
 	assert.match(src, /测试反馈|FeedbackButton/);
 	assert.match(src, /id="applyQty"/);
+	assert.match(src, /id="applySymbol"/);
 	assert.match(src, /selectPublicPoolSymbol/);
 	assert.match(src, /hasSymbolInPublicPool/);
 	assert.match(src, /Number\(applyQty\)/);
 	assert.match(src, /\/api\/resources\/coach/);
 	assert.match(src, /bindCoach/);
 	assert.match(src, /CoachBadge/);
+	assert.match(src, /CoachExamResourcePanel/);
+	assert.match(src, /审核中/);
+	assert.match(src, /canOpenDesk/);
 	assert.doesNotMatch(src, /再用下单区数量申请/);
+	assert.doesNotMatch(src, /请教练到「教练工作台」加入标的/);
 });
 
 test("order API normalizes string errors from placeV2Order", () => {
@@ -161,13 +166,15 @@ test("feedback API and button collect tester diagnostics", () => {
 	assert.match(button, /MAX_SCREENSHOT_BYTES/);
 });
 
-test("missing coach inventory symbol tells tester to use coach desk", async () => {
+test("missing coach inventory symbol tells tester to apply from the exam resource panel", async () => {
 	const { explainOperationFailure } = await loadTsModule("../../src/lib/trade-v2/operation-guidance.ts");
 	const text = explainOperationFailure("教练库存中不存在该标的");
-	assert.match(text, /教练/);
-	assert.match(text, /工作台/);
+	assert.match(text, /资源/);
+	assert.match(text, /审核中/);
 	const unbound = explainOperationFailure("请先选择金钱豹教练并等待对方接受");
 	assert.match(unbound, /绑定/);
+	const pending = explainOperationFailure("该标的已有审核中的申请");
+	assert.match(pending, /审核中/);
 });
 
 test("admin public resource upsert rejects illegal symbol and negative limits", async () => {
@@ -228,6 +235,11 @@ test("student apply creates a pending request instead of granting from the publi
 	assert.match(apply, /pending/);
 	assert.doesNotMatch(apply, /applyResource\(/);
 	assert.doesNotMatch(apply, /tq_apply_resource/);
+	const service = readFileSync(join(root, "src/lib/coach/service.ts"), "utf8");
+	assert.match(service, /status: "pending"/);
+	assert.match(service, /审核中/);
+	assert.doesNotMatch(service, /教练库存中不存在该标的/);
+	assert.doesNotMatch(service, /remaining < input.quantity/);
 });
 
 test("coach grant RPC deducts coach inventory not the public pool", () => {
@@ -268,9 +280,36 @@ test("admin can appoint golden leopard coaches without approving each quota", ()
 	assert.match(badges, /GOLDEN_LEOPARD_COACH_BADGE/);
 	const guide = readFileSync(join(root, "docs/trade/t0-sim-exam-guide.zh.md"), "utf8");
 	assert.match(guide, /金钱豹教练/);
-	assert.match(guide, /\/coach/);
+	assert.match(guide, /审核中/);
+	assert.match(guide, /考核盘「资源」栏/);
+	assert.match(guide, /后台「讲师」页/);
+	assert.doesNotMatch(guide, /cjkzt/i);
+	assert.doesNotMatch(guide, /教练打开 `\/coach`：加入标的/);
 	assert.doesNotMatch(guide, /配置公共资源池。学员只能申请这里已有的标的/);
+	const guideHtml = readFileSync(join(root, "docs/trade/t0-sim-exam-guide.zh.html"), "utf8");
+	assert.doesNotMatch(guideHtml, /cjkzt/i);
+	const tradeUi = [
+		readFileSync(join(root, "src/components/trade/TradeV2PageClient.tsx"), "utf8"),
+		readFileSync(join(root, "src/components/trade/TradeGuideModal.tsx"), "utf8"),
+		readFileSync(join(root, "src/components/coach/CoachExamResourcePanel.tsx"), "utf8"),
+		readFileSync(join(root, "src/lib/trade-v2/operation-guidance.ts"), "utf8"),
+	].join("\n");
+	assert.doesNotMatch(tradeUi, /cjkzt/i);
 	const requests = readFileSync(join(root, "src/app/api/coach/requests/route.ts"), "utf8");
 	assert.match(requests, /rejectReason/);
 	assert.match(requests, /tq_coach_grant_resource|grantCoachResource/);
+	assert.match(requests, /reviewedBy|reviewed_by|markResourceRequestReviewed/);
+	assert.match(requests, /ensureCoachInventoryForGrant/);
+	const migration = readFileSync(join(root, "supabase/migrations/20260820183000_resource_request_reviewed_by.sql"), "utf8");
+	assert.match(migration, /reviewed_by/);
+	const examPanel = readFileSync(join(root, "src/components/coach/CoachExamResourcePanel.tsx"), "utf8");
+	assert.match(examPanel, /可发放库存/);
+	assert.match(examPanel, /待我审批/);
+	assert.match(examPanel, /直接发放/);
+	assert.match(examPanel, /\/api\/coach\/resources/);
+	assert.match(examPanel, /\/api\/coach\/requests/);
+	const adminResources = readFileSync(join(root, "src/app/cjkzt/(protected)/resources/page.tsx"), "utf8");
+	assert.match(adminResources, /日常不要在这里加/);
+	const guideModal = readFileSync(join(root, "src/components/trade/TradeGuideModal.tsx"), "utf8");
+	assert.match(guideModal, /审核中/);
 });

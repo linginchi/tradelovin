@@ -1,7 +1,7 @@
 export const GOLDEN_LEOPARD_COACH_BADGE = {
 	id: "golden-leopard-coach",
 	name: "P3 · 金钱豹教练",
-	description: "可设置模拟盘库存、直接发放额度，并批准学员申请",
+	description: "可在考核盘资源栏设置库存、直接发放额度，并批准学员申请",
 } as const;
 
 export type CoachBindStatus = "none" | "pending" | "accepted" | "rejected";
@@ -44,10 +44,19 @@ export type ResourceRequestRow = {
 	quantity: number;
 	status: ResourceRequestStatus;
 	reject_reason: string | null;
+	reviewed_by: string | null;
 	reviewed_at: string | null;
 	created_at: string;
 	updated_at: string;
 	student_name?: string;
+	reviewed_by_name?: string;
+};
+
+export type CoachExamDeskPayload = {
+	canOpenDesk: true;
+	inventory: CoachInventoryRow[];
+	pendingRequests: Array<ResourceRequestRow & { student_name: string; reviewed_by_name: string | null }>;
+	students: Array<CoachStudentRow & { student_name: string }>;
 };
 
 export function displayNameFromProfile(row: {

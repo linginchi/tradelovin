@@ -34,7 +34,7 @@ export function TradeGuideModal({
 				<ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
 					<li>右上角「操作练习」是教学引导，不扣额度、不计入考核。</li>
 					<li>本页是考核盘（模拟）：成交会计入 TQ 月度评分。</li>
-					<li>下单前先绑定金钱豹教练，向其库存申请多头/空头额度；批准到账后才能开仓。</li>
+					<li>下单前先绑定金钱豹教练，在「资源」栏申请多头/空头额度；审核中需等教练当场批准到账后才能开仓。</li>
 					<li>点击卖盘价格 - 快速填入价格后买入</li>
 					<li>点击买盘价格 - 快速填入价格后卖出</li>
 					<li>点击卖量 - 挂单买入</li>

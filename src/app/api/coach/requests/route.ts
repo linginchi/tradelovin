@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 
 import { requireCoachDesk } from "@/lib/coach/guard";
-import { grantCoachResource, listCoachRequests } from "@/lib/coach/service";
-import { displayNameFromProfile } from "@/lib/coach/types";
+import {
+	attachRequestNames,
+	ensureCoachInventoryForGrant,
+	grantCoachResource,
+	listCoachRequests,
+	markResourceRequestReviewed,
+	recordDirectGrant,
+} from "@/lib/coach/service";
 import { isCanonicalCnSymbol, normalizeCnSymbol } from "@/lib/trade/symbol-normalizer";
 import type { ResourceSide } from "@/lib/trade-v2/resources";
 
@@ -13,18 +19,8 @@ export async function GET() {
 	if (ctx instanceof NextResponse) return ctx;
 	try {
 		const rows = await listCoachRequests(ctx.service, ctx.userId);
-		const studentIds = [...new Set(rows.map((row) => row.student_id))];
-		const nameMap = new Map<string, string>();
-		if (studentIds.length > 0) {
-			const { data } = await ctx.service.from("profiles").select("id, real_name, nickname").in("id", studentIds);
-			for (const row of (data ?? []) as Array<{ id: string; real_name: string | null; nickname: string | null }>) {
-				nameMap.set(row.id, displayNameFromProfile(row));
-			}
-		}
-		return NextResponse.json({
-			success: true,
-			data: rows.map((row) => ({ ...row, student_name: nameMap.get(row.student_id) ?? "学员" })),
-		});
+		const data = await attachRequestNames(ctx.service, rows);
+		return NextResponse.json({ success: true, data });
 	} catch (error) {
 		return NextResponse.json(
 			{ success: false, error: error instanceof Error ? error.message : "读取申请失败" },
@@ -64,36 +60,29 @@ export async function POST(request: Request) {
 			return NextResponse.json({ success: false, error: "该申请已处理" }, { status: 400 });
 		}
 		if (action === "reject") {
-			const { error: updErr } = await ctx.service
-				.from("tq_resource_requests")
-				.update({
-					status: "rejected",
-					reject_reason: rejectReason || "教练已拒绝",
-					reviewed_at: new Date().toISOString(),
-					updated_at: new Date().toISOString(),
-				})
-				.eq("id", requestId);
-			if (updErr) throw new Error(updErr.message);
+			await markResourceRequestReviewed(ctx.service, requestId, {
+				status: "rejected",
+				reviewedBy: ctx.userId,
+				rejectReason,
+			});
 			return NextResponse.json({ success: true });
 		}
 		const side = (row as { side: ResourceSide }).side;
+		const symbol = (row as { symbol: string }).symbol;
+		const quantity = Number((row as { quantity: number }).quantity);
+		await ensureCoachInventoryForGrant(ctx.service, ctx.userId, symbol, side, quantity);
 		await grantCoachResource(
 			ctx.service,
 			ctx.userId,
 			(row as { student_id: string }).student_id,
-			(row as { symbol: string }).symbol,
+			symbol,
 			side,
-			Number((row as { quantity: number }).quantity),
+			quantity,
 		);
-		const { error: updErr } = await ctx.service
-			.from("tq_resource_requests")
-			.update({
-				status: "approved",
-				reviewed_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-			})
-			.eq("id", requestId);
-		if (updErr) throw new Error(updErr.message);
+		await markResourceRequestReviewed(ctx.service, requestId, {
+			status: "approved",
+			reviewedBy: ctx.userId,
+		});
 		return NextResponse.json({ success: true });
 	} catch (error) {
 		return NextResponse.json(
@@ -121,7 +110,16 @@ export async function PUT(request: Request) {
 		return NextResponse.json({ success: false, error: "请填写学员、合法标的和正整数数量" }, { status: 400 });
 	}
 	try {
+		await ensureCoachInventoryForGrant(ctx.service, ctx.userId, symbol, side, quantity);
 		const data = await grantCoachResource(ctx.service, ctx.userId, studentId, symbol, side, quantity);
+		await recordDirectGrant(ctx.service, {
+			coachId: ctx.userId,
+			studentId,
+			symbol,
+			side,
+			quantity,
+			reviewedBy: ctx.userId,
+		});
 		return NextResponse.json({ success: true, data: data ?? null });
 	} catch (error) {
 		return NextResponse.json(

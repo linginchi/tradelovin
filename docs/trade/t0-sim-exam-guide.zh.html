@@ -88,7 +88,7 @@
         <span class="chip">下单</span><span class="chip">委托</span><span class="chip">仓位</span>
         <span class="chip">成交</span><span class="chip">资源</span><span class="chip">账户</span>
       </div>
-      <p class="muted" style="margin-top:8px">资源页：左「教练可发放库存」≠ 右「个人资源额度」（真正能开仓的数量）。申请后要等教练批准。</p>
+      <p class="muted" style="margin-top:8px">资源页：左「教练可发放库存」≠ 右「个人资源额度」（真正能开仓的数量）。申请后状态为审核中，教练在同一栏批准。</p>
     </div>
   </div>
 
@@ -106,21 +106,20 @@
   <div class="flow">
     <div class="box">绑定教练</div>
     <div class="arrow">→</div>
-    <div class="box">点教练库存</div>
+    <div class="box">输入标的与数量</div>
     <div class="arrow">申请 →</div>
-    <div class="box warn">待教练批准</div>
-    <div class="arrow">→</div>
+    <div class="box warn">审核中</div>
+    <div class="arrow">教练当场批准 →</div>
     <div class="box ok">个人资源额度</div>
   </div>
   <h3>申请步骤</h3>
   <ol>
     <li>滚到「资源」，选择金钱豹教练并申请绑定，等对方接受。</li>
-    <li>点左侧「教练可发放库存」那一行选标的。</li>
-    <li>在本面板「申请数量（股）」填数量，例如 <strong>1000</strong>。</li>
+    <li>输入标的代码（库存里没有的也可以）和申请数量，例如 <strong>1000</strong>。</li>
     <li>做多点「申请多头额度」；做空点「申请空头额度」。</li>
-    <li>个人表要等教练批准后才会出现记录，才能按同一方向下单。</li>
+    <li>个人表要等教练当场批准后才会出现记录，状态在批准前显示为「审核中」。</li>
   </ol>
-  <div class="note">教练在 /coach 设置库存，也可直接发放。管理员只在 /cjkzt/instructors 任命教练，不批每一笔额度。</div>
+  <div class="note">教练在考核盘「资源」栏加库存、批准或直接发放，不必进后台。管理员只在后台讲师页任命教练。/coach 是备份工作台。</div>
 
   <h2>5. 做多 / 做空（逐步）</h2>
   <div class="two">
@@ -163,7 +162,7 @@
     <tbody>
       <tr><td>空头/多头额度不足</td><td>等教练批准个人额度到账后再下单</td></tr>
       <tr><td>请先选择金钱豹教练</td><td>资源面板绑定教练</td></tr>
-      <tr><td>教练库存中不存在该标的</td><td>点教练库存已有行，或请教练加入</td></tr>
+      <tr><td>教练库存中不存在该标的</td><td>在资源栏输入该代码提出添加，等审核通过</td></tr>
       <tr><td>价格必须大于 0</td><td>点盘口价格，或手填价格</td></tr>
       <tr><td>资金不足</td><td>打开「账户」，减少数量或先平仓</td></tr>
       <tr><td>无可卖仓位</td><td>先买入开多并成交</td></tr>
@@ -185,7 +184,7 @@
   <ol>
     <li>打开 /trade，看到考核盘和 TQ。</li>
     <li>不申请额度就做空下单 → 应被拦住并跳到资源。</li>
-    <li>绑定教练，点库存标的，申请空头 1000 → 待批准 → 教练批准后个人表出现记录。</li>
+    <li>绑定教练，输入标的并申请空头 1000 → 审核中 → 教练在同一栏批准后个人表出现记录。</li>
     <li>再开空 → 不应再因额度被拒。</li>
     <li>点测试反馈，确认诊断里有标的和最近失败。</li>
     <li>可选：走一遍操作练习，确认不产生真实委托。</li>

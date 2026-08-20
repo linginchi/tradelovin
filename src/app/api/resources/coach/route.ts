@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 
-import { coachBadgePayload } from "@/lib/coach/guard";
+import { canOpenCoachDesk, coachBadgePayload } from "@/lib/coach/guard";
 import {
+	attachRequestNames,
+	attachStudentNames,
 	bindStudentToCoach,
 	getStudentBinding,
 	listCoachDirectory,
 	listCoachInventory,
+	listCoachRequests,
+	listCoachStudents,
 	listStudentRequests,
 } from "@/lib/coach/service";
 import { displayNameFromProfile } from "@/lib/coach/types";
@@ -41,6 +45,31 @@ export async function GET() {
 			coachName = displayNameFromProfile((data as { real_name?: string | null; nickname?: string | null }) ?? {});
 		}
 		const inventory = accepted ? await listCoachInventory(service, accepted.coach_id) : [];
+		const namedRequests = await attachRequestNames(service, requests);
+		const access = await canOpenCoachDesk(service, ctx.userId);
+		let desk: {
+			canOpenDesk: true;
+			inventory: Awaited<ReturnType<typeof listCoachInventory>>;
+			pendingRequests: Awaited<ReturnType<typeof attachRequestNames>>;
+			students: Awaited<ReturnType<typeof attachStudentNames>>;
+		} | null = null;
+		if (access.canOpenDesk) {
+			const [ownInventory, pendingRows, students] = await Promise.all([
+				listCoachInventory(service, ctx.userId),
+				listCoachRequests(service, ctx.userId, "pending"),
+				listCoachStudents(service, ctx.userId),
+			]);
+			const [pendingRequests, namedStudents] = await Promise.all([
+				attachRequestNames(service, pendingRows),
+				attachStudentNames(service, students),
+			]);
+			desk = {
+				canOpenDesk: true,
+				inventory: ownInventory,
+				pendingRequests,
+				students: namedStudents,
+			};
+		}
 		return NextResponse.json({
 			success: true,
 			data: {
@@ -60,7 +89,9 @@ export async function GET() {
 					: null,
 				directory,
 				inventory,
-				requests,
+				requests: namedRequests,
+				canOpenDesk: access.canOpenDesk,
+				desk,
 			},
 		});
 	} catch (error) {
