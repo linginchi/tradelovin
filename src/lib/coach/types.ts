@@ -49,7 +49,7 @@ export type ResourceRequestRow = {
 	created_at: string;
 	updated_at: string;
 	student_name?: string;
-	reviewed_by_name?: string;
+	reviewed_by_name?: string | null;
 };
 
 export type CoachExamDeskPayload = {
