@@ -20,6 +20,14 @@ import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useMembershipCurrent } from "@/lib/membership/client";
 import {
+	getOpeningQuotaSide,
+	getPersonalQuotaForSymbol,
+	isQuotaInsufficientReason,
+	quotaInsufficientMessage,
+} from "@/lib/trade-v2/resources";
+import { explainOperationFailure, splitOperationGuidance } from "@/lib/trade-v2/operation-guidance";
+import { buildTradeFeedbackDiagnostics, recordTradeFailure } from "@/lib/trade-v2/feedback-diagnostics";
+import {
 	isCanonicalCnSymbol,
 	normalizeCnSymbol,
 	shouldAutoSwitchCnSymbolInput,
@@ -170,6 +178,17 @@ function formatRiskDiagnostic(event: TriggerEvent): string {
 	);
 }
 
+function scrollToResourcesPanel() {
+	document.getElementById("panel-resources")?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toastFail(message: string) {
+	const explained = explainOperationFailure(message);
+	recordTradeFailure(explained);
+	const split = splitOperationGuidance(explained);
+	toast.error(split.reason, { description: `下一步：${split.next}` });
+}
+
 function resolveEventFailureScore(event: TriggerEvent): number {
 	return resolveFailurePriority({
 		code: extractCodeFromDetail(event.detail),
@@ -222,7 +241,8 @@ export function TradeV2PageClient() {
 	const focusSymbolInput = useCallback(() => {
 		document.getElementById("symbolInput")?.focus();
 	}, []);
-	const { expired: membershipExpired } = useMembershipCurrent(true);
+	const { expired: membershipExpired, membership } = useMembershipCurrent(true);
+	const upgradePreview = membership?.upgradePreview ?? null;
 	const failureOnlyEvents = isFailedEventView(searchParams.get("eventView"));
 
 	const loadQuote = useCallback(
@@ -250,7 +270,7 @@ export function TradeV2PageClient() {
 				setQuote(json.data);
 				if (!price) setPrice(String(json.data.price));
 			} catch (error) {
-				setFetchError(error instanceof Error ? error.message : "行情加载失败");
+				setFetchError(explainOperationFailure(error instanceof Error ? error.message : "行情加载失败"));
 			}
 		},
 		[locale, price],
@@ -359,7 +379,7 @@ export function TradeV2PageClient() {
 				loadQuote(resolvedSymbol),
 			]);
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "加载失败");
+			toastFail(error instanceof Error ? error.message : "加载失败");
 		} finally {
 			setBootLoading(false);
 		}
@@ -563,7 +583,7 @@ export function TradeV2PageClient() {
 		}
 		const clean = normalizeCnSymbol(trimmed);
 		if (!isCanonicalCnSymbol(clean)) {
-			toast.error(SYMBOL_INPUT_HINT_MESSAGE);
+			toastFail(SYMBOL_INPUT_HINT_MESSAGE);
 			return;
 		}
 		setSymbolInput(stripExchangeSuffix(clean));
@@ -611,19 +631,28 @@ export function TradeV2PageClient() {
 	const handlePlaceOrder = useCallback(
 		async (side: "buy" | "sell") => {
 			if (!resolvedSymbol || !isCanonicalCnSymbol(resolvedSymbol)) {
-				toast.error("请先在顶部输入标的代码");
+				toastFail("请先在顶部输入标的代码");
 				focusSymbolInput();
 				return;
 			}
 			const px = Number(isTypingPrice ? draftPrice : price);
 			const q = Number(qty);
 			if (!Number.isFinite(px) || px <= 0) {
-				toast.error("价格必须大于 0");
+				toastFail("价格必须大于 0");
 				return;
 			}
 			if (!Number.isInteger(q) || q <= 0) {
-				toast.error("股数必须为正整数");
+				toastFail("股数必须为正整数");
 				return;
+			}
+			const openingSide = getOpeningQuotaSide(positionMode, side);
+			if (openingSide) {
+				const available = getPersonalQuotaForSymbol(personalResources, resolvedSymbol, openingSide);
+				if (available < q) {
+					toastFail(quotaInsufficientMessage(openingSide));
+					scrollToResourcesPanel();
+					return;
+				}
 			}
 			setPlacing(true);
 			try {
@@ -642,7 +671,10 @@ export function TradeV2PageClient() {
 				});
 				const json = await parseJson<TradeV2OrderApiResponse>(res);
 				if (!json.success) {
-					toast.error(json.error ?? "下单失败");
+					toastFail(json.error ?? "下单失败");
+					if (isQuotaInsufficientReason(json.error)) {
+						scrollToResourcesPanel();
+					}
 					return;
 				}
 				const status = json.data?.status ?? "filled";
@@ -656,20 +688,23 @@ export function TradeV2PageClient() {
 				});
 				if (resultView.tone === "success") {
 					toast.success(resultView.toastText);
+				} else if (resultView.tone === "error") {
+					toastFail(resultView.detailText);
 				} else {
-					toast.warning(resultView.toastText);
+					const split = splitOperationGuidance(resultView.detailText);
+					toast.warning(split.reason, { description: `下一步：${split.next}` });
 				}
 				if (json.data?.exec_price) setPrice(String(json.data.exec_price));
 				await loadTradeData();
 				await loadResources();
 				await loadQuote(resolvedSymbol);
 			} catch (error) {
-				toast.error(error instanceof Error ? error.message : "下单失败");
+				toastFail(error instanceof Error ? error.message : "下单失败");
 			} finally {
 				setPlacing(false);
 			}
 		},
-		[accountType, draftPrice, focusSymbolInput, isTypingPrice, loadQuote, loadResources, loadTradeData, positionMode, price, qty, resolvedSymbol]
+		[accountType, draftPrice, focusSymbolInput, isTypingPrice, loadQuote, loadResources, loadTradeData, personalResources, positionMode, price, qty, resolvedSymbol]
 	);
 	const debouncedPlaceOrder = useDebouncedCallback((side: "buy" | "sell") => {
 		void handlePlaceOrder(side);
@@ -691,7 +726,7 @@ export function TradeV2PageClient() {
 				const json = await parseJson<TradeV2CancelApiResponse>(res);
 				if (!json.success) {
 					setOptimisticCancelledOrderIds((prev) => prev.filter((id) => id !== orderId));
-					toast.error(json.error ?? "撤单失败");
+					toastFail(json.error ?? "撤单失败");
 					return;
 				}
 				toast.success("撤单成功");
@@ -699,7 +734,7 @@ export function TradeV2PageClient() {
 				await loadResources();
 			} catch (error) {
 				setOptimisticCancelledOrderIds((prev) => prev.filter((id) => id !== orderId));
-				toast.error(error instanceof Error ? error.message : "撤单失败");
+				toastFail(error instanceof Error ? error.message : "撤单失败");
 			} finally {
 				setOptimisticCancelledOrderIds((prev) => prev.filter((id) => id !== orderId));
 			}
@@ -708,18 +743,18 @@ export function TradeV2PageClient() {
 	);
 	const forceClosePosition = useCallback(async () => {
 		if (!selectedPosition) {
-			toast.error("当前无可平仓持仓");
+			toastFail("当前无可平仓持仓");
 			return;
 		}
 		const closeSide = selectedPosition.position_type === "long" ? "sell" : "buy";
 		const closeQty = Math.max(0, Number(selectedPosition.available_qty));
 		if (!Number.isFinite(closeQty) || closeQty <= 0) {
-			toast.error("当前持仓可用数量为 0");
+			toastFail("当前持仓可用数量为 0");
 			return;
 		}
 		const px = Number(quote?.price ?? price);
 		if (!Number.isFinite(px) || px <= 0) {
-			toast.error("请先确认价格");
+			toastFail("请先确认价格");
 			return;
 		}
 		try {
@@ -736,12 +771,12 @@ export function TradeV2PageClient() {
 					price: px,
 					quantity: closeQty,
 					accountType,
-					positionMode,
+					positionMode: selectedPosition.position_type,
 				}),
 			});
 			const json = await parseJson<TradeV2OrderApiResponse>(res);
 			if (!json.success) {
-				toast.error(json.error ?? "平仓失败");
+				toastFail(json.error ?? "平仓失败");
 				return;
 			}
 			toast.success(`已对 ${selectedPosition.symbol} 执行平仓`);
@@ -749,22 +784,22 @@ export function TradeV2PageClient() {
 			await loadResources();
 			await loadQuote(selectedPosition.symbol);
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "平仓失败");
+			toastFail(error instanceof Error ? error.message : "平仓失败");
 		} finally {
 			setPlacing(false);
 		}
-	}, [accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price, selectedPosition]);
+	}, [accountType, loadQuote, loadResources, loadTradeData, price, quote?.price, selectedPosition]);
 	const forceClosePositionByRow = useCallback(
 		async (position: PositionRow) => {
 			const closeSide = position.position_type === "long" ? "sell" : "buy";
 			const closeQty = Math.max(0, Number(position.available_qty));
 			if (!Number.isFinite(closeQty) || closeQty <= 0) {
-				toast.error("当前持仓可用数量为 0");
+				toastFail("当前持仓可用数量为 0");
 				return;
 			}
 			const px = Number(quote?.price ?? price);
 			if (!Number.isFinite(px) || px <= 0) {
-				toast.error("请先确认价格");
+				toastFail("请先确认价格");
 				return;
 			}
 			try {
@@ -781,12 +816,12 @@ export function TradeV2PageClient() {
 						price: px,
 						quantity: closeQty,
 						accountType,
-						positionMode,
+						positionMode: position.position_type,
 					}),
 				});
 				const json = await parseJson<TradeV2OrderApiResponse>(res);
 				if (!json.success) {
-					toast.error(json.error ?? "平仓失败");
+					toastFail(json.error ?? "平仓失败");
 					return;
 				}
 				toast.success(`已对 ${position.symbol} 执行平仓`);
@@ -794,12 +829,12 @@ export function TradeV2PageClient() {
 				await loadResources();
 				await loadQuote(position.symbol);
 			} catch (error) {
-				toast.error(error instanceof Error ? error.message : "平仓失败");
+				toastFail(error instanceof Error ? error.message : "平仓失败");
 			} finally {
 				setPlacing(false);
 			}
 		},
-		[accountType, loadQuote, loadResources, loadTradeData, positionMode, price, quote?.price],
+		[accountType, loadQuote, loadResources, loadTradeData, price, quote?.price],
 	);
 	const adjustQty = useCallback((delta: number) => {
 		setQty((prev) => {
@@ -887,9 +922,14 @@ export function TradeV2PageClient() {
 	]);
 
 	const applyResource = useCallback(async (side: "long" | "short") => {
+		if (!resolvedSymbol || !isCanonicalCnSymbol(resolvedSymbol)) {
+			toastFail("请先在顶部输入标的代码，再申请额度");
+			focusSymbolInput();
+			return;
+		}
 		const quantity = Number(qty);
 		if (!Number.isInteger(quantity) || quantity <= 0) {
-			toast.error("申请数量必须为正整数");
+			toastFail("申请数量必须为正整数");
 			return;
 		}
 		try {
@@ -905,20 +945,20 @@ export function TradeV2PageClient() {
 			});
 			const json = await parseJson<TradeV2ResourceMutationApiResponse>(res);
 			if (!json.success) {
-				toast.error(json.error ?? "申请资源失败");
+				toastFail(json.error ?? "申请资源失败");
 				return;
 			}
 			toast.success(`${side === "long" ? "多头" : "空头"}资源申请成功`);
 			await loadResources();
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "申请资源失败");
+			toastFail(error instanceof Error ? error.message : "申请资源失败");
 		}
-	}, [loadResources, qty, resolvedSymbol]);
+	}, [focusSymbolInput, loadResources, qty, resolvedSymbol]);
 
 	const returnResourceBack = useCallback(async (side: "long" | "short") => {
 		const quantity = Number(qty);
 		if (!Number.isInteger(quantity) || quantity <= 0) {
-			toast.error("退回数量必须为正整数");
+			toastFail("退回数量必须为正整数");
 			return;
 		}
 		try {
@@ -934,13 +974,13 @@ export function TradeV2PageClient() {
 			});
 			const json = await parseJson<TradeV2ResourceMutationApiResponse>(res);
 			if (!json.success) {
-				toast.error(json.error ?? "退回资源失败");
+				toastFail(json.error ?? "退回资源失败");
 				return;
 			}
 			toast.success(`${side === "long" ? "多头" : "空头"}资源退回成功`);
 			await loadResources();
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "退回资源失败");
+			toastFail(error instanceof Error ? error.message : "退回资源失败");
 		}
 	}, [loadResources, qty, resolvedSymbol]);
 
@@ -952,7 +992,7 @@ export function TradeV2PageClient() {
 			});
 			const json = await parseJson<TradeV2ForceCloseApiResponse>(res);
 			if (!json.success) {
-				toast.error(json.error ?? "强平失败");
+				toastFail(json.error ?? "强平失败");
 				return;
 			}
 			toast.success(
@@ -960,7 +1000,7 @@ export function TradeV2PageClient() {
 			);
 			await loadAll();
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "强平失败");
+			toastFail(error instanceof Error ? error.message : "强平失败");
 		}
 	}, [loadAll]);
 
@@ -974,19 +1014,19 @@ export function TradeV2PageClient() {
 			});
 			const json = await parseJson<TradeV2RiskMessagesReadApiResponse>(res);
 			if (!json.success) {
-				toast.error(json.error ?? "标记已读失败");
+				toastFail(json.error ?? "标记已读失败");
 				return;
 			}
 			await loadRiskMessages();
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "标记已读失败");
+			toastFail(error instanceof Error ? error.message : "标记已读失败");
 		}
 	}, [loadRiskMessages]);
 
 	const saveSettings = useCallback(async () => {
 		const defaultQty = Number(qty);
 		if (!Number.isInteger(defaultQty) || defaultQty <= 0) {
-			toast.error("默认股数必须为正整数");
+			toastFail("默认股数必须为正整数");
 			return;
 		}
 		try {
@@ -1005,12 +1045,12 @@ export function TradeV2PageClient() {
 			});
 			const json = await parseJson<TradeV2SettingsApiResponse>(res);
 			if (!json.success) {
-				toast.error(json.error ?? "保存设置失败");
+				toastFail(json.error ?? "保存设置失败");
 				return;
 			}
 			toast.success("设置已保存");
 		} catch (error) {
-			toast.error(error instanceof Error ? error.message : "保存设置失败");
+			toastFail(error instanceof Error ? error.message : "保存设置失败");
 		}
 	}, [accountType, autoLogoutNight, positionMode, qty, quickOrderPrefs, sourceMode]);
 
@@ -1020,7 +1060,7 @@ export function TradeV2PageClient() {
 			await navigator.clipboard.writeText(diagnostic);
 			toast.success("结构化诊断串已复制");
 		} catch {
-			toast.error("复制失败，请手动复制");
+			toastFail("复制失败，请手动复制");
 		}
 	}, []);
 
@@ -1059,6 +1099,41 @@ export function TradeV2PageClient() {
 		}
 		window.localStorage.removeItem("trade-v2-guide-hide");
 	};
+	const collectTradeDiagnostics = useCallback(() => {
+		return buildTradeFeedbackDiagnostics({
+			pathname,
+			symbol: resolvedSymbol,
+			positionMode,
+			accountType,
+			qty,
+			price: isTypingPrice ? draftPrice : price,
+			fetchError,
+			plan: membership?.plan ?? "",
+			membershipStatus: membership?.status ?? "",
+			longQuota: getPersonalQuotaForSymbol(personalResources, resolvedSymbol, "long"),
+			shortQuota: getPersonalQuotaForSymbol(personalResources, resolvedSymbol, "short"),
+			recentOrders: orders.slice(0, 5).map((row) => ({
+				symbol: row.symbol,
+				side: row.side,
+				status: row.status,
+				reject_reason: row.reject_reason ?? null,
+			})),
+		});
+	}, [
+		accountType,
+		draftPrice,
+		fetchError,
+		isTypingPrice,
+		membership?.plan,
+		membership?.status,
+		orders,
+		pathname,
+		personalResources,
+		positionMode,
+		price,
+		qty,
+		resolvedSymbol,
+	]);
 
 	return (
 		<div className="mx-auto flex w-full max-w-6xl flex-col gap-4 pb-24">
@@ -1073,9 +1148,15 @@ export function TradeV2PageClient() {
 			<Card className="sticky top-2 z-10">
 				<CardHeader className="pb-2">
 					<div className="flex flex-wrap items-center justify-between gap-2">
-						<CardTitle className="text-base">工作台导航</CardTitle>
+						<div className="min-w-0 space-y-1">
+							<CardTitle className="text-base">考核盘（模拟）</CardTitle>
+							<p className="text-muted-foreground text-xs">
+								本页成交计入 TQ 考核。右上角「操作练习」不扣额度、不计入考核。
+							</p>
+						</div>
 						<div className="flex flex-wrap items-center gap-2">
 							<PracticeButton />
+							<FeedbackButton defaultContext="trade-v2-exam" collectDiagnostics={collectTradeDiagnostics} />
 							<Button variant="outline" size="sm" onClick={() => setGuideOpen(true)}>
 								<HelpCircle className="mr-1 h-4 w-4" />
 								帮助
@@ -1117,6 +1198,21 @@ export function TradeV2PageClient() {
 				>
 					{tMembership("expiredBanner")}
 				</Link>
+			) : null}
+			{upgradePreview ? (
+				<div className="rounded-xl border border-border/70 bg-card/40 px-3 py-2 text-sm">
+					<p className="text-muted-foreground text-xs">本月 TQ 考核进度</p>
+					<p>
+						成交 {upgradePreview.monthlyTradeCount}/{upgradePreview.minTradesForScore} 笔，分数{" "}
+						<span className="font-semibold tabular-nums">{upgradePreview.monthlyScore.toFixed(2)}</span>
+						{upgradePreview.nextPlan
+							? `；下一档 ${upgradePreview.nextPlan} 门槛 ${upgradePreview.planRequirements?.[upgradePreview.nextPlan]?.requiredScore ?? "—"}`
+							: "；已到最高档"}
+					</p>
+					<Link href="/membership" className="text-primary mt-1 inline-block text-xs underline underline-offset-2">
+						查看升级进度
+					</Link>
+				</div>
 			) : null}
 
 			<Card id="panel-symbol-input" className="border-primary/20">
@@ -1220,7 +1316,19 @@ export function TradeV2PageClient() {
 							</p>
 						</div>
 						{bootLoading ? <p className="text-muted-foreground text-sm">加载中...</p> : null}
-						{fetchError ? <p className="text-sm text-red-500">{fetchError}</p> : null}
+						{fetchError ? (
+							<div className="text-sm text-red-500">
+								{(() => {
+									const split = splitOperationGuidance(fetchError);
+									return (
+										<>
+											<p>{split.reason}</p>
+											<p>下一步：{split.next}</p>
+										</>
+									);
+								})()}
+							</div>
+						) : null}
 						<div className="grid grid-cols-2 gap-2">
 							<div className="rounded-md border p-3">
 								<p className="mb-2 text-xs font-medium" title="点击卖盘价格可快速填入并准备买入">
@@ -1518,13 +1626,17 @@ export function TradeV2PageClient() {
 												{resultView.statusText}
 											</Badge>
 										</TableCell>
-										<TableCell className="max-w-56 truncate text-xs text-muted-foreground">
+										<TableCell className="max-w-80 whitespace-normal text-xs text-muted-foreground">
 											{resultView.detailText}
 										</TableCell>
 										<TableCell className="text-end">
 											{o.status === "pending" ? (
 												<Button variant="outline" size="sm" onClick={() => void cancelOrder(o.id)}>
 													撤单
+												</Button>
+											) : isQuotaInsufficientReason(o.reject_reason) ? (
+												<Button variant="outline" size="sm" onClick={() => scrollToResourcesPanel()}>
+													去申请额度
 												</Button>
 											) : (
 												<span className="text-muted-foreground">—</span>
@@ -1632,17 +1744,26 @@ export function TradeV2PageClient() {
 					<TabsTrigger value="settings">设置</TabsTrigger>
 				</TabsList>
 				<TabsContent id="panel-resources" value="resources" className="space-y-3 rounded-md border p-3">
+					<p className="text-muted-foreground text-xs">
+						公共池是可申请库存，不是账户可交易额度。请先选标的，再用下单区数量申请个人多头或空头额度。
+					</p>
+					<p className="text-sm">
+						当前申请：
+						<span className="font-medium">
+							{hasResolvedSymbol ? `${resolvedSymbol} × ${qty}` : "尚未选择标的"}
+						</span>
+					</p>
 					<div className="flex flex-wrap items-center gap-2">
-						<Button variant="outline" onClick={() => void applyResource("long")}>
+						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void applyResource("long")}>
 							申请多头额度
 						</Button>
-						<Button variant="outline" onClick={() => void returnResourceBack("long")}>
+						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("long")}>
 							退回多头额度
 						</Button>
-						<Button variant="outline" onClick={() => void applyResource("short")}>
+						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void applyResource("short")}>
 							申请空头额度
 						</Button>
-						<Button variant="outline" onClick={() => void returnResourceBack("short")}>
+						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("short")}>
 							退回空头额度
 						</Button>
 						{resourceLoading ? <span className="text-muted-foreground text-xs">刷新中...</span> : null}
@@ -1692,7 +1813,7 @@ export function TradeV2PageClient() {
 									{personalResources.length === 0 ? (
 										<TableRow>
 											<TableCell colSpan={4} className="text-center text-muted-foreground">
-												暂无个人资源
+												暂无个人资源。公共池有股也不能直接下单，请先申请对应多头或空头额度。
 											</TableCell>
 										</TableRow>
 									) : (
@@ -1932,7 +2053,6 @@ export function TradeV2PageClient() {
 					)}
 				</CardContent>
 			</Card>
-			<FeedbackButton defaultContext="trade-v2" />
 		</div>
 	);
 }

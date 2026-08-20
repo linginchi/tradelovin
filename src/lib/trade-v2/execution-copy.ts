@@ -5,6 +5,7 @@ import {
 	TRADE_ORDER_MESSAGE_PENDING,
 	TRADE_ORDER_MESSAGE_REJECTED,
 } from "@/lib/trade/execution-messages";
+import { explainOperationFailure } from "@/lib/trade-v2/operation-guidance";
 
 export type UnifiedExecutionStatus = "pending" | "partial" | "filled" | "rejected" | "cancelled";
 
@@ -46,12 +47,13 @@ export function resolveExecutionStatusBadgeVariant(
 }
 
 export function resolveExecutionDetailText(status: UnifiedExecutionStatus, serverMessage?: string): string {
-	if (serverMessage) return serverMessage;
-	if (status === "filled") return TRADE_ORDER_MESSAGE_FILLED;
-	if (status === "partial") return TRADE_ORDER_MESSAGE_PARTIAL;
-	if (status === "pending") return TRADE_ORDER_MESSAGE_PENDING;
-	if (status === "rejected") return TRADE_ORDER_MESSAGE_REJECTED;
-	return TRADE_ORDER_MESSAGE_CANCELLED;
+	if (status === "filled") return serverMessage || TRADE_ORDER_MESSAGE_FILLED;
+	if (status === "partial") return serverMessage || TRADE_ORDER_MESSAGE_PARTIAL;
+	if (status === "cancelled") return serverMessage || TRADE_ORDER_MESSAGE_CANCELLED;
+	if (status === "pending") {
+		return explainOperationFailure(serverMessage || TRADE_ORDER_MESSAGE_PENDING);
+	}
+	return explainOperationFailure(serverMessage || TRADE_ORDER_MESSAGE_REJECTED);
 }
 
 export function buildExecutionToastCopy(input: ExecutionCopyInput): string {

@@ -16,7 +16,8 @@ import type {
 	TradeV2TradesApiResponse,
 } from "@/lib/trade-v2/api-types";
 import { pushRiskMessage } from "@/lib/trade-v2/risk-messages";
-import { consumeLongQuota, consumeShortQuota } from "@/lib/trade-v2/resources";
+import { consumeLongQuota, consumeShortQuota, getOpeningQuotaSide, getPersonalQuotaForSymbol, listPersonalResources, quotaInsufficientMessage } from "@/lib/trade-v2/resources";
+import { explainOperationFailure } from "@/lib/trade-v2/operation-guidance";
 
 type Side = "buy" | "sell";
 type PositionMode = "long" | "short";
@@ -81,7 +82,7 @@ type FillDecision = {
 };
 
 function err(message: string, status = 400): ApiResult<{ success: false; error: string }> {
-	return { status, body: { success: false, error: message } };
+	return { status, body: { success: false, error: explainOperationFailure(message) } };
 }
 
 function round2(n: number): number {
@@ -553,11 +554,12 @@ export async function placeV2Order(
 		};
 	}
 	if (decision.status === "rejected") {
+		const rejectReason = explainOperationFailure(decision.reason ?? "委托被拦截（模拟）");
 		await supabase
 			.from("tq_orders")
 			.update({
 				status: "rejected",
-				reject_reason: decision.reason ?? "委托被拦截（模拟）",
+				reject_reason: rejectReason,
 			})
 			.eq("id", order.id);
 		try {
@@ -566,7 +568,7 @@ export async function placeV2Order(
 				level: "warning",
 				code: "BROKER_SIM_DROP",
 				title: "委托被风控拦截（模拟）",
-				content: `${decision.reason ?? "通道拥堵导致委托被拦截"} | tier=${decision.tier} | gapBps=${decision.priceGapBps} | liq=${decision.liquidityScore}`,
+				content: `${rejectReason} | tier=${decision.tier} | gapBps=${decision.priceGapBps} | liq=${decision.liquidityScore}`,
 				meta: {
 					orderId: order.id,
 					symbol,
@@ -585,7 +587,7 @@ export async function placeV2Order(
 			status: 409,
 			body: {
 				success: false,
-				error: decision.reason ?? "委托被拦截（模拟）",
+				error: rejectReason,
 				data: {
 					id: order.id,
 					status: "rejected",
@@ -596,13 +598,21 @@ export async function placeV2Order(
 					liquidity_score: decision.liquidityScore,
 					execution_tier: decision.tier,
 					execution_model: "threshold-v1",
-					message: decision.reason ?? "委托被拦截（模拟）",
+					message: rejectReason,
 				},
 			},
 		};
 	}
 
 	try {
+		const openingSide = getOpeningQuotaSide(positionMode, input.side);
+		if (openingSide) {
+			const personal = await listPersonalResources(supabase, input.userId);
+			const available = getPersonalQuotaForSymbol(personal, symbol, openingSide);
+			if (available < decision.filledQty) {
+				throw new Error(quotaInsufficientMessage(openingSide));
+			}
+		}
 		if (positionMode === "long") {
 			if (input.side === "buy") {
 				await applyBuyLongFill(
@@ -662,7 +672,7 @@ export async function placeV2Order(
 			},
 		};
 	} catch (error) {
-		const reason = error instanceof Error ? error.message : "撮合失败";
+		const reason = explainOperationFailure(error instanceof Error ? error.message : "撮合失败");
 		await supabase
 			.from("tq_orders")
 			.update({

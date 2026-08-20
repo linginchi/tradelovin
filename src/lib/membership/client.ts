@@ -10,6 +10,14 @@ import {
 
 export type MembershipPlan = "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
 
+export type MembershipUpgradePreview = {
+	nextPlan: "T1" | "T2" | "T3" | null;
+	monthlyScore: number;
+	monthlyTradeCount: number;
+	minTradesForScore: number;
+	planRequirements?: Record<string, { requiredScore: number }>;
+};
+
 export type MembershipCurrent = {
 	id?: string;
 	userId?: string;
@@ -17,6 +25,7 @@ export type MembershipCurrent = {
 	status?: string;
 	trialEnd?: string | null;
 	trialDaysLeft?: number;
+	upgradePreview?: MembershipUpgradePreview | null;
 };
 
 type MembershipCurrentResponse = {

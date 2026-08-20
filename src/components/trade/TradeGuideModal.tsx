@@ -32,6 +32,9 @@ export function TradeGuideModal({
 					<DialogDescription>首次使用建议先阅读，熟悉盘口点击与快捷键。</DialogDescription>
 				</DialogHeader>
 				<ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+					<li>右上角「操作练习」是教学引导，不扣额度、不计入考核。</li>
+					<li>本页是考核盘（模拟）：成交会计入 TQ 月度评分。</li>
+					<li>下单前先到「资源」申请个人多头/空头额度；公共池有股不等于能直接交易。</li>
 					<li>点击卖盘价格 - 快速填入价格后买入</li>
 					<li>点击买盘价格 - 快速填入价格后卖出</li>
 					<li>点击卖量 - 挂单买入</li>

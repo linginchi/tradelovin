@@ -4,6 +4,43 @@ import { SYMBOL_FORMAT_ERROR_MESSAGE } from "@/lib/trade-v2/api-error";
 
 export type ResourceSide = "long" | "short";
 
+type PersonalQuotaLookupRow = {
+	symbol: string;
+	long_quota: number;
+	short_quota: number;
+	dynamic_quota?: number;
+};
+
+export function getPersonalQuotaForSymbol(
+	rows: PersonalQuotaLookupRow[],
+	symbolRaw: string,
+	side: ResourceSide,
+): number {
+	const symbol = symbolRaw.trim().toUpperCase();
+	const row = rows.find((item) => item.symbol.trim().toUpperCase() === symbol);
+	if (!row) return 0;
+	const base = side === "long" ? Number(row.long_quota ?? 0) : Number(row.short_quota ?? 0);
+	return Math.max(0, base) + Math.max(0, Number(row.dynamic_quota ?? 0));
+}
+
+export function getOpeningQuotaSide(
+	positionMode: ResourceSide,
+	side: "buy" | "sell",
+): ResourceSide | null {
+	if (positionMode === "long" && side === "buy") return "long";
+	if (positionMode === "short" && side === "sell") return "short";
+	return null;
+}
+
+export function quotaInsufficientMessage(side: ResourceSide): string {
+	const label = side === "long" ? "多头" : "空头";
+	return `${label}额度不足，请先在「资源」申请${label}额度`;
+}
+
+export function isQuotaInsufficientReason(reason: string | null | undefined): boolean {
+	return Boolean(reason && reason.includes("额度不足"));
+}
+
 type UserResourceRow = {
 	id: string;
 	user_id: string;
@@ -203,6 +240,6 @@ async function consumeQuotaBySide(
 	}
 
 	if (remain > 0) {
-		throw new Error(side === "long" ? "多头额度不足" : "空头额度不足");
+		throw new Error(quotaInsufficientMessage(side));
 	}
 }

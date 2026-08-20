@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>T0 模拟交易与考核说明书</title>
+  <style>
+    @page { size: A4; margin: 16mm 16mm 18mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+      color: #1a1a1a;
+      font-size: 12.5px;
+      line-height: 1.55;
+      margin: 0;
+    }
+    h1 { font-size: 22px; margin: 0 0 8px; }
+    h2 { font-size: 16px; margin: 22px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; page-break-after: avoid; }
+    h3 { font-size: 13.5px; margin: 14px 0 6px; page-break-after: avoid; }
+    p, li { margin: 0 0 6px; }
+    ol { padding-left: 1.3em; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; font-size: 12px; }
+    th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #f4f4f4; }
+    .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
+    .note { background: #fff7ed; border: 1px solid #fdba74; padding: 8px 10px; border-radius: 6px; margin: 8px 0 12px; }
+    .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 10px 0 14px; page-break-inside: avoid; }
+    .box {
+      border: 1.5px solid #333;
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-width: 88px;
+      text-align: center;
+      background: #fff;
+    }
+    .box.ok { background: #ecfdf5; border-color: #059669; }
+    .box.warn { background: #fff7ed; border-color: #ea580c; }
+    .box.bad { background: #fef2f2; border-color: #dc2626; }
+    .arrow { font-size: 16px; color: #444; }
+    .screen {
+      border: 1.5px solid #222;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 8px 0 14px;
+      page-break-inside: avoid;
+    }
+    .screen-bar { background: #111; color: #fff; padding: 6px 10px; font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
+    .screen-body { padding: 8px 10px; background: #fafafa; }
+    .chip { display: inline-block; border: 1px solid #999; border-radius: 999px; padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 11px; background: #fff; }
+    .chip.accent { background: #f97316; color: #fff; border-color: #ea580c; font-weight: 600; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; page-break-inside: avoid; }
+    .panel { border: 1px solid #ccc; border-radius: 6px; padding: 8px; background: #fff; }
+    .muted { color: #666; font-size: 11px; }
+    footer { margin-top: 24px; color: #777; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <h1>T0 模拟交易与考核说明书</h1>
+  <p class="meta">适用：测试员 / 学员（P0 · 花豹及以后）　入口：导航「TO交易训练」或打开 <strong>/trade</strong>　日期：2026-08-20</p>
+  <p>考核不在单独菜单里。打开交易页后，标题「考核盘（模拟）」就是考核环境。</p>
+
+  <h2>1. 先分清两件事</h2>
+  <table>
+    <thead><tr><th></th><th>操作练习</th><th>考核盘（本页）</th></tr></thead>
+    <tbody>
+      <tr><td>入口</td><td>右上角橙色「操作练习」</td><td>打开 /trade 后整页就是</td></tr>
+      <tr><td>扣额度</td><td>不扣</td><td>必须先申请个人额度</td></tr>
+      <tr><td>计入考核</td><td>不计入</td><td>成交计入 TQ 月度分</td></tr>
+      <tr><td>适合</td><td>第一次学按钮在哪</td><td>真实模拟下单、升级评分</td></tr>
+    </tbody>
+  </table>
+  <div class="flow">
+    <div class="box">登录</div><div class="arrow">→</div>
+    <div class="box">打开 /trade</div><div class="arrow">→</div>
+    <div class="box ok">考核盘下单</div><div class="arrow">→</div>
+    <div class="box">计入本月 TQ</div>
+  </div>
+  <p class="muted">旁路：右上角「操作练习」只学手势，不扣额度、不计入考核。</p>
+
+  <h2>2. 界面对照（示意图）</h2>
+  <div class="screen">
+    <div class="screen-bar">
+      <span>考核盘（模拟）　本月 TQ：成交 0/10　分数 0.00</span>
+      <span><span class="chip accent">操作练习</span> <span class="chip accent">测试反馈</span> 帮助</span>
+    </div>
+    <div class="screen-body">
+      <div>
+        <span class="chip">标的输入</span><span class="chip">交易设置</span><span class="chip">行情</span>
+        <span class="chip">下单</span><span class="chip">委托</span><span class="chip">仓位</span>
+        <span class="chip">成交</span><span class="chip">资源</span><span class="chip">账户</span>
+      </div>
+      <p class="muted" style="margin-top:8px">资源页：左「公共资源池」（可申请库存）≠ 右「个人资源额度」（真正能开仓的数量）</p>
+    </div>
+  </div>
+
+  <h2>3. 第一次打开</h2>
+  <ol>
+    <li>登录账号。</li>
+    <li>点导航「TO交易训练」，进入 /trade。</li>
+    <li>确认顶栏是「考核盘（模拟）」，并看到本月 TQ 进度。</li>
+    <li>阅读弹出的操作指引。以后可点「帮助」再看。</li>
+    <li>建议先点一次「操作练习」，走完「资源申请」关，再回到本页做考核。</li>
+  </ol>
+
+  <h2>4. 最关键：先申请个人额度</h2>
+  <p>公共池数字很大，并不表示你能直接买卖。开仓只扣<strong>个人额度</strong>。</p>
+  <div class="flow">
+    <div class="box">公共资源池<br/>可做多 / 可做空</div>
+    <div class="arrow">申请 →</div>
+    <div class="box ok">个人资源额度</div>
+    <div class="arrow">开仓 →</div>
+    <div class="box ok">成交并扣额度</div>
+  </div>
+  <div class="flow">
+    <div class="box">公共池有股</div>
+    <div class="arrow">直接下单 →</div>
+    <div class="box bad">拒单：多头/空头额度不足</div>
+  </div>
+  <h3>申请步骤</h3>
+  <ol>
+    <li>顶部「标的代码」输入 <strong>600000</strong> 或 <strong>600000.SH</strong>，按回车，等行情出现。</li>
+    <li>下单区「股数」填申请数量，例如 <strong>1000</strong>（一般为 100 的整数倍）。</li>
+    <li>滚到「资源」，确认「当前申请」为 <strong>600000.SH × 1000</strong>。</li>
+    <li>做多点「申请多头额度」；做空点「申请空头额度」。</li>
+    <li>成功后，「个人资源额度」表必须出现该标的，才能按同一方向下单。</li>
+  </ol>
+  <div class="note">未选标的时申请按钮是灰的。先选代码再申请。失败弹窗会同时写原因和下一步。</div>
+
+  <h2>5. 做多 / 做空（逐步）</h2>
+  <div class="two">
+    <div class="panel">
+      <h3>做多</h3>
+      <ol>
+        <li>交易模式选「做多」。</li>
+        <li>个人多头额度 ≥ 下单股数。</li>
+        <li>点盘口卖价填价格，或手填大于 0 的价格。</li>
+        <li>点「买入」。</li>
+        <li>「委托」看已成交 / 已挂单 / 已拒单。</li>
+        <li>平多：仍做多，点「卖出」，数量不超过仓位可用。</li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>做空</h3>
+      <ol>
+        <li>交易模式选「做空」。</li>
+        <li>个人空头额度 ≥ 下单股数。</li>
+        <li>填价格和数量。</li>
+        <li>点「卖出开空」（不是做多里的卖出）。</li>
+        <li>仓位出现空头后再回补。</li>
+        <li>回补：保持做空，点「买入回补」。</li>
+      </ol>
+    </div>
+  </div>
+
+  <h2>6. 看结果与评分</h2>
+  <ul>
+    <li><strong>委托</strong>：当日订单。拒单可点「去申请额度」。</li>
+    <li><strong>仓位</strong>：当前持仓。可用为 0 时不能平。</li>
+    <li><strong>成交</strong>：计入 TQ。</li>
+    <li>顶栏 TQ：大约满 10 笔才出有效分。P0 升 T1 门槛约 60 分。完整进度在会员中心。</li>
+    <li>操作练习的记录不会写入考核委托，也不会扣个人额度。</li>
+  </ul>
+
+  <h2>7. 失败时看「原因 + 下一步」</h2>
+  <table>
+    <thead><tr><th>你看到</th><th>先做什么</th></tr></thead>
+    <tbody>
+      <tr><td>空头/多头额度不足</td><td>选标的 → 资源 → 申请对应额度 → 再下单</td></tr>
+      <tr><td>请先输入标的</td><td>顶部输入代码并回车</td></tr>
+      <tr><td>价格必须大于 0</td><td>点盘口价格，或手填价格</td></tr>
+      <tr><td>资金不足</td><td>打开「账户」，减少数量或先平仓</td></tr>
+      <tr><td>无可卖仓位</td><td>先买入开多并成交</td></tr>
+      <tr><td>已挂单</td><td>等成交，或把价格改近现价</td></tr>
+      <tr><td>撮合通道拥堵</td><td>模拟风控随机拦截，稍后再试</td></tr>
+    </tbody>
+  </table>
+
+  <h2>8. 测试反馈</h2>
+  <p>顶栏橙色「测试反馈」，或右下角大按钮「测试遇到问题？点此反馈」。</p>
+  <ol>
+    <li>用自己的话写：刚才点了什么、期望什么、实际看到什么。</li>
+    <li>可填微信 / 邮箱 / 手机，可上传截图。</li>
+    <li>下方「自动诊断信息」不要删，里面有标的、额度、最近拒单和失败提示。</li>
+    <li>提交。</li>
+  </ol>
+
+  <h2>9. 建议测试路径（约 10 分钟）</h2>
+  <ol>
+    <li>打开 /trade，看到考核盘和 TQ。</li>
+    <li>不申请额度就做空下单 → 应被拦住并跳到资源。</li>
+    <li>输入 600000，数量 1000，申请空头额度 → 个人表出现记录。</li>
+    <li>再开空 → 不应再因额度被拒。</li>
+    <li>点测试反馈，确认诊断里有标的和最近失败。</li>
+    <li>可选：走一遍操作练习，确认不产生真实委托。</li>
+  </ol>
+  <footer>新紮學豹　T0 模拟交易与考核说明书　简体中文</footer>
+</body>
+</html>
