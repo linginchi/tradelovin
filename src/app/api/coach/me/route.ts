@@ -20,6 +20,7 @@ export async function GET() {
 			data: {
 				isCoach: access.isCoach,
 				canOpenDesk: access.canOpenDesk,
+				userId: ctx.userId,
 				badge: access.isCoach ? coachBadgePayload() : null,
 			},
 		});

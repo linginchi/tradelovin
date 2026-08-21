@@ -54,6 +54,7 @@ export type ResourceRequestRow = {
 
 export type CoachExamDeskPayload = {
 	canOpenDesk: true;
+	selfId: string;
 	inventory: CoachInventoryRow[];
 	pendingRequests: Array<ResourceRequestRow & { student_name: string; reviewed_by_name: string | null }>;
 	students: Array<CoachStudentRow & { student_name: string }>;

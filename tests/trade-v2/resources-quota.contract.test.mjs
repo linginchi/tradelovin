@@ -233,6 +233,8 @@ test("student apply creates a pending request instead of granting from the publi
 	const apply = readFileSync(join(root, "src/app/api/resources/apply/route.ts"), "utf8");
 	assert.match(apply, /createResourceRequest/);
 	assert.match(apply, /pending/);
+	assert.match(apply, /grantCoachQuotaWithRecord/);
+	assert.match(apply, /selfGranted/);
 	assert.doesNotMatch(apply, /applyResource\(/);
 	assert.doesNotMatch(apply, /tq_apply_resource/);
 	const service = readFileSync(join(root, "src/lib/coach/service.ts"), "utf8");
@@ -253,6 +255,9 @@ test("coach grant RPC deducts coach inventory not the public pool", () => {
 	assert.match(sql, /FROM public.tq_coach_resources/);
 	assert.doesNotMatch(sql, /UPDATE public.tq_public_resources/);
 	assert.doesNotMatch(sql, /INSERT INTO public.tq_public_resources/);
+	const selfGrant = readFileSync(join(root, "supabase/migrations/20260820190000_coach_self_grant.sql"), "utf8");
+	assert.match(selfGrant, /v_self_grant/);
+	assert.doesNotMatch(selfGrant, /不能给自己发放额度/);
 });
 
 test("coach desk requires is_coach and active T3", async () => {
@@ -295,6 +300,7 @@ test("admin can appoint golden leopard coaches without approving each quota", ()
 		readFileSync(join(root, "src/lib/trade-v2/operation-guidance.ts"), "utf8"),
 	].join("\n");
 	assert.doesNotMatch(tradeUi, /cjkzt/i);
+	assert.match(tradeUi, /不必绑定另一位教练|不必绑定其他教练/);
 	const requests = readFileSync(join(root, "src/app/api/coach/requests/route.ts"), "utf8");
 	assert.match(requests, /rejectReason/);
 	assert.match(requests, /tq_coach_grant_resource|grantCoachResource/);
@@ -306,6 +312,7 @@ test("admin can appoint golden leopard coaches without approving each quota", ()
 	assert.match(examPanel, /可发放库存/);
 	assert.match(examPanel, /待我审批/);
 	assert.match(examPanel, /直接发放/);
+	assert.match(examPanel, /自己（本账号）/);
 	assert.match(examPanel, /\/api\/coach\/resources/);
 	assert.match(examPanel, /\/api\/coach\/requests/);
 	const adminResources = readFileSync(join(root, "src/app/cjkzt/(protected)/resources/page.tsx"), "utf8");

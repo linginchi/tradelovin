@@ -131,7 +131,7 @@ npm run deploy:cloudflare
 2. Stripe webhook 已包含 `https://leolearnstotrade.com/api/membership/webhook/stripe`（可暂时保留 `tradelovin.com` endpoint）。
 3. `wrangler.jsonc` 与 CI 构建的 `NEXT_PUBLIC_APP_URL` 已指向 `https://leolearnstotrade.com` 并完成一次 main 部署。
 4. GitHub Actions Variable `TQ_CRON_BASE_URL` 已改为 `https://leolearnstotrade.com`。
-5. Supabase Authentication → Site URL 已指向新主域；Redirect URLs **仍保留** `https://xeoaxis.com/**`。
+5. Supabase Authentication → Site URL 已指向新主域；Redirect URLs **仍保留** `https://xeoaxis.com/**`。Google OAuth 自定义域 **`auth.leolearnstotrade.com` 已激活**（细节见 [`ops/mainland-access/XEOAXIS_RECOVERY.md`](ops/mainland-access/XEOAXIS_RECOVERY.md) §D）；**不要**改构建期 `NEXT_PUBLIC_SUPABASE_URL`。
 6. 部署后 `npm run smoke:xeoaxis` 与主域 release fingerprint 均通过。
 
 详细步骤见 [`docs/superpowers/specs/2026-07-30-phase2-overseas-domain-cutover.md`](docs/superpowers/specs/2026-07-30-phase2-overseas-domain-cutover.md) 与 [`ops/phase2-overseas-domain-cutover/CHECKLIST.md`](ops/phase2-overseas-domain-cutover/CHECKLIST.md)。

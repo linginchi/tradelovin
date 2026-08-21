@@ -17,7 +17,7 @@ type Props = {
 
 export function CoachExamResourcePanel({ desk, busy: parentBusy, onChanged }: Props) {
 	const [form, setForm] = useState({ symbol: "", name: "", long_limit: "100000", short_limit: "100000" });
-	const [grant, setGrant] = useState({ studentId: "", symbol: "", side: "short", quantity: "100" });
+	const [grant, setGrant] = useState({ studentId: desk.selfId, symbol: "", side: "short", quantity: "100" });
 	const [busy, setBusy] = useState(false);
 	const disabled = busy || Boolean(parentBusy);
 	const acceptedStudents = desk.students.filter((row) => row.status === "accepted");
@@ -117,7 +117,7 @@ export function CoachExamResourcePanel({ desk, busy: parentBusy, onChanged }: Pr
 		<div className="space-y-3 rounded-md border border-amber-300/60 bg-amber-50/40 p-3 dark:bg-amber-950/20">
 			<p className="text-sm font-medium">教练当场操作</p>
 			<p className="text-muted-foreground text-xs">
-				日常加库存、批准审核中申请、直接发放都在本栏完成，不必进后台。批准时若库存不够，会按申请数量先补再发放。
+				日常加库存、给自己或学员发放额度、批准审核中申请都在本栏完成，不必进后台。给自己加额度会留下发放记录，无需再绑定其他教练。批准时若库存不够，会按申请数量先补再发放。
 			</p>
 
 			{pendingBinds.length > 0 ? (
@@ -244,7 +244,7 @@ export function CoachExamResourcePanel({ desk, busy: parentBusy, onChanged }: Pr
 							value={grant.studentId}
 							onChange={(e) => setGrant((prev) => ({ ...prev, studentId: e.target.value }))}
 						>
-							<option value="">选择已绑定学员</option>
+							<option value={desk.selfId}>自己（本账号）</option>
 							{acceptedStudents.map((row) => (
 								<option key={row.student_id} value={row.student_id}>
 									{row.student_name ?? row.student_id}

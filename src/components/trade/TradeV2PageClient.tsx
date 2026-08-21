@@ -1020,9 +1020,11 @@ export function TradeV2PageClient() {
 				return;
 			}
 			toast.success(
-				json.data && typeof json.data === "object" && "pending" in json.data && json.data.pending
-					? `${side === "long" ? "多头" : "空头"}申请已提交，状态为审核中`
-					: `${side === "long" ? "多头" : "空头"}资源申请成功`,
+				json.data && typeof json.data === "object" && "selfGranted" in json.data && json.data.selfGranted
+					? `${side === "long" ? "多头" : "空头"}额度已发放到本账号`
+					: json.data && typeof json.data === "object" && "pending" in json.data && json.data.pending
+						? `${side === "long" ? "多头" : "空头"}申请已提交，状态为审核中`
+						: `${side === "long" ? "多头" : "空头"}资源申请成功`,
 			);
 			await loadResources();
 		} catch (error) {
@@ -1854,11 +1856,19 @@ export function TradeV2PageClient() {
 				</TabsList>
 				<TabsContent id="panel-resources" value="resources" className="space-y-3 rounded-md border p-3">
 					<p className="text-muted-foreground text-xs">
-						额度由金钱豹教练在本栏设置并批准。输入标的和数量提出添加，状态为「审核中」；到账前不能开仓。
+						额度由金钱豹教练在本栏设置并批准。学员输入标的和数量提出添加，状态为「审核中」；到账前不能开仓。教练给自己加额度会立刻到账并留下发放记录，不必绑定其他教练。
 					</p>
 					{canOpenDesk && coachDesk ? (
 						<CoachExamResourcePanel desk={coachDesk} busy={resourceLoading} onChanged={loadResources} />
 					) : null}
+					{canOpenDesk ? (
+						<div className="rounded-md border p-3 space-y-1">
+							<p className="text-sm font-medium">我的教练</p>
+							<p className="text-muted-foreground text-xs">
+								你是金钱豹教练，给自己加个人额度时不必绑定另一位教练。发放记录会写在申请单里。
+							</p>
+						</div>
+					) : (
 					<div className="rounded-md border p-3 space-y-2">
 						<p className="text-sm font-medium">我的教练</p>
 						{myCoach ? (
@@ -1895,6 +1905,7 @@ export function TradeV2PageClient() {
 							<p className="text-destructive text-xs">还没有已任命的金钱豹教练。请管理员在后台讲师页任命。</p>
 						) : null}
 					</div>
+					)}
 					<div className="grid gap-3 sm:grid-cols-2 sm:items-end">
 						<div className="space-y-1.5">
 							<Label htmlFor="applySymbol">申请标的</Label>
@@ -1910,8 +1921,11 @@ export function TradeV2PageClient() {
 									{hasApplySymbol ? `${applyTargetSymbol} × ${applyQty}` : "尚未输入标的"}
 								</span>
 							</p>
-							{!myCoach ? (
+							{!myCoach && !canOpenDesk ? (
 								<p className="text-destructive text-xs">先绑定教练后才能申请额度。</p>
+							) : null}
+							{canOpenDesk ? (
+								<p className="text-xs">教练申请会直接发到本账号个人额度，并留下发放记录。</p>
 							) : null}
 							{myCoach && publicResources.length === 0 ? (
 								<p className="text-xs">
@@ -1943,13 +1957,13 @@ export function TradeV2PageClient() {
 						</p>
 					) : null}
 					<div className="flex flex-wrap items-center gap-2">
-						<Button variant="outline" disabled={!hasApplySymbol || !myCoach} onClick={() => void applyResource("long")}>
+						<Button variant="outline" disabled={!hasApplySymbol || (!myCoach && !canOpenDesk)} onClick={() => void applyResource("long")}>
 							申请多头额度
 						</Button>
 						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("long")}>
 							退回多头额度
 						</Button>
-						<Button variant="outline" disabled={!hasApplySymbol || !myCoach} onClick={() => void applyResource("short")}>
+						<Button variant="outline" disabled={!hasApplySymbol || (!myCoach && !canOpenDesk)} onClick={() => void applyResource("short")}>
 							申请空头额度
 						</Button>
 						<Button variant="outline" disabled={!hasResolvedSymbol} onClick={() => void returnResourceBack("short")}>

@@ -49,6 +49,7 @@ export async function GET() {
 		const access = await canOpenCoachDesk(service, ctx.userId);
 		let desk: {
 			canOpenDesk: true;
+			selfId: string;
 			inventory: Awaited<ReturnType<typeof listCoachInventory>>;
 			pendingRequests: Awaited<ReturnType<typeof attachRequestNames>>;
 			students: Awaited<ReturnType<typeof attachStudentNames>>;
@@ -65,6 +66,7 @@ export async function GET() {
 			]);
 			desk = {
 				canOpenDesk: true,
+				selfId: ctx.userId,
 				inventory: ownInventory,
 				pendingRequests,
 				students: namedStudents,

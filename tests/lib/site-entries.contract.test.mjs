@@ -40,3 +40,10 @@ test("magic-link allowlist includes all entry hosts", () => {
 		assert.ok(hosts.includes(name), name);
 	}
 });
+
+test("magic-link allowlist does not include a Supabase custom auth hostname", () => {
+	for (const host of getMagicLinkAllowedHosts()) {
+		assert.equal(host.startsWith("auth."), false, host);
+		assert.equal(host.endsWith(".supabase.co"), false, host);
+	}
+});

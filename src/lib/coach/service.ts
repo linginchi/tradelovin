@@ -310,6 +310,36 @@ export async function grantCoachResource(
 	return data;
 }
 
+export async function grantCoachQuotaWithRecord(
+	service: SupabaseClient,
+	input: {
+		coachId: string;
+		studentId: string;
+		symbol: string;
+		side: ResourceSide;
+		quantity: number;
+	},
+) {
+	await ensureCoachInventoryForGrant(service, input.coachId, input.symbol, input.side, input.quantity);
+	const data = await grantCoachResource(
+		service,
+		input.coachId,
+		input.studentId,
+		input.symbol,
+		input.side,
+		input.quantity,
+	);
+	await recordDirectGrant(service, {
+		coachId: input.coachId,
+		studentId: input.studentId,
+		symbol: input.symbol,
+		side: input.side,
+		quantity: input.quantity,
+		reviewedBy: input.coachId,
+	});
+	return data;
+}
+
 export async function returnToCoachPool(
 	service: SupabaseClient,
 	studentId: string,

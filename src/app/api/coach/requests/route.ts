@@ -4,10 +4,10 @@ import { requireCoachDesk } from "@/lib/coach/guard";
 import {
 	attachRequestNames,
 	ensureCoachInventoryForGrant,
+	grantCoachQuotaWithRecord,
 	grantCoachResource,
 	listCoachRequests,
 	markResourceRequestReviewed,
-	recordDirectGrant,
 } from "@/lib/coach/service";
 import { isCanonicalCnSymbol, normalizeCnSymbol } from "@/lib/trade/symbol-normalizer";
 import type { ResourceSide } from "@/lib/trade-v2/resources";
@@ -110,15 +110,12 @@ export async function PUT(request: Request) {
 		return NextResponse.json({ success: false, error: "请填写学员、合法标的和正整数数量" }, { status: 400 });
 	}
 	try {
-		await ensureCoachInventoryForGrant(ctx.service, ctx.userId, symbol, side, quantity);
-		const data = await grantCoachResource(ctx.service, ctx.userId, studentId, symbol, side, quantity);
-		await recordDirectGrant(ctx.service, {
+		const data = await grantCoachQuotaWithRecord(ctx.service, {
 			coachId: ctx.userId,
 			studentId,
 			symbol,
 			side,
 			quantity,
-			reviewedBy: ctx.userId,
 		});
 		return NextResponse.json({ success: true, data: data ?? null });
 	} catch (error) {

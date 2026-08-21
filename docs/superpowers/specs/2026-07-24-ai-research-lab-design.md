@@ -144,6 +144,7 @@ No secrets.
 | P0-B | 后台模型切换、限次、成本字段、管理导航 |
 | P1 | 研究复盘 |
 | P2 | 教学组合跟踪 |
+| 其后 | **模块考核仪表盘**（T0 + 本实验室各一块，TQ + 点击给训练提示）。P0 完成后再做，见 [`2026-08-20-module-assessment-dashboard-design.md`](./2026-08-20-module-assessment-dashboard-design.md)。对外主名倾向 **量化实验室**。 |
 
 ## 10. Acceptance (P0)
 

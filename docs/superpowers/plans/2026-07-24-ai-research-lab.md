@@ -199,6 +199,10 @@
 `Task 8`（VPS）与 Spike 绑定  
 `Task 9` 收口
 
+## After P0 (do not start now)
+
+模块考核仪表盘（T0 + 量化实验室、TQ、点击给「从哪开始 / 加强哪项」）已记下，**等本计划 Task 9 完成后再另写 plan**。见 [`docs/superpowers/specs/2026-08-20-module-assessment-dashboard-design.md`](../specs/2026-08-20-module-assessment-dashboard-design.md)。
+
 ## Fallback
 
 若 Spike Gate 失败：保留主站 Task 1–7 接口形状，将 Dojo 替换为自研 `lab-worker`（同 VPS 或 Workers AI），Gemini 直连；更新 runbook，不重做会员与合规层。

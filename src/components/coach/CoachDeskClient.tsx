@@ -23,19 +23,28 @@ export function CoachDeskClient() {
 	const [deny, setDeny] = useState("");
 	const [state, setState] = useState<DeskState>(EMPTY);
 	const [form, setForm] = useState({ symbol: "", name: "", long_limit: "100000", short_limit: "100000" });
+	const [selfId, setSelfId] = useState("");
 	const [grant, setGrant] = useState({ studentId: "", symbol: "", side: "short", quantity: "100" });
 	const [studentEmail, setStudentEmail] = useState("");
 	const [busy, setBusy] = useState(false);
 
 	const load = useCallback(async () => {
 		const me = await fetch("/api/coach/me", { credentials: "include" });
-		const meJson = (await me.json()) as { success?: boolean; data?: { canOpenDesk?: boolean }; error?: string };
+		const meJson = (await me.json()) as {
+			success?: boolean;
+			data?: { canOpenDesk?: boolean; userId?: string };
+			error?: string;
+		};
 		if (!me.ok || !meJson.data?.canOpenDesk) {
 			setAllowed(false);
 			setDeny(meJson.error ?? "需要金钱豹教练身份，且会员为有效 T3。");
 			return;
 		}
 		setAllowed(true);
+		if (meJson.data.userId) {
+			setSelfId(meJson.data.userId);
+			setGrant((prev) => ({ ...prev, studentId: prev.studentId || meJson.data?.userId || "" }));
+		}
 		const [invRes, stuRes, reqRes] = await Promise.all([
 			fetch("/api/coach/resources", { credentials: "include" }),
 			fetch("/api/coach/students", { credentials: "include" }),
@@ -319,7 +328,7 @@ export function CoachDeskClient() {
 							value={grant.studentId}
 							onChange={(e) => setGrant((p) => ({ ...p, studentId: e.target.value }))}
 						>
-							<option value="">选择已绑定学员</option>
+							<option value={selfId || ""}>自己（本账号）</option>
 							{acceptedStudents.map((row) => (
 								<option key={row.student_id} value={row.student_id}>
 									{row.student_name ?? row.student_id}

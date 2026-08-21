@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { createResourceRequest, getStudentBinding } from "@/lib/coach/service";
+import { canOpenCoachDesk } from "@/lib/coach/guard";
+import { createResourceRequest, getStudentBinding, grantCoachQuotaWithRecord } from "@/lib/coach/service";
 import { requireMembershipCapability } from "@/lib/membership/guard";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { isCanonicalCnSymbol, normalizeCnSymbol } from "@/lib/trade/symbol-normalizer";
@@ -49,6 +50,24 @@ export async function POST(request: Request) {
 	}
 
 	try {
+		const access = await canOpenCoachDesk(service, userId);
+		if (access.canOpenDesk) {
+			const data = await grantCoachQuotaWithRecord(service, {
+				coachId: userId,
+				studentId: userId,
+				symbol,
+				side,
+				quantity,
+			});
+			return NextResponse.json({
+				success: true,
+				data: {
+					...(data && typeof data === "object" ? data : {}),
+					pending: false,
+					selfGranted: true,
+				},
+			});
+		}
 		const binding = await getStudentBinding(service, userId);
 		if (!binding || binding.status !== "accepted") {
 			return NextResponse.json(
