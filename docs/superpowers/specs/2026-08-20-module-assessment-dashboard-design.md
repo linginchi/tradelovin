@@ -18,7 +18,7 @@ T0 考核盘已有成交计入 TQ，学习页也有雷达卡，但两条训练�
 1. **每个模块一块考核仪表盘**：T0 训练盘、量化实验室各一块，位置在该模块入口/工作台显眼处。
 2. **反映学员水平**：以 **TQ 分数** 为主读数（总分 + 维度），学员只能看自己的。
 3. **可点击**：点仪表不只看分，还给出提示——冷启动时「从哪开始」；有分时「要加强哪些训练」。
-4. **命名**：入口 B 对外称 **量化实验室**（不再用「AI 实验室 / AI 研究实验室」当主名）。文案切换可并进本项或实验室收口时一起改。
+4. **命名**：入口 B 对外称 **AI量化实验室**。文案切换可并进本项或实验室收口时一起改。
 
 ## 3. Non-Goals（本项）
 
@@ -66,14 +66,14 @@ T0 考核盘已有成交计入 TQ，学习页也有雷达卡，但两条训练�
 
 1. 实验室仪表第一版是否就展示 T0 sim TQ，还是等实验室有自己的过程分再上仪表。
 2. 教练是否要在考核盘资源栏旁看到学员仪表摘要。
-3. 「量化实验室」四字是否与实验室 P0 文案一并改（`messages/*.json`、`/lab` 页、首页入口）。
+3. 「AI量化实验室」文案是否与实验室 P0 一并落地（`messages/*.json`、`/lab` 页、首页入口）。
 
 ## 9. 明日开工顺序（2026-08-21 · 量化和儀表工程）
 
 今晚（8/20）按约定不写实现。明天按这个顺序：
 
-1. **量化实验室 P0 卡点：** 主站入口 `/lab`、SSO、合规过滤、`lab_*` 表已在库（`lab_config.active_model` 已是 gemini）。**外部 Spike 未跑**：[`docs/lab/spike-protocol.md`](../../lab/spike-protocol.md) Gate A–E 无 Pass。没有 VPS/`LAB_PUBLIC_BASE_URL` 时，`npm run spike:lab:check` 应 fail closed。
-2. **明天第一件事：** 决定走 Dojo VPS Spike，还是按 plan Fallback 上自研 lab-worker + Gemini。未过 Spike 不得宣称端到端可用。
-3. **文案：** 对外主名改成「量化实验室」（可与 P0 一起改）。
+1. **量化实验室 P0 卡点：** 主站入口 `/lab`、SSO、合规过滤、`lab_*` 表已在库。Phase 0 在分支 `feat/quant-lab-phase-0`：提供商 **仅 volcano**；apply `20260821041119_lab_volcano_provider.sql` 后 `lab_config.active_model` 为 `{ "provider": "volcano", "model_id": "pending-spike" }`。**外部 Spike 未跑**：[`docs/lab/spike-protocol.md`](../../lab/spike-protocol.md) Gate A–E 无 Pass。没有 VPS/`LAB_PUBLIC_BASE_URL` 时，`npm run spike:lab:check` 应 fail closed。
+2. **当前第一件事：** 决定走 Dojo VPS Spike，还是按 plan Fallback 上自研 lab-worker + **火山（volcano SDK）**。未过 Spike 不得宣称端到端可用。
+3. **文案：** 对外主名 **AI量化实验室**（可与 P0 一起改）。提醒规则 `.cursor/rules/quant-dashboard-engineering.mdc` **已删除（工程已开工）**。
 4. **仪表盘：** 等上面能出一份去标的化诊断之后，再按本文 §5 做 T0 / 实验室考核仪表。不要提前做仪表 UI。
 

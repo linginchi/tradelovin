@@ -55,13 +55,17 @@ npm run deploy:cloudflare
 
 **先实验室 P0，后考核仪表盘。** 不要先做仪表 UI。
 
-### 2.1 量化实验室 P0（明天第一件事）
+### 2.1 量化实验室 P0（进行中）
 
-主站已有：`/lab`、SSO、合规过滤、`lab_sessions` / `lab_config` / `lab_sso_codes`（远程 `lab_config.active_model` = gemini-2.0-flash）。
+**Phase 0 进行中**，分支：`feat/quant-lab-phase-0`。不要在 `main` 上当作已收口。
 
-**未完成：** 外部 Spike（VPS + Gemini 截图诊断）。[`docs/lab/spike-protocol.md`](../lab/spike-protocol.md) Gate A–E 无 Pass。无 `LAB_PUBLIC_BASE_URL` 时 `npm run spike:lab:check` 应 fail closed。
+主站已有：`/lab`、SSO、合规过滤、`lab_sessions` / `lab_config` / `lab_sso_codes`。提供商 **仅 volcano**（无 Gemini / GLM）。apply [`supabase/migrations/20260821041119_lab_volcano_provider.sql`](../supabase/migrations/20260821041119_lab_volcano_provider.sql) 后，`lab_config.active_model` 将变为 `{ "provider": "volcano", "model_id": "pending-spike" }`（远程在 apply 前可能仍是旧 gemini 值）。
 
-决策：走 Dojo VPS，或 plan Fallback（自研 lab-worker + Gemini）。未过 Spike 不得宣称端到端可用。对外主名用 **量化实验室**。
+**未完成：** 外部 Spike（VPS + 火山多模态截图诊断）。[`docs/lab/spike-protocol.md`](../lab/spike-protocol.md) Gate A–E 无 Pass。无 `LAB_PUBLIC_BASE_URL` 时 `npm run spike:lab:check` 应 fail closed。API 路径 TBD：Path A 方舟 `ARK_API_KEY` vs Path B 视觉智能 `VOLC_*`。
+
+决策：走 Dojo VPS，或 plan Fallback（自研 lab-worker + **volcano** SDK，非 Gemini）。未过 Spike 不得宣称端到端可用。对外主名用 **AI量化实验室**。
+
+提醒规则 `.cursor/rules/quant-dashboard-engineering.mdc` **已删除（工程已开工）**。
 
 文档：
 
@@ -73,8 +77,7 @@ npm run deploy:cloudflare
 
 T0 与量化实验室各一块 TQ 仪表；点击给出「从哪开始 / 加强哪项」。复用 `tq_scores`、雷达、`/api/tq/advice`。
 
-Spec：[`docs/superpowers/specs/2026-08-20-module-assessment-dashboard-design.md`](../superpowers/specs/2026-08-20-module-assessment-dashboard-design.md)（含 §9 开工顺序）  
-提醒规则：`.cursor/rules/quant-dashboard-engineering.mdc`
+Spec：[`docs/superpowers/specs/2026-08-20-module-assessment-dashboard-design.md`](../superpowers/specs/2026-08-20-module-assessment-dashboard-design.md)（含 §9 开工顺序）
 
 ---
 
@@ -84,7 +87,7 @@ Spec：[`docs/superpowers/specs/2026-08-20-module-assessment-dashboard-design.md
 - 不把 `auth.*` 加入魔法链接 allowlist。
 - 不改 `src/lib/auth/magic-link-origin.mjs` 的 Host 优先。
 - Redirect URLs 保留 `https://xeoaxis.com/**`。
-- Gemini / Dojo API Key 只放 VPS，不进 `lab_config`、不进 git。
+- 火山密钥（`ARK_API_KEY` 或 `VOLC_ACCESS_KEY` + `VOLC_SECRET_KEY`）以及 Dojo 密钥 **只放 VPS**，不进 `lab_config`、不进 git。主站不要配置 Gemini / GLM key。
 - 用户可见实验室报告必须去标的化，禁止买卖指令。
 
 Auth 自定义域排障：[`ops/mainland-access/XEOAXIS_RECOVERY.md`](../../ops/mainland-access/XEOAXIS_RECOVERY.md) §D。新子域 `ERR_NAME_NOT_RESOLVED` 多为本机/运营商负缓存，不是证书挂了。

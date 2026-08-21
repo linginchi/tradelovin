@@ -4,7 +4,13 @@ import test from "node:test";
 
 import { filterLabReport } from "@/lib/lab/compliance-filter";
 import { canAccessLabFromHint } from "@/lib/lab/access";
-import { isModelSelectable, type LabProviderHealth } from "@/lib/lab/config";
+import { resolveAdminModelSelection } from "@/lib/lab/admin-model-select";
+import {
+	fetchLabProviderHealth,
+	getLabActiveModel,
+	isModelSelectable,
+	type LabProviderHealth,
+} from "@/lib/lab/config";
 import { exchangeLabAuthCode, issueLabAuthCode, verifyLabSessionToken } from "@/lib/lab/sso";
 import { canUseLabAccess, type CurrentMembership } from "@/lib/membership/v2";
 import { POST as writeLabSession } from "@/app/api/lab/session/route";
@@ -167,14 +173,111 @@ test("client lab entry hint matches active, unexpired server gate", () => {
 
 test("admin model selection requires a health-listed vision-capable model", () => {
 	const health: LabProviderHealth = {
-		id: "gemini",
+		id: "volcano",
 		configured: true,
 		visionCapable: true,
-		models: ["gemini-2.0-flash"],
+		models: ["pending-spike"],
 	};
-	assert.equal(isModelSelectable(health, "gemini-2.0-flash"), true);
+	assert.equal(isModelSelectable(health, "pending-spike"), true);
 	assert.equal(isModelSelectable(health, "unverified-model"), false);
-	assert.equal(isModelSelectable({ ...health, models: [] }, "gemini-2.0-flash"), false);
+	assert.equal(isModelSelectable({ ...health, models: [] }, "pending-spike"), false);
+});
+
+test("fetchLabProviderHealth fail-closed returns a single volcano placeholder", async () => {
+	const previousUrl = process.env.LAB_PUBLIC_BASE_URL;
+	const previousPublicUrl = process.env.NEXT_PUBLIC_LAB_BASE_URL;
+	const previousKey = process.env.LAB_DOJO_SERVER_KEY;
+	delete process.env.LAB_PUBLIC_BASE_URL;
+	delete process.env.NEXT_PUBLIC_LAB_BASE_URL;
+	delete process.env.LAB_DOJO_SERVER_KEY;
+
+	try {
+		const health = await fetchLabProviderHealth();
+		assert.equal(health.length, 1);
+		assert.equal(health[0].id, "volcano");
+		assert.equal(health[0].configured, false);
+		assert.equal(health[0].visionCapable, false);
+		assert.deepEqual(health[0].models, ["pending-spike"]);
+		assert.match(String(health[0].reason), /LAB_PUBLIC_BASE_URL|LAB_DOJO_SERVER_KEY/);
+	} finally {
+		if (previousUrl === undefined) delete process.env.LAB_PUBLIC_BASE_URL;
+		else process.env.LAB_PUBLIC_BASE_URL = previousUrl;
+		if (previousPublicUrl === undefined) delete process.env.NEXT_PUBLIC_LAB_BASE_URL;
+		else process.env.NEXT_PUBLIC_LAB_BASE_URL = previousPublicUrl;
+		if (previousKey === undefined) delete process.env.LAB_DOJO_SERVER_KEY;
+		else process.env.LAB_DOJO_SERVER_KEY = previousKey;
+	}
+});
+
+test("fetchLabProviderHealth fail-closed when health returns two volcano providers", async () => {
+	const previousUrl = process.env.LAB_PUBLIC_BASE_URL;
+	const previousPublicUrl = process.env.NEXT_PUBLIC_LAB_BASE_URL;
+	const previousKey = process.env.LAB_DOJO_SERVER_KEY;
+	process.env.LAB_PUBLIC_BASE_URL = "https://lab.example.invalid";
+	delete process.env.NEXT_PUBLIC_LAB_BASE_URL;
+	process.env.LAB_DOJO_SERVER_KEY = "test-dojo-key";
+
+	let fetchCalled = 0;
+	try {
+		const health = await fetchLabProviderHealth({
+			fetchImpl: async () => {
+				fetchCalled += 1;
+				return new Response(
+					JSON.stringify({
+						providers: [
+							{ id: "volcano", configured: true, visionCapable: true, models: ["pending-spike"] },
+							{ id: "volcano", configured: true, visionCapable: true, models: ["pending-spike"] },
+						],
+					}),
+					{ status: 200, headers: { "content-type": "application/json" } },
+				);
+			},
+		});
+		assert.equal(fetchCalled, 1);
+		assert.equal(health.length, 1);
+		assert.equal(health[0].id, "volcano");
+		assert.equal(health[0].configured, false);
+		assert.equal(health[0].visionCapable, false);
+		assert.deepEqual(health[0].models, ["pending-spike"]);
+	} finally {
+		if (previousUrl === undefined) delete process.env.LAB_PUBLIC_BASE_URL;
+		else process.env.LAB_PUBLIC_BASE_URL = previousUrl;
+		if (previousPublicUrl === undefined) delete process.env.NEXT_PUBLIC_LAB_BASE_URL;
+		else process.env.NEXT_PUBLIC_LAB_BASE_URL = previousPublicUrl;
+		if (previousKey === undefined) delete process.env.LAB_DOJO_SERVER_KEY;
+		else process.env.LAB_DOJO_SERVER_KEY = previousKey;
+	}
+});
+
+test("resolveAdminModelSelection prefers a health-listed model over pending-spike", () => {
+	assert.equal(resolveAdminModelSelection("pending-spike", ["real-model"]), "real-model");
+	assert.equal(resolveAdminModelSelection("real-model", ["real-model", "other"]), "real-model");
+	assert.equal(resolveAdminModelSelection("pending-spike", []), "pending-spike");
+});
+
+test("getLabActiveModel falls back when stored provider is not volcano", async () => {
+	const srv = {
+		from() {
+			return {
+				select() {
+					return {
+						eq() {
+							return {
+								async maybeSingle() {
+									return {
+										data: { value: { provider: "gemini", model_id: "gemini-2.0-flash" } },
+										error: null,
+									};
+								},
+							};
+						},
+					};
+				},
+			};
+		},
+	};
+	const active = await getLabActiveModel(srv as never);
+	assert.deepEqual(active, { provider: "volcano", modelId: "pending-spike" });
 });
 
 test("SSO code is single-use and rejects expired database records", async () => {
@@ -204,14 +307,14 @@ test("SSO fails closed without a production secret", async () => {
 });
 
 test("diagnostic writeback rechecks membership and never persists caller inputSummary", async () => {
-	const writeRequest = () =>
+	const writeRequest = (provider = "volcano") =>
 		new Request("http://localhost/api/lab/session", {
 			method: "POST",
 			headers: { authorization: "Bearer test-dojo-key", "content-type": "application/json" },
 			body: JSON.stringify({
 				userId: sessionUserId,
 				inputSummary: "买入 600519 的截图",
-				provider: "gemini",
+				provider,
 				model: "test-model",
 				outputJson: validReport,
 			}),
@@ -226,6 +329,11 @@ test("diagnostic writeback rechecks membership and never persists caller inputSu
 	const accepted = await writeLabSession(writeRequest());
 	assert.equal(accepted.status, 200);
 	assert.equal(state.sessions.length, 1);
+	assert.equal(state.sessions[0].provider, "volcano");
 	assert.equal(state.sessions[0].input_summary, "已上传组合截图");
 	assert.doesNotMatch(String(state.sessions[0].input_summary), /600519|买入/);
+
+	const geminiRejected = await writeLabSession(writeRequest("gemini"));
+	assert.equal(geminiRejected.status, 400);
+	assert.equal(state.sessions.length, 1);
 });

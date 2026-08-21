@@ -87,7 +87,7 @@ export function validateHealthModelsPayload(body: unknown): HealthModelsValidati
 			continue;
 		}
 		const row = raw as Record<string, unknown>;
-		if (row.id !== "gemini" && row.id !== "glm") continue;
+		if (row.id !== "volcano") continue;
 
 		if (typeof row.configured !== "boolean") details.push(`${String(row.id)}: 缺少 boolean configured`);
 		if (typeof row.visionCapable !== "boolean") {
@@ -104,8 +104,8 @@ export function validateHealthModelsPayload(body: unknown): HealthModelsValidati
 		});
 	}
 
-	if (!mapped.some((p) => p.id === "gemini")) details.push("缺少 gemini provider");
-	if (!mapped.some((p) => p.id === "glm")) details.push("缺少 glm provider");
+	if (!mapped.some((p) => p.id === "volcano")) details.push("缺少 volcano provider");
+	if (mapped.length > 1) details.push("volcano provider 必须唯一");
 	if (details.length > 0) {
 		return { ok: false, reason: "health 响应形状不合规", details };
 	}
@@ -116,54 +116,27 @@ export function validateHealthModelsPayload(body: unknown): HealthModelsValidati
 export type GateEEvaluation = {
 	gate: "E";
 	pass: boolean;
-	gemini: {
+	volcano: {
 		configured: boolean;
 		visionCapable: boolean;
-		pass: boolean;
-		reason?: string;
-	};
-	glm: {
-		configured: boolean;
-		visionCapable: boolean;
-		safeUnconfigured: boolean;
 		pass: boolean;
 		reason?: string;
 	};
 };
 
-function evaluateGlmGate(glm: LabProviderHealth | undefined): { pass: boolean; reason?: string } {
-	if (!glm) return { pass: false, reason: "缺少 glm provider" };
-	if (!glm.configured && !glm.visionCapable) return { pass: true };
-	if (glm.configured && glm.visionCapable) return { pass: true };
-	if (glm.configured && !glm.visionCapable) {
-		return { pass: false, reason: "GLM 已配置但 visionCapable=false" };
-	}
-	return { pass: false, reason: "GLM 未配置但 visionCapable=true，状态不一致" };
-}
-
-/** Gate E：Gemini 须可用；GLM 未配置时须安全关闭，已配置时须 visionCapable */
+/** Gate E：volcano 须 configured=true 且 visionCapable=true */
 export function evaluateGateE(providers: LabProviderHealth[]): GateEEvaluation {
-	const gemini = providers.find((p) => p.id === "gemini");
-	const glm = providers.find((p) => p.id === "glm");
-
-	const geminiPass = Boolean(gemini?.configured && gemini?.visionCapable);
-	const glmResult = evaluateGlmGate(glm);
+	const volcano = providers.find((p) => p.id === "volcano");
+	const volcanoPass = Boolean(volcano?.configured && volcano?.visionCapable);
 
 	return {
 		gate: "E",
-		pass: geminiPass && glmResult.pass,
-		gemini: {
-			configured: Boolean(gemini?.configured),
-			visionCapable: Boolean(gemini?.visionCapable),
-			pass: geminiPass,
-			reason: geminiPass ? undefined : "Gemini 须 configured=true 且 visionCapable=true",
-		},
-		glm: {
-			configured: Boolean(glm?.configured),
-			visionCapable: Boolean(glm?.visionCapable),
-			safeUnconfigured: Boolean(glm && !glm.configured && !glm.visionCapable),
-			pass: glmResult.pass,
-			reason: glmResult.reason,
+		pass: volcanoPass,
+		volcano: {
+			configured: Boolean(volcano?.configured),
+			visionCapable: Boolean(volcano?.visionCapable),
+			pass: volcanoPass,
+			reason: volcanoPass ? undefined : "Volcano 须 configured=true 且 visionCapable=true",
 		},
 	};
 }
@@ -315,7 +288,7 @@ export async function runSpikeLabCheck(options?: {
 				labBaseUrl,
 				health: { httpStatus, validation, gateE },
 				suggestFallback: true,
-				note: "Gate E 未通过。建议 fallback（尚未实施）；不得将 Dojo/Gemini 能力描述为已通过。",
+				note: "Gate E 未通过。建议 fallback（尚未实施）；不得将 Dojo/volcano 能力描述为已通过。",
 			},
 		};
 	}
@@ -365,7 +338,7 @@ export async function runSpikeLabCheck(options?: {
 			labBaseUrl,
 			health: { httpStatus, validation, gateE },
 			suggestFallback: false,
-			note: "Gate E（/health/models）通过。Gate A–D 与 Gemini 多模态仍须在 VPS 手工验收。",
+			note: "Gate E（/health/models）通过。Gate A–D 与 volcano 多模态仍须在 VPS 手工验收。",
 		},
 	};
 }

@@ -754,6 +754,7 @@
 		"navCourseTeaser": "Home teaser",
 		"navInstructors": "Faculty",
 		"navFees": "Fees",
+		"navLab": "AI Quant Lab",
 		"courseTeaserPageTitle": "Homepage teaser card",
 		"courseTeaserPageSubtitle": "Edit the static teaser text on the home page. If disabled, visitors see a default placeholder.",
 		"courseTeaserLabelContent": "Teaser text (plain text)",

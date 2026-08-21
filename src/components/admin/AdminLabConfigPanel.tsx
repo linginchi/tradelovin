@@ -5,9 +5,10 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { resolveAdminModelSelection } from "@/lib/lab/admin-model-select";
 
 type ProviderHealth = {
-	id: "gemini" | "glm";
+	id: "volcano";
 	configured: boolean;
 	visionCapable: boolean;
 	models: string[];
@@ -15,15 +16,14 @@ type ProviderHealth = {
 };
 
 type ActiveModel = {
-	provider: "gemini" | "glm";
+	provider: "volcano";
 	modelId: string;
 };
 
 export function AdminLabConfigPanel() {
 	const [active, setActive] = useState<ActiveModel | null>(null);
 	const [providers, setProviders] = useState<ProviderHealth[]>([]);
-	const [provider, setProvider] = useState<"gemini" | "glm">("gemini");
-	const [modelId, setModelId] = useState("gemini-2.0-flash");
+	const [modelId, setModelId] = useState("pending-spike");
 	const [busy, setBusy] = useState(false);
 
 	const load = useCallback(async () => {
@@ -40,8 +40,8 @@ export function AdminLabConfigPanel() {
 		}
 		setActive(json.active);
 		setProviders(json.providers ?? []);
-		setProvider(json.active.provider);
-		setModelId(json.active.modelId);
+		const volcanoHealth = (json.providers ?? []).find((p) => p.id === "volcano");
+		setModelId(resolveAdminModelSelection(json.active.modelId, volcanoHealth?.models ?? []));
 	}, []);
 
 	useEffect(() => {
@@ -52,16 +52,11 @@ export function AdminLabConfigPanel() {
 	}, [load]);
 
 	const selectedHealth = useMemo(
-		() => providers.find((p) => p.id === provider),
-		[provider, providers],
+		() => providers.find((p) => p.id === "volcano"),
+		[providers],
 	);
 
-	const selectableModels = selectedHealth?.models?.length
-		? selectedHealth.models
-		: provider === "gemini"
-			? ["gemini-2.0-flash"]
-			: [];
-
+	const selectableModels = selectedHealth?.models ?? [];
 	const canSave = Boolean(
 		selectedHealth?.configured &&
 			selectedHealth.visionCapable &&
@@ -79,7 +74,7 @@ export function AdminLabConfigPanel() {
 				method: "PUT",
 				credentials: "include",
 				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ provider, modelId }),
+				body: JSON.stringify({ provider: "volcano", modelId }),
 			});
 			const json = (await res.json()) as {
 				success?: boolean;
@@ -117,21 +112,10 @@ export function AdminLabConfigPanel() {
 				<h2 className="text-sm font-semibold">切换模型</h2>
 				<div className="grid gap-3 sm:grid-cols-2">
 					<div className="space-y-1.5">
-						<Label htmlFor="lab-provider">提供商</Label>
-						<select
-							id="lab-provider"
-							className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-							value={provider}
-							onChange={(e) => {
-								const next = e.target.value === "glm" ? "glm" : "gemini";
-								setProvider(next);
-								const health = providers.find((p) => p.id === next);
-								setModelId(health?.models?.[0] ?? (next === "gemini" ? "gemini-2.0-flash" : ""));
-							}}
-						>
-							<option value="gemini">Gemini（默认）</option>
-							<option value="glm">GLM（需 VPS 配置密钥）</option>
-						</select>
+						<Label>提供商</Label>
+						<p className="border-input bg-muted/40 flex h-9 w-full items-center rounded-md border px-2 text-sm">
+							火山（volcano）
+						</p>
 					</div>
 					<div className="space-y-1.5">
 						<Label htmlFor="lab-model">模型 ID</Label>
@@ -149,13 +133,14 @@ export function AdminLabConfigPanel() {
 								))}
 							</select>
 						) : (
-							<input
+							<select
 								id="lab-model"
 								className="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
-								value={modelId}
-								onChange={(e) => setModelId(e.target.value)}
-								placeholder="模型 ID"
-							/>
+								value="pending-spike"
+								disabled
+							>
+								<option value="pending-spike">pending-spike</option>
+							</select>
 						)}
 					</div>
 				</div>

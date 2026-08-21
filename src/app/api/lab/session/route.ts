@@ -76,12 +76,12 @@ export async function POST(request: Request) {
 	}
 
 	const userId = String(body.userId ?? "").trim();
-	const provider = String(body.provider ?? "gemini").trim();
+	const provider = String(body.provider ?? "volcano").trim();
 	const model = String(body.model ?? "").trim();
 	if (!userId || !model) {
 		return NextResponse.json({ success: false, error: "缺少 userId 或 model" }, { status: 400 });
 	}
-	if (provider !== "gemini" && provider !== "glm") {
+	if (provider !== "volcano") {
 		return NextResponse.json({ success: false, error: "非法 provider" }, { status: 400 });
 	}
 

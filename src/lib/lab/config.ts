@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type LabModelProvider = "gemini" | "glm";
+import { validateHealthModelsPayload } from "@/lib/lab/spike-check";
+
+export type LabModelProvider = "volcano";
 
 export type LabActiveModel = {
 	provider: LabModelProvider;
@@ -16,9 +18,19 @@ export type LabProviderHealth = {
 };
 
 const DEFAULT_ACTIVE: LabActiveModel = {
-	provider: "gemini",
-	modelId: "gemini-2.0-flash",
+	provider: "volcano",
+	modelId: "pending-spike",
 };
+
+function volcanoPlaceholder(reason: string): LabProviderHealth {
+	return {
+		id: "volcano",
+		configured: false,
+		visionCapable: false,
+		models: ["pending-spike"],
+		reason,
+	};
+}
 
 export function getLabDojoHealthUrl(): string | null {
 	const base =
@@ -31,9 +43,9 @@ export async function getLabActiveModel(srv: SupabaseClient): Promise<LabActiveM
 	const { data, error } = await srv.from("lab_config").select("value").eq("key", "active_model").maybeSingle();
 	if (error || !data?.value || typeof data.value !== "object") return DEFAULT_ACTIVE;
 	const value = data.value as Record<string, unknown>;
-	const provider = value.provider === "glm" ? "glm" : "gemini";
+	if (value.provider !== "volcano") return DEFAULT_ACTIVE;
 	const modelId = typeof value.model_id === "string" && value.model_id.trim() ? value.model_id.trim() : DEFAULT_ACTIVE.modelId;
-	return { provider, modelId };
+	return { provider: "volcano", modelId };
 }
 
 export async function setLabActiveModel(
@@ -53,95 +65,38 @@ export async function setLabActiveModel(
 	if (error) throw new Error(error.message);
 }
 
-/** 拉取 Dojo /health/models；不可达时返回未配置占位 */
-export async function fetchLabProviderHealth(): Promise<LabProviderHealth[]> {
+/** 拉取 Dojo /health/models；不可达或形状不合规则返回未配置占位 */
+export async function fetchLabProviderHealth(options?: {
+	fetchImpl?: typeof fetch;
+}): Promise<LabProviderHealth[]> {
 	const url = getLabDojoHealthUrl();
 	const serverKey = process.env.LAB_DOJO_SERVER_KEY?.trim();
 	if (!url || !serverKey) {
-		return [
-			{
-				id: "gemini",
-				configured: false,
-				visionCapable: false,
-				models: ["gemini-2.0-flash"],
-				reason: "LAB_PUBLIC_BASE_URL 或 LAB_DOJO_SERVER_KEY 未配置",
-			},
-			{
-				id: "glm",
-				configured: false,
-				visionCapable: false,
-				models: [],
-				reason: "LAB_PUBLIC_BASE_URL 或 LAB_DOJO_SERVER_KEY 未配置",
-			},
-		];
+		return [volcanoPlaceholder("LAB_PUBLIC_BASE_URL 或 LAB_DOJO_SERVER_KEY 未配置")];
 	}
 
+	const fetchFn = options?.fetchImpl ?? fetch;
 	try {
-		const res = await fetch(url, {
+		const res = await fetchFn(url, {
 			headers: { Authorization: `Bearer ${serverKey}` },
 			cache: "no-store",
 			signal: AbortSignal.timeout(8000),
 		});
-		const json = (await res.json()) as {
-			providers?: Array<{
-				id?: string;
-				configured?: boolean;
-				visionCapable?: boolean;
-				models?: string[];
-				reason?: string;
-			}>;
-		};
-		if (!res.ok || !Array.isArray(json.providers)) {
+		const json: unknown = await res.json();
+		if (!res.ok) {
 			throw new Error(`health http ${res.status}`);
 		}
-		const mapped: LabProviderHealth[] = [];
-		for (const p of json.providers) {
-			if (p.id !== "gemini" && p.id !== "glm") continue;
-			mapped.push({
-				id: p.id,
-				configured: Boolean(p.configured),
-				visionCapable: Boolean(p.visionCapable),
-				models: Array.isArray(p.models) ? p.models.map(String) : [],
-				reason: typeof p.reason === "string" ? p.reason : undefined,
-			});
+		const validation = validateHealthModelsPayload(json);
+		if (!validation.ok) {
+			const message = validation.details.length
+				? `${validation.reason}：${validation.details.join("；")}`
+				: validation.reason;
+			return [volcanoPlaceholder(message)];
 		}
-		if (!mapped.some((m) => m.id === "gemini")) {
-			mapped.unshift({
-				id: "gemini",
-				configured: false,
-				visionCapable: false,
-				models: ["gemini-2.0-flash"],
-				reason: "health 未返回 gemini",
-			});
-		}
-		if (!mapped.some((m) => m.id === "glm")) {
-			mapped.push({
-				id: "glm",
-				configured: false,
-				visionCapable: false,
-				models: [],
-				reason: "health 未返回 glm",
-			});
-		}
-		return mapped;
+		return validation.providers;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
-		return [
-			{
-				id: "gemini",
-				configured: false,
-				visionCapable: false,
-				models: ["gemini-2.0-flash"],
-				reason: `Dojo 不可达: ${message}`,
-			},
-			{
-				id: "glm",
-				configured: false,
-				visionCapable: false,
-				models: [],
-				reason: `Dojo 不可达: ${message}`,
-			},
-		];
+		return [volcanoPlaceholder(`Dojo 不可达: ${message}`)];
 	}
 }
 

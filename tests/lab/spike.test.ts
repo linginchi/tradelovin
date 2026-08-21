@@ -23,24 +23,12 @@ const compliantReport = {
 };
 
 const validHealthBody = {
-	providers: [
-		{ id: "gemini", configured: true, visionCapable: true, models: ["gemini-2.0-flash"] },
-		{
-			id: "glm",
-			configured: false,
-			visionCapable: false,
-			models: [],
-			reason: "ZHIPU_API_KEY missing",
-		},
-	],
+	providers: [{ id: "volcano", configured: true, visionCapable: true, models: ["pending-spike"] }],
 };
 
-function geminiGlmHealth(gemini: Record<string, unknown>, glm: Record<string, unknown>) {
+function volcanoHealth(volcano: Record<string, unknown>) {
 	return {
-		providers: [
-			{ id: "gemini", models: [], ...gemini },
-			{ id: "glm", models: [], ...glm },
-		],
+		providers: [{ id: "volcano", models: [], ...volcano }],
 	};
 }
 
@@ -73,55 +61,67 @@ test("non-compliant reports are rejected by main site compliance filter", () => 
 	assert.equal(filterLabReport({ ...compliantReport, summary: "建议买入" }).ok, false);
 });
 
-test("health payload missing fields cannot pass Gate E", () => {
-	const shapeFail = validateHealthModelsPayload({ providers: [{ id: "gemini" }] });
-	assert.equal(shapeFail.ok, false);
+test("health payload missing volcano fails shape", () => {
+	const missingFields = validateHealthModelsPayload({ providers: [{ id: "volcano" }] });
+	assert.equal(missingFields.ok, false);
 
-	const geminiOff = validateHealthModelsPayload(
-		geminiGlmHealth({ configured: false, visionCapable: false }, { configured: false, visionCapable: false }),
-	);
-	assert(geminiOff.ok);
-	assert.equal(evaluateGateE(geminiOff.providers).pass, false);
-
-	const noVision = validateHealthModelsPayload(
-		geminiGlmHealth(
-			{ configured: true, visionCapable: false, models: ["gemini-2.0-flash"] },
-			{ configured: false, visionCapable: false },
-		),
-	);
-	assert(noVision.ok);
-	assert.equal(evaluateGateE(noVision.providers).pass, false);
-
-	const valid = validateHealthModelsPayload(validHealthBody);
-	assert(valid.ok);
-	assert.equal(evaluateGateE(valid.providers).pass, true);
+	const volcanoMissing = validateHealthModelsPayload({
+		providers: [{ id: "gemini", configured: true, visionCapable: true, models: ["gemini-2.0-flash"] }],
+	});
+	assert.equal(volcanoMissing.ok, false);
+	assert.match(volcanoMissing.ok ? "" : volcanoMissing.details.join(" "), /volcano/);
 });
 
-test("Gate E passes when GLM is configured with visionCapable=true", () => {
+test("volcano not configured fails Gate E", () => {
 	const body = validateHealthModelsPayload(
-		geminiGlmHealth(
-			{ configured: true, visionCapable: true, models: ["gemini-2.0-flash"] },
-			{ configured: true, visionCapable: true, models: ["glm-4v"] },
-		),
-	);
-	assert(body.ok);
-	const gateE = evaluateGateE(body.providers);
-	assert.equal(gateE.pass, true);
-	assert.equal(gateE.glm.pass, true);
-});
-
-test("Gate E fails when GLM is configured but visionCapable=false", () => {
-	const body = validateHealthModelsPayload(
-		geminiGlmHealth(
-			{ configured: true, visionCapable: true, models: ["gemini-2.0-flash"] },
-			{ configured: true, visionCapable: false, models: ["glm-4"] },
-		),
+		volcanoHealth({ configured: false, visionCapable: false }),
 	);
 	assert(body.ok);
 	const gateE = evaluateGateE(body.providers);
 	assert.equal(gateE.pass, false);
-	assert.equal(gateE.glm.pass, false);
-	assert.match(String(gateE.glm.reason), /visionCapable=false/);
+	assert.equal(gateE.volcano.pass, false);
+	assert.equal(gateE.volcano.configured, false);
+
+	const noVision = validateHealthModelsPayload(
+		volcanoHealth({ configured: true, visionCapable: false, models: ["pending-spike"] }),
+	);
+	assert(noVision.ok);
+	assert.equal(evaluateGateE(noVision.providers).pass, false);
+});
+
+test("volcano configured with visionCapable passes Gate E", () => {
+	const valid = validateHealthModelsPayload(validHealthBody);
+	assert(valid.ok);
+	const gateE = evaluateGateE(valid.providers);
+	assert.equal(gateE.pass, true);
+	assert.equal(gateE.volcano.pass, true);
+	assert.equal(gateE.volcano.configured, true);
+	assert.equal(gateE.volcano.visionCapable, true);
+});
+
+test("extra gemini id is ignored in health payload", () => {
+	const body = validateHealthModelsPayload({
+		providers: [
+			{ id: "gemini", configured: true, visionCapable: true, models: ["gemini-2.0-flash"] },
+			{ id: "volcano", configured: true, visionCapable: true, models: ["pending-spike"] },
+		],
+	});
+	assert(body.ok);
+	assert.equal(body.providers.length, 1);
+	assert.equal(body.providers[0].id, "volcano");
+	assert.equal(evaluateGateE(body.providers).pass, true);
+});
+
+test("two volcano providers fail shape validation", () => {
+	const duplicate = validateHealthModelsPayload({
+		providers: [
+			{ id: "volcano", configured: true, visionCapable: true, models: ["pending-spike"] },
+			{ id: "gemini", configured: true, visionCapable: true, models: ["gemini-2.0-flash"] },
+			{ id: "volcano", configured: true, visionCapable: true, models: ["pending-spike"] },
+		],
+	});
+	assert.equal(duplicate.ok, false);
+	assert.match(duplicate.ok ? "" : duplicate.details.join(" "), /volcano provider 必须唯一/);
 });
 
 test("invalid lab base URL fails closed without echoing sensitive parts", async () => {
@@ -181,19 +181,17 @@ test("fetch failures emit sanitized summary without secrets from error or env", 
 	assert(!output.includes("connection failed"));
 });
 
-test("runSpikeLabCheck marks gate_e_fail and suggestFallback when gemini not ready", async () => {
+test("runSpikeLabCheck marks gate_e_fail and suggestFallback when volcano not ready", async () => {
 	const { exitCode, summary } = await runSpikeLabCheck({
 		env: asProcessEnv({
 			LAB_PUBLIC_BASE_URL: "https://lab.example.invalid",
 			LAB_DOJO_SERVER_KEY: "test-key",
 		}),
 		fetchImpl: async () =>
-			new Response(
-				JSON.stringify(
-					geminiGlmHealth({ configured: false, visionCapable: false }, { configured: false, visionCapable: false }),
-				),
-				{ status: 200, headers: { "content-type": "application/json" } },
-			),
+			new Response(JSON.stringify(volcanoHealth({ configured: false, visionCapable: false })), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			}),
 	});
 	assert.equal(exitCode, 1);
 	assert.equal(summary.executionStatus, "gate_e_fail");

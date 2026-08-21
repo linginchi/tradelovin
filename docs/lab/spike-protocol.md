@@ -1,4 +1,4 @@
-# AI 量化实验室 · DojoAgents + Gemini Spike Protocol
+# AI量化实验室 · DojoAgents + 火山 Spike Protocol
 
 **文档状态：** 工具与验收步骤已备妥  
 **外部 Spike 状态：** 尚未执行（无 Gate A–E 通过证据）  
@@ -19,7 +19,7 @@
 | Spike runner | `npm run spike:lab:check` | 配置 `LAB_PUBLIC_BASE_URL`、`LAB_DOJO_SERVER_KEY` |
 | 离线校验 | `npm run test:lab`（含 spike 单测） | — |
 | Gate A 自托管 | 命令模板 | 目标 VPS + Python/uv |
-| Gate B 多模态 | 截图规格 + 记录模板 | `GEMINI_API_KEY` + Dojo 进程 |
+| Gate B 火山多模态 | 截图规格 + 记录模板 | 火山密钥（Path A 或 Path B，见 §1.1）+ Dojo 进程 |
 | Gate C 去标的化 JSON | schema + compliance filter | Dojo 诊断输出样例 |
 | Gate D SSO + 回调 | 流程说明 | 主站 + VPS 联调 |
 | Gate E 健康检查 | runner 可自动验 `/health/models` | VPS 上 Dojo 已启动 |
@@ -32,7 +32,7 @@
 
 ### 1.1 环境变量（VPS / Spike 执行机）
 
-从 [env.sample](./env.sample) 复制；**禁止**提交含真实 secret 的文件。
+从 [env.sample](./env.sample) 复制；**禁止**提交含真实 secret 的文件。密钥 **仅 VPS**，不得写入 `lab_config` 或 git。
 
 | 变量 | Gate | 说明 |
 |------|------|------|
@@ -40,8 +40,10 @@
 | `LAB_DOJO_SERVER_KEY` | D, E | 与主站一致；用于 `/health/models` 与主站回调 |
 | `LAB_SSO_SECRET` | D | 与主站一致（exchange / session JWT） |
 | `MAIN_APP_BASE_URL` | D | 主站根 URL |
-| `GEMINI_API_KEY` | B, C | **仅 VPS**；Dojo 多模态诊断 |
-| `ZHIPU_API_KEY` / `GLM_API_KEY` | E（可选） | 未配置时 GLM 须 `configured=false` |
+| `ARK_API_KEY` | B, C（**Path A**，TBD） | 火山方舟 Ark。见 `scripts/test/leo-001/`。与 Path B **二选一**，Spike 锁定后再填。 |
+| `VOLC_ACCESS_KEY` + `VOLC_SECRET_KEY` | B, C（**Path B**，TBD） | 视觉智能 visual。见 `scripts/test/leo-003/`、`scripts/test/leo-004/`。与 Path A **二选一**。 |
+
+**API 路径尚未锁定：** Spike 须在 Path A（方舟 `ARK_API_KEY`）与 Path B（视觉智能 `VOLC_ACCESS_KEY` + `VOLC_SECRET_KEY`）之间选定一条。**不要**臆造 Doubao/Ark 的真实 model id；主站默认 `lab_config.active_model` 为 `{ "provider": "volcano", "model_id": "pending-spike" }`，直至 Spike 锁定。
 
 可选覆盖：`LAB_SPIKE_LAB_BASE_URL` — 仅 Spike runner 使用，覆盖 `LAB_PUBLIC_BASE_URL`（便于对 staging 做检查）。
 
@@ -55,17 +57,19 @@
   "executedAt": "2026-07-25T12:00:00.000Z",
   "executor": "姓名或工号",
   "dojoagentsVersion": "x.y.z 或 git SHA",
-  "geminiModelId": "gemini-2.0-flash",
+  "volcanoModelId": "pending-spike",
   "latencyMs": 4200,
   "inputTokens": 1200,
   "outputTokens": 450,
   "estimatedCostUsd": 0.002,
   "result": "pass",
-  "notes": "匿名截图 A；无股票代码进入报告"
+  "notes": "匿名截图 A；无股票代码进入报告；Path A 或 Path B"
 }
 ```
 
-**成本估算（示意）：** 查阅 Google AI 定价页，按 `inputTokens` / `outputTokens` × 单价；记录 **估算值** 与 **model id**，勿写入 API key。
+`volcanoModelId` 在 Spike 锁定前可记 `pending-spike`；锁定后改为健康检查列出的 model id，**不要**事先填写臆造的 Doubao/Ark id。
+
+**成本估算（示意）：** 查阅火山引擎（Volcengine）定价页（方舟或视觉智能，以 Spike 锁定的 Path 为准），按 `inputTokens` / `outputTokens`（或该 Path 的计费单位）× 单价；记录 **估算值** 与 **model id**，勿写入 API key。
 
 ### 1.3 三份匿名 / 虚构测试截图规格
 
@@ -116,15 +120,15 @@ curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8765/
 
 ---
 
-## 3. Gate B — Gemini 多模态（须 VPS + GEMINI_API_KEY）
+## 3. Gate B — 火山多模态（须 VPS + 火山密钥）
 
-**依赖：** Gate A Pass、`GEMINI_API_KEY` 已配置到 Dojo。
+**依赖：** Gate A Pass；Path A（`ARK_API_KEY`）或 Path B（`VOLC_ACCESS_KEY` + `VOLC_SECRET_KEY`）已配置到 Dojo。路径由 Spike 锁定，二者勿同时当作已选定。
 
 ### 步骤
 
-1. 在 Dojo 中选择支持 vision 的 Gemini model id（记录到 evidence）。
+1. 在 Dojo 中选择支持 vision 的 **volcano** model id（记录到 evidence 的 `volcanoModelId`）。Spike 锁定前主站占位为 `pending-spike`，**不要**臆造真实 Doubao/Ark id。
 2. 依次上传 **anon-A / anon-B / anon-C**（见 §1.3）。
-3. 每次记录：开始/结束时间 → `latencyMs`；Dojo 或 Gemini 控制台中的 token 用量。
+3. 每次记录：开始/结束时间 → `latencyMs`；Dojo 或火山控制台中的 token / 计费用量。
 4. 确认 UI 有「不上传 PII / 教学用途」类同意文案（是/否写入 checklist）。
 
 ### 预期输出
@@ -207,6 +211,8 @@ node --loader ./tests/lab/ts-loader.mjs scripts/lab/spike-check.ts \
 
 **依赖：** Dojo 暴露 `GET /health/models`（Bearer `LAB_DOJO_SERVER_KEY`）。
 
+提供商 **仅** `volcano`。Gemini / GLM 不再作为可选 provider；未知 `id` 忽略；`volcano` 出现两次则形状失败。
+
 ### 手工 curl
 
 ```bash
@@ -218,25 +224,22 @@ curl -sS -H "Authorization: Bearer $LAB_DOJO_SERVER_KEY" \
 
 ### 预期形状
 
+恰好一个 volcano provider：
+
 ```json
 {
   "providers": [
     {
-      "id": "gemini",
+      "id": "volcano",
       "configured": true,
       "visionCapable": true,
-      "models": ["gemini-2.0-flash"]
-    },
-    {
-      "id": "glm",
-      "configured": false,
-      "visionCapable": false,
-      "models": [],
-      "reason": "ZHIPU_API_KEY missing"
+      "models": ["<Spike 锁定的 model id>"]
     }
   ]
 }
 ```
+
+Spike 锁定前，`models` 可为占位 `["pending-spike"]`；**不要**填写臆造的真实 Doubao/Ark id。
 
 ### 自动检查（推荐）
 
@@ -252,10 +255,8 @@ npm run spike:lab:check -- --report ./gate-c-sample.json
 
 | 结果 | 判准 |
 |------|------|
-| **Pass** | Gemini 须 `configured=true` 且 `visionCapable=true`；GLM **若未配置** 须 `configured=false` 且 `visionCapable=false`（安全关闭态）；GLM **若已配置** 须 `visionCapable=true`（已配置且具备 vision 视为可用） |
-| **Fail** | 响应缺字段；Gemini 不可用；GLM 已配置但 `visionCapable=false`；GLM 状态不一致；HTTP 非 200 |
-
-**说明：** GLM 已配置且 `visionCapable=true` **可以** Pass；失败原因是「已配置却无 vision 能力」或 Gemini 不可用，而非「GLM 已配置」本身。
+| **Pass** | volcano 须 `configured=true` **且** `visionCapable=true`；恰好一个 volcano；未知 id（如 gemini/glm）被忽略 |
+| **Fail** | 响应缺字段；缺少 volcano；volcano 重复；volcano `configured=false` 或 `visionCapable=false`；HTTP 非 200 |
 
 **Fail 时：** runner 输出 `"suggestFallback": true` 与 `"建议 fallback（尚未实施）"`。
 
@@ -277,6 +278,8 @@ npm run spike:lab:check -- --report ./gate-c-sample.json
 | 继续 Dojo 路径 | 全部 Gate Pass |
 | 建议 fallback | 任一硬 Gate Fail（**不在此仓库实现**） |
 
+Fallback 形态：自研 lab-worker + **volcano** SDK（非 Gemini），保持主站 SSO / session / health 接口形状。
+
 ---
 
 ## 8. 工具命令速查
@@ -294,5 +297,6 @@ npm run spike:lab:check -- --report ./gate-c-sample.json
 ## 9. 当前结论（模板）
 
 > **工具已备妥：** Spike protocol、runner、离线测试已在仓库内。  
-> **外部 Spike 尚未执行：** Gate A–E 无 Pass 证据；Dojo/Gemini 能力 **未** 验证为可用。  
+> **外部 Spike 尚未执行：** Gate A–E 无 Pass 证据；Dojo / 火山多模态能力 **未** 验证为可用。  
+> **提供商：** 仅 `volcano`；默认 `active_model` 为 `pending-spike`。API Path A（方舟）与 Path B（视觉智能）尚未锁定。  
 > **下一步：** 在目标 VPS 配置环境变量后，按 Gate 顺序执行并填写 checklist + evidence JSON。

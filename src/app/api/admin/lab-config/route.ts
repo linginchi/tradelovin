@@ -6,7 +6,6 @@ import {
 	getLabActiveModel,
 	isModelSelectable,
 	setLabActiveModel,
-	type LabModelProvider,
 } from "@/lib/lab/config";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
@@ -42,7 +41,7 @@ export async function PUT(request: Request) {
 		return NextResponse.json({ success: false, error: "请求体格式错误" }, { status: 400 });
 	}
 
-	const provider = body.provider === "glm" ? "glm" : body.provider === "gemini" ? "gemini" : null;
+	const provider = body.provider === "volcano" ? "volcano" : null;
 	const modelId = String(body.modelId ?? "").trim();
 	if (!provider || !modelId) {
 		return NextResponse.json({ success: false, error: "缺少 provider 或 modelId" }, { status: 400 });
@@ -63,7 +62,7 @@ export async function PUT(request: Request) {
 	}
 
 	try {
-		await setLabActiveModel(srv, { provider: provider as LabModelProvider, modelId }, null);
+		await setLabActiveModel(srv, { provider, modelId }, null);
 		const active = await getLabActiveModel(srv);
 		return NextResponse.json({ success: true, active, providers });
 	} catch (error) {

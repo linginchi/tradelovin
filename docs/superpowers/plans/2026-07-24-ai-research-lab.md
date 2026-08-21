@@ -1,5 +1,7 @@
 # AI 研究实验室 Implementation Plan
 
+> **2026-08-21 注（Phase 0）：** P0 提供商现为 **volcano-only**。下文 Goal / Tech Stack / Global Constraints 中的默认 `gemini`、预留 `glm`、以及 Task 中的 `GEMINI_API_KEY` / Gemini·GLM 后台切换 **已过时**，以代码与 [`docs/lab/spike-protocol.md`](../../lab/spike-protocol.md) 为准：`active_model` = `{ "provider": "volcano", "model_id": "pending-spike" }`；后台只选 volcano model id；Fallback = lab-worker + volcano SDK。本文件作为 2026-07-24 历史计划 **不整篇重写**。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 交付 `/lab` 组合诊断 MVP（T2+、Gemini 多模态、auth-code SSO、去标的化报告、后台可切换 GLM）。

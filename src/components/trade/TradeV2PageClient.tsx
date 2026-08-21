@@ -1282,6 +1282,11 @@ export function TradeV2PageClient() {
 									条件单
 								</Button>
 							</Link>
+							<Link href="/lab">
+								<Button variant="outline" size="sm">
+									AI量化实验室
+								</Button>
+							</Link>
 							<Badge variant="secondary">Beta</Badge>
 						</div>
 					</div>

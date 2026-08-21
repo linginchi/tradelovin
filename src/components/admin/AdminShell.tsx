@@ -26,6 +26,7 @@ import {
 	Users,
 	WalletCards,
 	Clapperboard,
+	FlaskConical,
 } from "lucide-react";
 
 import { ADMIN_BASE_PATH } from "@/lib/admin/paths";
@@ -72,6 +73,7 @@ export function AdminShell({ role, email, children }: Props) {
 		{ href: `${ADMIN_BASE_PATH}/course-registrations`, label: t("navCourseRegs"), icon: UserPlus },
 		{ href: `${ADMIN_BASE_PATH}/job-applications`, label: t("navJobApps"), icon: Briefcase },
 		{ href: `${ADMIN_BASE_PATH}/tq`, label: "TQ 评分", icon: LineChart },
+		{ href: `${ADMIN_BASE_PATH}/lab`, label: t("navLab"), icon: FlaskConical },
 		{ href: `${ADMIN_BASE_PATH}/resources`, label: "模拟盘资源", icon: Boxes },
 		{ href: `${ADMIN_BASE_PATH}/instructors`, label: t("navInstructors"), icon: UserCircle },
 		{ href: `${ADMIN_BASE_PATH}/fees`, label: t("navFees"), icon: Mail },

@@ -1,17 +1,24 @@
-# AI 实验室 · 主站验收（迁移 + 环境变量 + 冒烟）
+# AI量化实验室 · 主站验收（迁移 + 环境变量 + 冒烟）
 
-在 VPS / Dojo 接通之前，先完成主站侧落地。未配置 `LAB_PUBLIC_BASE_URL` 时，「进入实验室」会提示服务未配置——属预期。
+在 VPS / Dojo 接通之前，先完成主站侧落地。未配置 `LAB_PUBLIC_BASE_URL` 时，「进入实验室」会提示服务未配置——属预期。对外主名：**AI量化实验室**。
+
+提供商 **仅 volcano**。密钥只放 VPS，禁止把火山 / Gemini / GLM API Key 写进主站或 `lab_config`。
 
 ---
 
 ## 1. 应用数据库迁移
 
-文件：[`supabase/migrations/20260724140000_lab_research.sql`](../../supabase/migrations/20260724140000_lab_research.sql)
+须 **两份** 迁移都已应用：
+
+1. [`supabase/migrations/20260724140000_lab_research.sql`](../../supabase/migrations/20260724140000_lab_research.sql) — 初始表：`lab_sessions` / `lab_config` / `lab_sso_codes`
+2. [`supabase/migrations/20260821041119_lab_volcano_provider.sql`](../../supabase/migrations/20260821041119_lab_volcano_provider.sql) — provider 收敛为 volcano；`active_model` 更新为 pending-spike
+
+原始 `20260724140000` **仍保留**（建表），不要删；火山约束在第二份迁移。
 
 ### 方式 A：Supabase Dashboard（推荐，无 CLI 时）
 
 1. 打开目标项目 → **SQL Editor**
-2. 粘贴上述迁移全文并 **Run**
+2. 按时间顺序粘贴上述两份迁移全文并分别 **Run**
 3. 在 **Table Editor** 确认存在：
    - `lab_sessions`
    - `lab_config`（应有一行 `key=active_model`）
@@ -27,7 +34,7 @@ supabase db push
 
 ```sql
 select key, value from public.lab_config where key = 'active_model';
--- 期望: {"provider":"gemini","model_id":"gemini-2.0-flash"}
+-- 期望（第二份迁移 apply 后）: {"provider":"volcano","model_id":"pending-spike"}
 
 select tablename from pg_tables
 where schemaname = 'public'
@@ -55,7 +62,7 @@ openssl rand -hex 32   # → LAB_DOJO_SERVER_KEY
 
 - `LAB_SSO_SECRET` / `LAB_DOJO_SERVER_KEY` **必须**与未来 VPS 一致。
 - 未设 `LAB_PUBLIC_BASE_URL` 时：入口页、SSO 签发、后台配置仍可用；点击「进入实验室」会 toast「服务尚未配置」。
-- **禁止**把 API Key（Gemini 等）写进主站或 `lab_config`。
+- **禁止**把 API Key（`ARK_API_KEY` / `VOLC_ACCESS_KEY` / `VOLC_SECRET_KEY`，以及任何 Gemini/GLM key）写进主站或 `lab_config`。火山密钥 **仅 VPS**。
 
 ### 本地示例（`.env.local` 或 `.dev.vars`，勿提交）
 
@@ -85,8 +92,8 @@ npx wrangler secret put LAB_DOJO_SERVER_KEY
 
 ### 3.1 导航与叙事
 
-- [ ] 登录后顶栏可见「T0 训练盘」「AI 实验室」
-- [ ] 打开 `/trade`：顶部有 T0 叙事 +「进入 AI 实验室」链接
+- [ ] 登录后顶栏可见「T0 训练盘」「AI量化实验室」
+- [ ] 打开 `/trade`：顶部有 T0 叙事 +「AI量化实验室」链接
 - [ ] 打开 `/lab`：有全局叙事、做什么/不做什么、合规短句
 
 ### 3.2 会员门禁
@@ -136,8 +143,8 @@ curl -i -X POST "$BASE_URL/api/lab/session" \
   -H "Content-Type: application/json" \
   -d '{
     "userId":"<T2_USER_UUID>",
-    "provider":"gemini",
-    "model":"gemini-2.0-flash",
+    "provider":"volcano",
+    "model":"pending-spike",
     "inputSummary":"验收用模拟上传",
     "outputJson":{
       "version":"lab-diagnose-v1",
@@ -160,8 +167,9 @@ curl -i -X POST "$BASE_URL/api/lab/session" \
 ### 3.6 后台模型切换
 
 - [ ] 超管打开 `/cjkzt/lab`
-- [ ] 可见当前 `gemini / gemini-2.0-flash`
-- [ ] 未接 VPS 时 GLM/Gemini 健康检查为不可用；**无法**保存切换到未通过检查的模型
+- [ ] 可见当前 `volcano / pending-spike`（第二份迁移 apply 后）
+- [ ] 无 Gemini / GLM 开关；仅 volcano model id（来自 health 列表；未接 VPS 时为占位 `pending-spike`）
+- [ ] 未接 VPS 时 volcano 健康检查为不可用；**无法**保存切换到未通过检查的模型
 - [ ] 「刷新健康检查」不报 500
 
 ---
@@ -169,6 +177,8 @@ curl -i -X POST "$BASE_URL/api/lab/session" \
 ## 4. 通过标准（本阶段）
 
 全部勾选即可认为 **主站 P0（无 VPS）验收通过**，可进入 VPS Spike。
+
+**不得**据此宣称 Spike Gate 已通过，也 **不得**宣称端到端可用。
 
 未通过时常见原因：
 
@@ -178,3 +188,4 @@ curl -i -X POST "$BASE_URL/api/lab/session" \
 | 403 会员 | 账号非 T2+ active |
 | 后台无法保存模型 | 预期：Dojo health 未通 |
 | exchange 一直 401 | `LAB_DOJO_SERVER_KEY` 主站未配或与 curl 不一致 |
+| `active_model` 仍是 gemini | 第二份迁移 `20260821041119_lab_volcano_provider.sql` 未 apply |
