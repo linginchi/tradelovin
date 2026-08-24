@@ -35,6 +35,9 @@ jobs:
       - name: xeoaxis multi-entry contract tests
         run: npm run test:contracts:xeoaxis
 
+      - name: Cron workflow contract tests
+        run: npm run test:contracts:cron-workflows
+
       - name: Trade session redirect regression guard
         run: npm run verify:trade-session-redirect
 
