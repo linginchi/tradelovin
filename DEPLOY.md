@@ -199,8 +199,20 @@ npm run deploy:cloudflare
 - **Variables（Actions）**：`NEXT_ASSET_PREFIX` 应删除或留空（见上文「静态资源前缀」）。
 - **TQ 定时重算必配项**：
   - Actions Secret：`TQ_CRON_API_KEY`（与 Worker 运行环境变量 `TQ_CRON_API_KEY` 保持一致）。
-  - Actions Variable：`TQ_CRON_BASE_URL`（例如 `https://tradelovin.com`）。
+  - Actions Variable：`TQ_CRON_BASE_URL`（必须是 canonical 主域 `https://leolearnstotrade.com`；legacy 域名会 `308`）。
   - 接口在服务端会二次判断：仅交易日且香港时间 16:00 后执行；非交易日或 16:00 前会返回 `skipped=true`。
+- **视频定时任务必配项**：两个 cron 各自独立鉴权，**Actions Secret 与 Worker Secret 必须成对配置且取值一致**，只配一边会得到 `401`。
+
+  | 工作流 | 时间 | 接口 | Actions Secret | 对应 Worker Secret | 请求头 |
+  | --- | --- | --- | --- | --- | --- |
+  | [`video-marketing-growth.yml`](.github/workflows/video-marketing-growth.yml) | 每小时 | `POST /api/cron/video-marketing-growth` | `VIDEO_MARKETING_GROWTH_CRON_KEY` | `VIDEO_MARKETING_GROWTH_CRON_KEY` | `x-video-marketing-growth-cron-key` |
+  | [`bump-view-counts.yml`](.github/workflows/bump-view-counts.yml) | 每天 08:10 HKT | `POST /api/cron/bump-view-counts` | `VIEW_COUNT_CRON_KEY` | `VIEW_COUNT_CRON_KEY` | `x-cron-key` |
+
+  - 两者都复用 Actions Variable `TQ_CRON_BASE_URL`，**必须指向 canonical 主域** `https://leolearnstotrade.com`；填 legacy 域名时 `/api/*` 会返回 `308`，定时任务会「绿灯但没执行」。
+  - `bump-view-counts` 也接受历史密钥 `INTERNAL_WEBHOOK_TOKEN` 与 `TQ_CRON_API_KEY`（优先级：`VIEW_COUNT_CRON_KEY` → `INTERNAL_WEBHOOK_TOKEN` → `TQ_CRON_API_KEY`，与服务端 `authorize()` 一致）；新配置统一用 `VIEW_COUNT_CRON_KEY`。
+  - `bump-view-counts` 是**幂等补跑**：按香港日期跳过已写入的日期，因此漏跑的日子会在下一次成功运行时自动补齐，无需手工回填。
+  - 缺少 base URL 或密钥时工作流会**直接失败**（不静默跳过），避免观看人次长期停止增长而无人发现。
+  - 新增/修改这两个工作流后须运行：`npm run test:contracts:cron-workflows`。
 - **重要**：不带 `--var` 的 `wrangler deploy` 会按本次发布覆盖 Worker 上对应 **vars**；此前仅用本地命令行注入的 `ALLOW_*` / `ENABLE_*` 可能在一次 CI 发布后被清空，表现为**后台固定码 / 前台测试登录「像退回老版本」**。当前工作流在部署步骤会**始终传入**下列变量（未在仓库 Variables 中设置时默认 `0`，安全默认关闭）：
   - `ALLOW_FIXED_ADMIN_OTP`
   - `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION`
