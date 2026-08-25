@@ -38,6 +38,12 @@ jobs:
       - name: Cron workflow contract tests
         run: npm run test:contracts:cron-workflows
 
+      - name: Release verification contract tests
+        run: npm run test:contracts:deploy
+
+      - name: Video playback contract tests
+        run: npm run test:contracts:video-playback
+
       - name: Trade session redirect regression guard
         run: npm run verify:trade-session-redirect
 

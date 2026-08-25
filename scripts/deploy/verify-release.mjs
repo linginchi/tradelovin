@@ -52,16 +52,17 @@ async function check(baseUrl, path, fetchImpl) {
 	return { ok: res.ok, status: res.status, text };
 }
 
-function parseReleaseSha(text) {
+export function parseVersionPayload(text) {
 	let versionJson = null;
 	try {
 		versionJson = JSON.parse(text);
 	} catch {
-		return { error: "invalid_json", sha: "" };
+		return { error: "invalid_json", sha: "", features: {} };
 	}
 	return {
 		error: null,
 		sha: String(versionJson?.data?.release?.sha ?? ""),
+		features: versionJson?.data?.features ?? {},
 	};
 }
 
@@ -98,7 +99,7 @@ export async function verifyRelease({
 			if (!versionRes.ok) {
 				throw new Error(`version_http_${versionRes.status}`);
 			}
-			const parsed = parseReleaseSha(versionRes.text);
+			const parsed = parseVersionPayload(versionRes.text);
 			if (parsed.error === "invalid_json") {
 				throw new Error("version_invalid_json");
 			}
@@ -123,6 +124,21 @@ export async function verifyRelease({
 	if (!wait.ok) {
 		log.error(
 			`FAIL release sha mismatch after ${wait.attempts} attempt(s): expected=${expected} actual=${wait.actualSha || "unknown"}`,
+		);
+		return 1;
+	}
+
+	// A deploy that drops VIDEO_STORAGE_* still serves every page; only course
+	// playback breaks, so without this gate users report it before CI does.
+	const featureRes = await check(normalizedBase, "/api/deploy/version", fetchImpl);
+	const featureParsed = parseVersionPayload(featureRes.text);
+	if (featureParsed.error === "invalid_json") {
+		log.error("FAIL /api/deploy/version invalid JSON");
+		return 1;
+	}
+	if (featureParsed.features?.videoPlayback !== true) {
+		log.error(
+			"FAIL video playback not configured: the Worker cannot sign play URLs. Set SUPABASE_SERVICE_ROLE_KEY (legacy Supabase Videos) and/or VIDEO_STORAGE_* as Worker *Secrets* (plain vars are wiped by wrangler deploy). See DEPLOY.md 6.1.",
 		);
 		return 1;
 	}
