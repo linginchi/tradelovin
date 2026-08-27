@@ -239,7 +239,22 @@
 		"devQuickLoginTitle": "Dev/Test quick login",
 		"devAccountLabel": "Test account",
 		"devPasswordLabel": "Password",
-		"devLoginButton": "Quick login"
+		"devLoginButton": "Quick login",
+		"forgotPasswordLocal": "This local draft cannot send a reset email. Sign in with Google on the live site, set a new password on your profile, then come back here and use that password.",
+		"passkeyLogin": "Sign in with Face ID / Touch ID",
+		"passkeyLoggingIn": "Verifying…",
+		"passkeyCancelled": "Cancelled",
+		"passkeyFailed": "Verification failed. Please try again.",
+		"passkeyNeedsEnroll": "Face ID is not set up yet. Sign in with password first, then bind Face ID after you are logged in.",
+		"passkeyLoginHint": "Sign in with email link or password first, then bind Face ID.",
+		"passkeyMissingServiceRole": "This local draft has no server key, so Face ID and email link cannot run. Use password sign-in instead.",
+		"localDevNotice": "You are on the local draft. Use password sign-in. If you forgot it: sign in with Google on leolearnstotrade.com, set a new password on your profile, then come back. Face ID and email link need a local server key. Local Google would jump to the live site, so it is blocked.",
+		"googleLocalBlocked": "On this local draft, use password sign-in. Google would send you to the live site, which does not have this Face ID draft.",
+		"passkeyEnrollTitle": "Turn on quick sign-in",
+		"passkeyEnrollBody": "Use Face ID or Touch ID next time",
+		"passkeyEnrollCta": "Enable",
+		"passkeyEnrollSkip": "Not now",
+		"passkeyEnrollSuccess": "Passkey saved. You can use Face ID or Touch ID next time."
 	},
 	"EnrollPage": {
 		"metaTitle": "Course enrollment · Leo Learns To Trade",
@@ -559,7 +574,11 @@
 		"passwordUpdated": "Password updated. You can now sign in with password.",
 		"passwordUpdateFailed": "Failed to update password. Please try again later.",
 		"passwordMismatch": "The two passwords do not match.",
-		"passwordRequired": "Please enter a password with at least 8 characters"
+		"passwordRequired": "Please enter a password with at least 8 characters",
+		"passkeySectionTitle": "Quick sign-in (Face ID / Touch ID)",
+		"passkeyBind": "Enable quick sign-in",
+		"passkeyRebind": "Rebind",
+		"passkeyBound": "Bound"
 	},
 	"MyScores": {
 		"title": "My scores",

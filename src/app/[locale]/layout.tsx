@@ -3,6 +3,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { PasskeyEnrollPrompt } from "@/components/auth/PasskeyEnrollPrompt";
 import { LocaleMainShell } from "@/components/layout/LocaleMainShell";
 import { SiteTopBar } from "@/components/shared/SiteTopBar";
 import { routing } from "@/i18n/routing";
@@ -39,6 +40,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 	return (
 		<NextIntlClientProvider locale={locale} messages={messages}>
 			<SiteTopBar />
+			<PasskeyEnrollPrompt />
 			<LocaleMainShell>{children}</LocaleMainShell>
 		</NextIntlClientProvider>
 	);

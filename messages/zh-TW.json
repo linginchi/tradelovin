@@ -239,7 +239,22 @@
 		"devQuickLoginTitle": "開發/測試快捷登入",
 		"devAccountLabel": "測試帳號",
 		"devPasswordLabel": "密碼",
-		"devLoginButton": "快捷登入"
+		"devLoginButton": "快捷登入",
+		"forgotPasswordLocal": "本機發不出重設郵件。請先到正式站用 Google 登入，在「我的」裡設定新密碼，再回到這裡用新密碼登入。",
+		"passkeyLogin": "使用 Face ID / Touch ID 登入",
+		"passkeyLoggingIn": "驗證中…",
+		"passkeyCancelled": "已取消",
+		"passkeyFailed": "驗證失敗，請重試",
+		"passkeyNeedsEnroll": "還沒有綁定面容登入，請先用密碼或郵箱連結登入，登入後再綁定。",
+		"passkeyLoginHint": "請先用郵箱連結或密碼登入，成功後再綁定 Face ID。",
+		"passkeyMissingServiceRole": "本機還沒配服務端密鑰，Face ID 和郵箱連結都發不了。請改用密碼登入。",
+		"localDevNotice": "你在本機草稿站。請用「密碼登入」。忘了密碼時：先到 leolearnstotrade.com 用 Google 登入，在「我的」設定新密碼，再回到這裡。Face ID 和郵箱連結需要本機配置服務端密鑰。本機 Google 會跳正式站，所以不能用。",
+		"googleLocalBlocked": "本機請用密碼登入。Google 會跳到線上正式站，那裡沒有這次的 Face ID 草稿。",
+		"passkeyEnrollTitle": "綁定快速登入",
+		"passkeyEnrollBody": "下次可用面容或指紋登入",
+		"passkeyEnrollCta": "立即綁定",
+		"passkeyEnrollSkip": "以後再說",
+		"passkeyEnrollSuccess": "已綁定，下次可用面容或指紋登入"
 	},
 	"EnrollPage": {
 		"metaTitle": "報名課程 · 新紮學豹",
@@ -559,7 +574,11 @@
 		"passwordUpdated": "密碼已更新，可使用密碼登入。",
 		"passwordUpdateFailed": "設定密碼失敗，請稍後再試。",
 		"passwordMismatch": "兩次輸入的密碼不一致。",
-		"passwordRequired": "請輸入至少 8 位密碼"
+		"passwordRequired": "請輸入至少 8 位密碼",
+		"passkeySectionTitle": "快速登入（Face ID / Touch ID）",
+		"passkeyBind": "綁定快速登入",
+		"passkeyRebind": "重新綁定",
+		"passkeyBound": "已綁定"
 	},
 	"MyScores": {
 		"title": "我的成績",

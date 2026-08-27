@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { isLocalDevAuthHost } from "@/lib/auth/passkey";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
 
 type Props = {
@@ -15,8 +16,17 @@ export function GoogleLoginButton({ nextPath }: Props) {
   const t = useTranslations("MagicLogin");
   const locale = useLocale();
   const [busy, setBusy] = useState(false);
+  const [localDev, setLocalDev] = useState(false);
+
+  useEffect(() => {
+    setLocalDev(isLocalDevAuthHost(window.location.hostname));
+  }, []);
 
   async function onGoogleLogin() {
+    if (isLocalDevAuthHost(window.location.hostname)) {
+      toast.error(t("googleLocalBlocked"));
+      return;
+    }
     const sb = getSupabaseBrowserClient();
     if (!sb) {
       toast.error(t("sendFailed"));
@@ -46,8 +56,11 @@ export function GoogleLoginButton({ nextPath }: Props) {
   }
 
   return (
-    <Button type="button" variant="outline" onClick={() => void onGoogleLogin()} disabled={busy}>
-      {busy ? t("googleLoggingIn") : t("googleLogin")}
-    </Button>
+    <div className="flex min-w-0 flex-col gap-1">
+      <Button type="button" variant="outline" onClick={() => void onGoogleLogin()} disabled={busy}>
+        {busy ? t("googleLoggingIn") : t("googleLogin")}
+      </Button>
+      {localDev ? <p className="text-muted-foreground max-w-56 text-xs">{t("googleLocalBlocked")}</p> : null}
+    </div>
   );
 }

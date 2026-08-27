@@ -194,7 +194,7 @@ async function mintSessionTokens(
 	return toMintedSession(data.session);
 }
 
-async function establishMagicLinkSession(
+export async function establishMagicLinkSession(
 	srv: SupabaseClient,
 	response: NextResponse,
 	emailLower: string,

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
@@ -10,7 +10,10 @@ import { toast, Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { isLocalDevAuthHost } from "@/lib/auth/passkey";
 import { getSupabaseBrowserClient } from "@/lib/supabase/client";
+
+const LOCAL_RESET_ON_PROD_URL = "https://leolearnstotrade.com/login";
 
 type FormValues = {
 	email: string;
@@ -24,6 +27,11 @@ export function PasswordLoginForm() {
 	const [busy, setBusy] = useState(false);
 	const [forgotBusy, setForgotBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [localDev, setLocalDev] = useState(false);
+
+	useEffect(() => {
+		setLocalDev(isLocalDevAuthHost(window.location.hostname));
+	}, []);
 
 	const {
 		register,
@@ -73,6 +81,12 @@ export function PasswordLoginForm() {
 	 * then landing on the profile page so the user can set a new password.
 	 */
 	const sendForgotPasswordLink = async () => {
+		if (localDev) {
+			toast.message(t("forgotPasswordLocal"));
+			window.open(LOCAL_RESET_ON_PROD_URL, "_blank", "noopener,noreferrer");
+			return;
+		}
+
 		const emailValid = await trigger("email");
 		if (!emailValid) return;
 		const email = getValues("email").trim().toLowerCase();
@@ -154,7 +168,9 @@ export function PasswordLoginForm() {
 				)}
 			</Button>
 
-			<p className="text-muted-foreground text-xs">{t("forgotPasswordHint")}</p>
+			<p className="text-muted-foreground text-xs">
+				{localDev ? t("forgotPasswordLocal") : t("forgotPasswordHint")}
+			</p>
 
 			{error ? <p className="text-destructive text-sm">{error}</p> : null}
 			<Toaster richColors theme="dark" position="top-center" />
