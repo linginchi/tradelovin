@@ -183,6 +183,12 @@ npm run deploy:cloudflare
 | 运行期（Worker Secret） | `SUPABASE_SERVICE_ROLE_KEY` | 服务端 API 写库、后台管理、受保护流程 | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `ADMIN_JWT_SECRET` | 管理后台 JWT 签发与校验 | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `RESEND_API_KEY` | 邮件验证码与通知邮件 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `VIDEO_STORAGE_PROVIDER` | 课程视频存储类型（`r2` 或 `aliyun`） | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `VIDEO_STORAGE_BUCKET` | 视频 bucket 名 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `VIDEO_STORAGE_ENDPOINT` | S3 兼容 endpoint | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `VIDEO_STORAGE_ACCESS_KEY_ID` | 签名用 access key | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `VIDEO_STORAGE_SECRET_ACCESS_KEY` | 签名用 secret key | Cloudflare Worker Secrets |
+| 运行期（Worker Var/Secret，可选） | `VIDEO_STORAGE_PUBLIC_URL` | 公开访问域名（不设则用签名 URL） | Cloudflare Worker Variables/Secrets |
 | 运行期（Worker Var/Secret） | `RESEND_FROM_EMAIL` | 发件人地址 | Cloudflare Worker Variables/Secrets |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP` | 开启后台固定码登录（仅开发/测试建议） | Cloudflare Worker Variables / 本地 `.env` |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION` | 生产环境二次确认固定码（默认不启用） | Cloudflare Worker Variables |
@@ -190,6 +196,11 @@ npm run deploy:cloudflare
 | 构建期（Next 打包） | `NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN` | `/cjkzt/login` 显示「一键登录（测试）」按钮（仍需 Worker 打开固定管理员 OTP） | 本地 `.env` / GitHub Actions Variables（不设时 workflow 默认 `0`） |
 | 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS` | 启用 `/api/auth/dev-test-login`（固定测试账号入口） | Worker Variables（不设时 workflow 部署默认 `0`） |
 | 运行期（Worker Var） | `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION` | 生产环境二次确认 dev 测试账号入口（默认不启用） | Worker Variables（不设时 workflow 部署默认 `0`） |
+
+> **课程视频有两条后端，不要用同一把锁挡住。**
+> - **旧片**（`storage_key` 不是 `videos/` 前缀，例如豹哥/豹叔系列）走 Supabase Storage `Videos` bucket，只需要 Worker Secret `SUPABASE_SERVICE_ROLE_KEY`。播放接口不得在看到 key 之前就因缺少 `VIDEO_STORAGE_*` 返回「视频服务暂未配置」。
+> - **后台新上传**（key 以 `videos/` 开头）走 R2/Aliyun，需要 `VIDEO_STORAGE_PROVIDER` / `BUCKET` / `ENDPOINT` / `ACCESS_KEY_ID` / `SECRET_ACCESS_KEY`。这些**必须放在 Worker Secrets，不要放 Variables**：`wrangler deploy` 会用 `wrangler.jsonc` 的 `vars` 块整体替换明文变量，该文件并未声明 `VIDEO_STORAGE_*`，配成 Variables 会被下一次发布清空。
+> 自查：`curl -s https://leolearnstotrade.com/api/deploy/version` → `data.features.videoPlayback`（能否签发任一后端）与 `data.features.videoObjectStore`（R2/Aliyun 是否配好）。`videoPlayback === false` 时发布后校验会失败。
 
 ### 6.2 GitHub Actions：推送到 `main` 自动部署 Workers（推荐路径）
 
@@ -199,8 +210,20 @@ npm run deploy:cloudflare
 - **Variables（Actions）**：`NEXT_ASSET_PREFIX` 应删除或留空（见上文「静态资源前缀」）。
 - **TQ 定时重算必配项**：
   - Actions Secret：`TQ_CRON_API_KEY`（与 Worker 运行环境变量 `TQ_CRON_API_KEY` 保持一致）。
-  - Actions Variable：`TQ_CRON_BASE_URL`（例如 `https://tradelovin.com`）。
+  - Actions Variable：`TQ_CRON_BASE_URL`（必须是 canonical 主域 `https://leolearnstotrade.com`；legacy 域名会 `308`）。
   - 接口在服务端会二次判断：仅交易日且香港时间 16:00 后执行；非交易日或 16:00 前会返回 `skipped=true`。
+- **视频定时任务必配项**：两个 cron 各自独立鉴权，**Actions Secret 与 Worker Secret 必须成对配置且取值一致**，只配一边会得到 `401`。
+
+  | 工作流 | 时间 | 接口 | Actions Secret | 对应 Worker Secret | 请求头 |
+  | --- | --- | --- | --- | --- | --- |
+  | [`video-marketing-growth.yml`](.github/workflows/video-marketing-growth.yml) | 每小时 | `POST /api/cron/video-marketing-growth` | `VIDEO_MARKETING_GROWTH_CRON_KEY` | `VIDEO_MARKETING_GROWTH_CRON_KEY` | `x-video-marketing-growth-cron-key` |
+  | [`bump-view-counts.yml`](.github/workflows/bump-view-counts.yml) | 每天 08:10 HKT | `POST /api/cron/bump-view-counts` | `VIEW_COUNT_CRON_KEY` | `VIEW_COUNT_CRON_KEY` | `x-cron-key` |
+
+  - 两者都复用 Actions Variable `TQ_CRON_BASE_URL`，**必须指向 canonical 主域** `https://leolearnstotrade.com`；填 legacy 域名时 `/api/*` 会返回 `308`，定时任务会「绿灯但没执行」。
+  - `bump-view-counts` 也接受历史密钥 `INTERNAL_WEBHOOK_TOKEN` 与 `TQ_CRON_API_KEY`（优先级：`VIEW_COUNT_CRON_KEY` → `INTERNAL_WEBHOOK_TOKEN` → `TQ_CRON_API_KEY`，与服务端 `authorize()` 一致）；新配置统一用 `VIEW_COUNT_CRON_KEY`。
+  - `bump-view-counts` 是**幂等补跑**：按香港日期跳过已写入的日期，因此漏跑的日子会在下一次成功运行时自动补齐，无需手工回填。
+  - 缺少 base URL 或密钥时工作流会**直接失败**（不静默跳过），避免观看人次长期停止增长而无人发现。
+  - 新增/修改这两个工作流后须运行：`npm run test:contracts:cron-workflows`。
 - **重要**：不带 `--var` 的 `wrangler deploy` 会按本次发布覆盖 Worker 上对应 **vars**；此前仅用本地命令行注入的 `ALLOW_*` / `ENABLE_*` 可能在一次 CI 发布后被清空，表现为**后台固定码 / 前台测试登录「像退回老版本」**。当前工作流在部署步骤会**始终传入**下列变量（未在仓库 Variables 中设置时默认 `0`，安全默认关闭）：
   - `ALLOW_FIXED_ADMIN_OTP`
   - `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION`

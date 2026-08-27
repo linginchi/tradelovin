@@ -35,6 +35,15 @@ jobs:
       - name: xeoaxis multi-entry contract tests
         run: npm run test:contracts:xeoaxis
 
+      - name: Cron workflow contract tests
+        run: npm run test:contracts:cron-workflows
+
+      - name: Release verification contract tests
+        run: npm run test:contracts:deploy
+
+      - name: Video playback contract tests
+        run: npm run test:contracts:video-playback
+
       - name: Trade session redirect regression guard
         run: npm run verify:trade-session-redirect
 
@@ -153,6 +162,7 @@ jobs:
             echo "Missing TQ_CRON_BASE_URL or TQ_CRON_API_KEY, skip scheduled recalculation."
             exit 0
           fi
-          curl -fsS -X POST "${TQ_CRON_BASE_URL%/}/api/tq/cron/recalculate" \
+          # -L：legacy 域名对 /api/* 返回 308，未跟随时 curl -f 会把 308 当成功。
+          curl -fsS -L -X POST "${TQ_CRON_BASE_URL%/}/api/tq/cron/recalculate" \
             -H "x-tq-cron-key: ${TQ_CRON_API_KEY}" \
             -H "Content-Type: application/json"

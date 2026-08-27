@@ -7,27 +7,68 @@ on:
     # 每天 08:10 HKT（00:10 UTC）
     - cron: "10 0 * * *"
 
+concurrency:
+  group: bump-view-counts
+  cancel-in-progress: false
+
 jobs:
   bump:
     runs-on: ubuntu-latest
     steps:
       - name: Call bump-view-counts cron
         env:
-          APP_URL: ${{ vars.TQ_CRON_BASE_URL }}
+          BUMP_VIEW_COUNTS_BASE_URL: ${{ vars.TQ_CRON_BASE_URL }}
+          VIEW_COUNT_CRON_KEY: ${{ secrets.VIEW_COUNT_CRON_KEY }}
           INTERNAL_WEBHOOK_TOKEN: ${{ secrets.INTERNAL_WEBHOOK_TOKEN }}
           TQ_CRON_API_KEY: ${{ secrets.TQ_CRON_API_KEY }}
         run: |
           set -euo pipefail
-          BASE_URL="${APP_URL:-https://tradelovin.com}"
-          if [ -n "${INTERNAL_WEBHOOK_TOKEN:-}" ]; then
-            curl -fsS -X POST "${BASE_URL%/}/api/cron/bump-view-counts" \
-              -H "Content-Type: application/json" \
-              -H "x-internal-token: ${INTERNAL_WEBHOOK_TOKEN}"
-          elif [ -n "${TQ_CRON_API_KEY:-}" ]; then
-            curl -fsS -X POST "${BASE_URL%/}/api/cron/bump-view-counts" \
-              -H "Content-Type: application/json" \
-              -H "x-cron-key: ${TQ_CRON_API_KEY}"
-          else
-            echo "Missing INTERNAL_WEBHOOK_TOKEN or TQ_CRON_API_KEY secret"
+
+          if [ -z "${BUMP_VIEW_COUNTS_BASE_URL:-}" ]; then
+            echo "::error::Missing production base URL (vars.TQ_CRON_BASE_URL). Cannot bump view counts."
             exit 1
           fi
+
+          # 服务端优先级：VIEW_COUNT_CRON_KEY > TQ_CRON_API_KEY（见 authorize()），此处保持一致。
+          if [ -n "${VIEW_COUNT_CRON_KEY:-}" ]; then
+            auth_header="x-cron-key"
+            auth_value="${VIEW_COUNT_CRON_KEY}"
+          elif [ -n "${INTERNAL_WEBHOOK_TOKEN:-}" ]; then
+            auth_header="x-internal-token"
+            auth_value="${INTERNAL_WEBHOOK_TOKEN}"
+          elif [ -n "${TQ_CRON_API_KEY:-}" ]; then
+            auth_header="x-cron-key"
+            auth_value="${TQ_CRON_API_KEY}"
+          else
+            echo "::error::No cron credential available. Add Actions secret VIEW_COUNT_CRON_KEY (or INTERNAL_WEBHOOK_TOKEN / TQ_CRON_API_KEY) with the same value as the matching Cloudflare Worker secret. See DEPLOY.md 6.2."
+            exit 1
+          fi
+
+          # -L 是必需的：legacy 域名对 /api/* 返回 308，不跟随就永远打不到接口。
+          endpoint="${BUMP_VIEW_COUNTS_BASE_URL%/}/api/cron/bump-view-counts"
+          response_body="$(mktemp)"
+          if ! http_code="$(curl -sS -L --max-time 120 \
+            --retry 3 --retry-delay 5 --retry-connrefused \
+            -o "${response_body}" -w '%{http_code}' \
+            -X POST "${endpoint}" \
+            -H "Content-Type: application/json" \
+            -H "${auth_header}: ${auth_value}")"; then
+            echo "::error::Could not reach ${endpoint} (curl transport error)."
+            exit 1
+          fi
+
+          echo "HTTP ${http_code}"
+          cat "${response_body}"
+          echo
+
+          case "${http_code}" in
+            2*) ;;
+            404)
+              echo "::error::/api/cron/bump-view-counts returned 404. The deployed Worker predates this route; redeploy main before the cron can run."
+              exit 1
+              ;;
+            *)
+              echo "::error::bump-view-counts cron failed with HTTP ${http_code}."
+              exit 1
+              ;;
+          esac

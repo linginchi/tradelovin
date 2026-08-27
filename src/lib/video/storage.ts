@@ -1,30 +1,27 @@
-type VideoStorageConfig = {
-  provider: "r2" | "aliyun";
-  bucket: string;
-  endpoint: string;
-  accessKeyId: string;
-  secretAccessKey: string;
-  publicUrl?: string;
+import { hasServiceRoleKey } from "@/lib/supabase/service";
+import {
+  getVideoStorageConfig,
+  getVideoStorageMissingEnvNames,
+  isLegacySupabaseVideoKey,
+  isVideoStorageConfigured,
+  objectStoreMissingFor,
+  requiresObjectStore,
+  SUPABASE_VIDEOS_BUCKET,
+} from "@/lib/video/storage-config.mjs";
+
+export {
+  getVideoStorageConfig,
+  getVideoStorageMissingEnvNames,
+  isLegacySupabaseVideoKey,
+  isVideoStorageConfigured,
+  objectStoreMissingFor,
+  requiresObjectStore,
+  SUPABASE_VIDEOS_BUCKET,
 };
 
 const DEFAULT_SIGN_TTL_SECONDS = 15 * 60;
 
-/**
- * Legacy Leo/AI clips (e.g. `leo-004/...mp4`) were uploaded to Supabase Storage.
- * Admin course uploads use R2 under `videos/{courseId}/...`.
- */
-export const SUPABASE_VIDEOS_BUCKET = "Videos";
-
-function env(name: string): string {
-  return (process.env[name] ?? "").trim();
-}
-
-/** True for storage_key values that are not the admin R2 upload prefix. */
-export function isLegacySupabaseVideoKey(storageKey: string): boolean {
-  const key = storageKey.trim();
-  if (!key) return false;
-  return !key.startsWith("videos/");
-}
+type VideoStorageConfig = NonNullable<ReturnType<typeof getVideoStorageConfig>>;
 
 function normalizeEndpoint(raw: string): string {
   const value = raw.trim().replace(/\/+$/, "");
@@ -41,41 +38,12 @@ function encodeKeyPath(storageKey: string): string {
     .join("/");
 }
 
-function isValidProvider(value: string): value is "r2" | "aliyun" {
-  return value === "r2" || value === "aliyun";
-}
-
-export function getVideoStorageConfig(): VideoStorageConfig | null {
-  const providerRaw = env("VIDEO_STORAGE_PROVIDER").toLowerCase();
-  if (!isValidProvider(providerRaw)) return null;
-  const bucket = env("VIDEO_STORAGE_BUCKET");
-  const endpoint = env("VIDEO_STORAGE_ENDPOINT");
-  const accessKeyId = env("VIDEO_STORAGE_ACCESS_KEY_ID");
-  const secretAccessKey = env("VIDEO_STORAGE_SECRET_ACCESS_KEY");
-  const publicUrl = env("VIDEO_STORAGE_PUBLIC_URL");
-  if (!bucket || !endpoint || !accessKeyId || !secretAccessKey) return null;
-  return {
-    provider: providerRaw,
-    bucket,
-    endpoint,
-    accessKeyId,
-    secretAccessKey,
-    publicUrl: publicUrl || undefined,
-  };
-}
-
-export function isVideoStorageConfigured(): boolean {
-  return Boolean(getVideoStorageConfig());
-}
-
-export function getVideoStorageMissingEnvNames(): string[] {
-  const missing: string[] = [];
-  if (!env("VIDEO_STORAGE_PROVIDER")) missing.push("VIDEO_STORAGE_PROVIDER");
-  if (!env("VIDEO_STORAGE_BUCKET")) missing.push("VIDEO_STORAGE_BUCKET");
-  if (!env("VIDEO_STORAGE_ENDPOINT")) missing.push("VIDEO_STORAGE_ENDPOINT");
-  if (!env("VIDEO_STORAGE_ACCESS_KEY_ID")) missing.push("VIDEO_STORAGE_ACCESS_KEY_ID");
-  if (!env("VIDEO_STORAGE_SECRET_ACCESS_KEY")) missing.push("VIDEO_STORAGE_SECRET_ACCESS_KEY");
-  return missing;
+/**
+ * True when the Worker can issue at least one kind of play URL.
+ * Legacy Leo clips need the Supabase service role; `videos/` keys need R2/Aliyun.
+ */
+export function canServeVideoPlayback(): boolean {
+  return hasServiceRoleKey() || isVideoStorageConfigured();
 }
 
 type AwsSdk = {

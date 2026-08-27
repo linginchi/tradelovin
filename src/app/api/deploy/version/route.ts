@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { canServeVideoPlayback, isVideoStorageConfigured } from "@/lib/video/storage";
+
 export const runtime = "nodejs";
 
 export async function GET() {
@@ -15,6 +17,10 @@ export async function GET() {
 				legacyScoreAlias: true,
 				tqPeriods: ["all", "monthly", "weekly", "daily"],
 				tqCertificates: true,
+				// Presence only — never values. Legacy Leo clips play via Supabase
+				// Storage (service role); `videos/` keys need VIDEO_STORAGE_* Secrets.
+				videoPlayback: canServeVideoPlayback(),
+				videoObjectStore: isVideoStorageConfigured(),
 			},
 		},
 	});
