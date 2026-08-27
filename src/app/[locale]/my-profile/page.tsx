@@ -3,6 +3,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import MyMembershipSection from "@/components/profile/MyMembershipSection";
 import { ProfileMembershipLevelCard } from "@/components/profile/ProfileMembershipLevelCard";
+import { ProfilePasskeySection } from "@/components/profile/ProfilePasskeySection";
 import { ProfilePasswordSection } from "@/components/profile/ProfilePasswordSection";
 import { buttonVariants } from "@/components/ui/button";
 import { Link } from "@/i18n/navigation";
@@ -130,6 +131,7 @@ export default async function MyProfilePage({ params }: Props) {
 				<MyMembershipSection />
 				<ProfileMembershipLevelCard />
 				<ProfilePasswordSection />
+				<ProfilePasskeySection />
 
 				<section className="border-border/80 bg-card/30 rounded-2xl border p-6 backdrop-blur-md md:p-8">
 					<h2 className="flex items-center gap-2 text-base font-semibold tracking-tight">

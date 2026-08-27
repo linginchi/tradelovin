@@ -1,10 +1,14 @@
+import { headers } from "next/headers";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { EmailLinkLoginForm } from "@/components/auth/EmailLinkLoginForm";
+import { LocalDevLoginNotice } from "@/components/auth/LocalDevLoginNotice";
+import { PasskeyLoginButton } from "@/components/auth/PasskeyLoginButton";
 import { PasswordLoginForm } from "@/components/auth/PasswordLoginForm";
 import { buttonVariants } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "@/i18n/navigation";
+import { isLocalDevAuthHost } from "@/lib/auth/passkey";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -27,6 +31,8 @@ export default async function LoginPage({ params }: Props) {
 
 	const tNav = await getTranslations("RegisterPage");
 	const t = await getTranslations("MagicLogin");
+	const host = (await headers()).get("host") ?? "";
+	const localDev = isLocalDevAuthHost(host);
 
 	return (
 		<div className="relative flex min-h-full flex-1 flex-col">
@@ -41,7 +47,9 @@ export default async function LoginPage({ params }: Props) {
 						<h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
 						<p className="text-muted-foreground text-sm">{t("intro")}</p>
 					</div>
-					<Tabs defaultValue="email-link" className="w-full">
+					<LocalDevLoginNotice />
+					<PasskeyLoginButton />
+					<Tabs defaultValue={localDev ? "password" : "email-link"} className="w-full">
 						<TabsList className="grid w-full grid-cols-2">
 							<TabsTrigger value="email-link">{t("emailLinkTab")}</TabsTrigger>
 							<TabsTrigger value="password">{t("passwordTab")}</TabsTrigger>
