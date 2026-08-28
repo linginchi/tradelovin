@@ -26,6 +26,20 @@ export function isLegacySupabaseVideoKey(storageKey: string): boolean {
   return !key.startsWith("videos/");
 }
 
+/** Admin uploads under `videos/` need R2/Aliyun; Leo/AI clips do not. */
+export function requiresObjectStore(storageKey: string): boolean {
+  return !isLegacySupabaseVideoKey(storageKey);
+}
+
+/**
+ * True when this key cannot be signed with the currently configured backends.
+ * Legacy keys only need the Supabase service role (checked later by the signer).
+ * Do not gate all playback on VIDEO_STORAGE_*.
+ */
+export function objectStoreMissingFor(storageKey: string): boolean {
+  return requiresObjectStore(storageKey) && !isVideoStorageConfigured();
+}
+
 function normalizeEndpoint(raw: string): string {
   const value = raw.trim().replace(/\/+$/, "");
   if (!value) return "";

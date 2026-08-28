@@ -1,0 +1,32 @@
+---
+description: Freeze video playback — do not break working play without CEO approval
+globs:
+  - src/lib/video/storage.ts
+  - src/app/api/courses/**/play/route.ts
+  - src/app/api/admin/courses/**/play/route.ts
+  - src/components/video/**
+alwaysApply: true
+---
+
+# 视频播放冻结
+
+没有用户原文 **「CEO批准视频播放」**，禁止改动会破坏已能播放的视频路径。
+
+## 冻结文件（默认禁止改）
+
+- `src/lib/video/storage.ts`
+- `src/app/api/courses/[courseId]/videos/[videoId]/play/route.ts`
+- `src/app/api/admin/courses/[courseId]/videos/[videoId]/play/route.ts`
+- `src/components/video/VideoPlayerClient.tsx`
+
+## 硬规则
+
+1. **Legacy 片（`storage_key` 不以 `videos/` 开头，例如 `leo-004/...`）走 Supabase Storage `Videos` 桶签名 URL。** 不得因为 Worker 缺 `VIDEO_STORAGE_PROVIDER` / `BUCKET` / `ENDPOINT` 就对全部 play 请求返回 503。
+2. **`videos/` 前缀才走 R2/Aliyun。** 对象存储未配齐时，只拦这类片，不要连豹哥/旧片一起拦。
+3. 禁止把 `if (!isVideoStorageConfigured()) return 503` 重新加回公开 / 管理 play 路由的入口。必须先读 `storage_key`，再用 `objectStoreMissingFor(storageKey)`。
+4. 禁止改签名路径、桶名、`isLegacySupabaseVideoKey` 判定、播放器取 `playUrl` 的方式，除非用户明确批准。
+5. 口号、会员 CTA、通知、考核仪表等任务 **不得** 顺手改上述冻结文件。
+
+## 允许的例外
+
+仅当用户消息含 **「CEO批准视频播放」**，或用户明确要求修复当前已证实的播放故障，且改动是恢复既有能播路径（不是新架构）。
