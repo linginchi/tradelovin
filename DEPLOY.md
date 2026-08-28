@@ -182,6 +182,7 @@ npm run deploy:cloudflare
 | 构建期（可选） | `NEXT_ASSET_PREFIX` | 仅 Cloudflare 构建时设置静态资源绝对前缀 | GitHub Actions Variables / 部署命令前设置 |
 | 运行期（Worker Secret） | `SUPABASE_SERVICE_ROLE_KEY` | 服务端 API 写库、后台管理、受保护流程 | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `ADMIN_JWT_SECRET` | 管理后台 JWT 签发与校验 | Cloudflare Worker Secrets |
+| 运行期（Worker Secret） | `STAFF_PAY_PASSWORD` | `/staff/pay` 职员收款共享密码（生产必配；本地未设则用 `staffpay`） | Cloudflare Worker Secrets |
 | 运行期（Worker Secret） | `RESEND_API_KEY` | 邮件验证码与通知邮件 | Cloudflare Worker Secrets |
 | 运行期（Worker Var/Secret） | `RESEND_FROM_EMAIL` | 发件人地址 | Cloudflare Worker Variables/Secrets |
 | 运行期（Worker Var） | `ALLOW_FIXED_ADMIN_OTP` | 开启后台固定码登录（仅开发/测试建议） | Cloudflare Worker Variables / 本地 `.env` |

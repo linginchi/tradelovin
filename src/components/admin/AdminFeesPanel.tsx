@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
@@ -182,7 +183,12 @@ export function AdminFeesPanel() {
 			<Card className="border-border/60 bg-card/35">
 				<CardHeader>
 					<CardTitle className="text-base">{t("sendFee")}</CardTitle>
-					<CardDescription>{t("feeCardDesc")}</CardDescription>
+					<CardDescription>
+						{t("feeCardDesc")}{" "}
+						<Link href="/staff/pay" className="text-primary underline-offset-4 hover:underline">
+							{t("feeQrLink")}
+						</Link>
+					</CardDescription>
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

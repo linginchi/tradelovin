@@ -219,6 +219,14 @@ async function middlewareAsync(request: NextRequest) {
 		return withInvokePath(request);
 	}
 
+	if (pathname === "/staff" || pathname.startsWith("/staff/")) {
+		return withInvokePath(request);
+	}
+
+	if (pathname === "/p" || pathname.startsWith("/p/")) {
+		return withInvokePath(request);
+	}
+
 	const legacyLearning = redirectLegacyLearningPaths(request);
 	if (legacyLearning) {
 		return legacyLearning;

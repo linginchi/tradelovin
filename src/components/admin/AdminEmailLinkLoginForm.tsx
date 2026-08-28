@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { resolveAdminLoginNextPath } from "@/lib/staff-pay/staff-pay";
 import { cn } from "@/lib/utils";
 
 type FormValues = {
@@ -36,11 +37,7 @@ export function AdminEmailLinkLoginForm() {
 		mode: "onBlur",
 	});
 
-	const nextPathRaw = searchParams.get("next");
-	const nextPath =
-		nextPathRaw && nextPathRaw.startsWith("/cjkzt") && !nextPathRaw.startsWith("//")
-			? nextPathRaw
-			: "/cjkzt";
+	const nextPath = resolveAdminLoginNextPath(searchParams.get("next"));
 
 	async function sendLink(values: FormValues) {
 		if (cooldownSeconds > 0) return;

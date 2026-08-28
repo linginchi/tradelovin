@@ -840,6 +840,7 @@
 		"feeBody": "正文（純文本，必填）",
 		"feeHtml": "HTML 正文（可選）",
 		"feeCardDesc": "編輯郵件正文後，在下方表格中勾選學員併發送。",
+		"feeQrLink": "打開學費二維碼",
 		"sendFeeConfirmTitle": "確認發送繳費郵件？",
 		"sendFeeConfirmDesc": "將向選中的 {count} 位學員發送郵件。",
 		"sendFee": "發送郵件",

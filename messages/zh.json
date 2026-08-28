@@ -840,6 +840,7 @@
 		"feeBody": "正文（纯文本，必填）",
 		"feeHtml": "HTML 正文（可选）",
 		"feeCardDesc": "编辑邮件正文后，在下方表格中勾选学员并发送。",
+		"feeQrLink": "打开学费二维码",
 		"sendFeeConfirmTitle": "确认发送缴费邮件？",
 		"sendFeeConfirmDesc": "将向选中的 {count} 位学员发送邮件。",
 		"sendFee": "发送邮件",
