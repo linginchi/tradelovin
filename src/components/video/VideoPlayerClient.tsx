@@ -251,6 +251,15 @@ export function VideoPlayerClient() {
           </Link>
         </div>
       ) : null}
+      <div className="flex justify-center py-2">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/partner-qr.png"
+          alt="广发证券"
+          className="w-32 rounded-lg border border-border/40 bg-card shadow-sm sm:w-36"
+          draggable={false}
+        />
+      </div>
       <p className="text-muted-foreground text-xs">
         播放地址为临时签名 URL（15 分钟有效）。系统会每 10 秒自动保存观看进度。
       </p>
