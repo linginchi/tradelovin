@@ -57,7 +57,10 @@ test("staff pay create route uses mainland origin not NEXT_PUBLIC_APP_URL", asyn
 		"utf8",
 	);
 	assert.doesNotMatch(source, /NEXT_PUBLIC_APP_URL/);
-	assert.match(source, /buildStaffCheckoutSessionParams/);
+	assert.doesNotMatch(source, /stripe\.checkout\.sessions\.create/);
+	assert.match(source, /createStaffStripeCheckoutSession/);
+	const lib = await readFile(new URL("../../src/lib/staff-pay/staff-pay.ts", import.meta.url), "utf8");
+	assert.match(lib, /api\.stripe\.com\/v1\/checkout\/sessions/);
 	assert.doesNotMatch(source, /requireAdminSession/);
 	assert.match(source, /requireStaffPaySession/);
 	assert.match(source, /resolveStaffPayOrigin/);

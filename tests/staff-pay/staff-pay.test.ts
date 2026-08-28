@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+	buildStaffCheckoutForm,
 	buildStaffCheckoutSessionParams,
 	isStaffTuitionSession,
 	parseTuitionAmountHkd,
@@ -68,6 +69,22 @@ test("publicPayUrl defaults to xeoaxis.com and accepts a local origin", () => {
 	});
 	assert.equal(localParams.success_url?.startsWith("http://192.168.31.183:3001/p/abc123"), true);
 	assert.equal(localParams.cancel_url, "http://192.168.31.183:3001/p/abc123?canceled=1");
+});
+
+test("staff checkout form uses Stripe fetch fields without payment_method_types", () => {
+	const form = buildStaffCheckoutForm({
+		token: "abc123",
+		amountCents: 10_000,
+		payerName: "张三",
+		note: "一期",
+		createdBy: "staff",
+		expiresAtUnix: 1_800_000_000,
+	});
+	assert.equal(form.get("mode"), "payment");
+	assert.equal(form.get("line_items[0][price_data][currency]"), "hkd");
+	assert.equal(form.get("line_items[0][price_data][unit_amount]"), "10000");
+	assert.equal(form.get("metadata[kind]"), STAFF_PAY_KIND);
+	assert.equal(form.has("payment_method_types[0]"), false);
 });
 
 test("isStaffTuitionSession does not activate membership", () => {

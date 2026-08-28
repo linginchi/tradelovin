@@ -94,7 +94,8 @@ export function StaffPayClient({
 				credentials: "include",
 				body: JSON.stringify({ amountHkd, payerName, note }),
 			});
-			const data = (await res.json()) as {
+			const text = await res.text();
+			let data: {
 				success?: boolean;
 				error?: string;
 				payUrl?: string;
@@ -102,6 +103,12 @@ export function StaffPayClient({
 				payerName?: string;
 				note?: string;
 			};
+			try {
+				data = JSON.parse(text) as typeof data;
+			} catch {
+				setError(res.status ? `服务异常（${res.status}），请稍后重试` : "网络错误，请稍后重试");
+				return;
+			}
 			if (!res.ok || !data.success || !data.payUrl || data.amountCents == null) {
 				setError(data.error ?? "生成失败，请重试");
 				return;
