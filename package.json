@@ -31,7 +31,8 @@
 		"upload": "npm run clean:open-next && opennextjs-cloudflare build && opennextjs-cloudflare upload",
 		"cf-typegen": "wrangler types --config wrangler.jsonc --env-interface CloudflareEnv cloudflare-env.d.ts",
 		"test:assessment": "node --loader ./tests/lab/ts-loader.mjs --test tests/assessment/dashboard.test.ts",
-		"test:trade-v2-session-settings": "node --loader ./tests/lab/ts-loader.mjs --test tests/trade-v2/session-settings.test.ts"
+		"test:trade-v2-session-settings": "node --loader ./tests/lab/ts-loader.mjs --test tests/trade-v2/session-settings.test.ts",
+		"test:notices": "node --loader ./tests/lab/ts-loader.mjs --test tests/notices/notices.test.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.1047.0",

@@ -26,7 +26,12 @@
 		"loggingOut": "Logging out...",
 		"userFallback": "User",
 		"lab": "AI Quant Lab",
-		"coachDesk": "Coach desk"
+		"coachDesk": "Coach desk",
+		"inbox": "Inbox",
+		"inboxEmpty": "No messages yet",
+		"inboxLoading": "Loading…",
+		"inboxUnread": "{count} unread messages",
+		"markAllRead": "Mark all as read"
 	},
 	"LanguageSwitcher": {
 		"label": "Language",
@@ -890,7 +895,13 @@
 		"courseTopicNone": "No topic",
 		"courseTopicMissing": "Topic unavailable",
 		"courseTopicUnavailable": "Course topics are unavailable. Apply the course topics migration before assigning topics.",
-		"courseTopicColumn": "Topic"
+		"courseTopicColumn": "Topic",
+		"sendNotice": "Send notice",
+		"sendNoticeTitle": "Title",
+		"sendNoticeBody": "Message",
+		"sendNoticeNeedAccount": "This student has no login account yet",
+		"noticeSent": "Notice sent",
+		"noticeSendFailed": "Failed to send"
 	},
 	"AdminAuth": {
 		"title": "Admin sign-in",

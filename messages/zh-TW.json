@@ -26,7 +26,12 @@
 		"loggingOut": "退出中...",
 		"userFallback": "用戶",
 		"lab": "AI量化實驗室",
-		"coachDesk": "教練工作台"
+		"coachDesk": "教練工作台",
+		"inbox": "站內消息",
+		"inboxEmpty": "暫無消息",
+		"inboxLoading": "載入中…",
+		"inboxUnread": "{count} 則未讀消息",
+		"markAllRead": "全部已讀"
 	},
 	"LanguageSwitcher": {
 		"label": "語言",
@@ -890,7 +895,13 @@
 		"courseTopicNone": "不設置主題",
 		"courseTopicMissing": "主題已不可用",
 		"courseTopicUnavailable": "課程主題當前不可用，請先執行課程主題數據庫遷移後再指派主題。",
-		"courseTopicColumn": "主題"
+		"courseTopicColumn": "主題",
+		"sendNotice": "發通知",
+		"sendNoticeTitle": "標題",
+		"sendNoticeBody": "正文",
+		"sendNoticeNeedAccount": "該學員尚未綁定登入帳號",
+		"noticeSent": "通知已發送",
+		"noticeSendFailed": "發送失敗"
 	},
 	"AdminAuth": {
 		"title": "管理員登錄",

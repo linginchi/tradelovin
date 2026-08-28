@@ -66,6 +66,10 @@ export function AdminStudentsPanel() {
 	const [edit, setEdit] = useState<EditState | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [toast, setToast] = useState<string | null>(null);
+	const [noticeTarget, setNoticeTarget] = useState<RegistrationRow | null>(null);
+	const [noticeTitle, setNoticeTitle] = useState("");
+	const [noticeBody, setNoticeBody] = useState("");
+	const [sendingNotice, setSendingNotice] = useState(false);
 
 	useEffect(() => {
 		const id = window.setTimeout(() => setDebouncedSearch(search.trim()), 320);
@@ -153,6 +157,47 @@ export function AdminStudentsPanel() {
 			setToast(t("saveError"));
 		} finally {
 			setSaving(false);
+		}
+	}
+
+	function startNotice(row: RegistrationRow) {
+		setNoticeTarget(row);
+		setNoticeTitle("");
+		setNoticeBody("");
+		setToast(null);
+	}
+
+	async function sendNotice() {
+		if (!noticeTarget?.profile_id) {
+			setToast(t("sendNoticeNeedAccount"));
+			return;
+		}
+		setSendingNotice(true);
+		setToast(null);
+		try {
+			const res = await fetch("/api/admin/notices", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				credentials: "include",
+				body: JSON.stringify({
+					userId: noticeTarget.profile_id,
+					title: noticeTitle,
+					body: noticeBody,
+				}),
+			});
+			const data = (await res.json()) as { error?: string };
+			if (!res.ok) {
+				setToast(data.error ?? t("noticeSendFailed"));
+				return;
+			}
+			setToast(t("noticeSent"));
+			setNoticeTarget(null);
+			setNoticeTitle("");
+			setNoticeBody("");
+		} catch {
+			setToast(t("noticeSendFailed"));
+		} finally {
+			setSendingNotice(false);
 		}
 	}
 
@@ -262,6 +307,16 @@ export function AdminStudentsPanel() {
 					<Button type="button" variant="outline" size="sm" onClick={() => startEdit(row.original)}>
 						{t("edit")}
 					</Button>
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						disabled={!row.original.profile_id}
+						title={row.original.profile_id ? undefined : t("sendNoticeNeedAccount")}
+						onClick={() => startNotice(row.original)}
+					>
+						{t("sendNotice")}
+					</Button>
 				</div>
 			),
 		},
@@ -305,7 +360,7 @@ export function AdminStudentsPanel() {
 				<p
 					className={cn(
 						"text-sm",
-						toast === t("saved")
+						toast === t("saved") || toast === t("noticeSent")
 							? "text-emerald-600 dark:text-emerald-400"
 							: "text-destructive",
 					)}
@@ -451,6 +506,52 @@ export function AdminStudentsPanel() {
 							onClick={() => editingRow && void saveEdit(editingRow.id)}
 						>
 							{t("save")}
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
+			<Dialog
+				open={noticeTarget !== null}
+				onOpenChange={(o) => {
+					if (!o) setNoticeTarget(null);
+				}}
+			>
+				<DialogContent className="sm:max-w-lg" showCloseButton>
+					<DialogHeader>
+						<DialogTitle>
+							{t("sendNotice")}
+							{noticeTarget ? ` · ${noticeTarget.nickname}` : ""}
+						</DialogTitle>
+					</DialogHeader>
+					<div className="grid gap-3">
+						<div className="space-y-2">
+							<Label htmlFor="notice-title">{t("sendNoticeTitle")}</Label>
+							<Input
+								id="notice-title"
+								value={noticeTitle}
+								onChange={(e) => setNoticeTitle(e.target.value)}
+								maxLength={80}
+								className="h-10"
+							/>
+						</div>
+						<div className="space-y-2">
+							<Label htmlFor="notice-body">{t("sendNoticeBody")}</Label>
+							<Textarea
+								id="notice-body"
+								value={noticeBody}
+								onChange={(e) => setNoticeBody(e.target.value)}
+								maxLength={2000}
+								className="min-h-[120px]"
+							/>
+						</div>
+					</div>
+					<DialogFooter className="border-t-0 bg-transparent p-0 sm:justify-end">
+						<Button type="button" variant="outline" disabled={sendingNotice} onClick={() => setNoticeTarget(null)}>
+							{t("cancel")}
+						</Button>
+						<Button type="button" disabled={sendingNotice} onClick={() => void sendNotice()}>
+							{t("sendNotice")}
 						</Button>
 					</DialogFooter>
 				</DialogContent>

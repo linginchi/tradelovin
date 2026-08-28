@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 import { NavDropdown } from "@/components/shared/NavDropdown";
 import { CoachDeskNavLink } from "@/components/coach/CoachDeskNavLink";
+import { InboxBell } from "@/components/notices/InboxBell";
 import {
 	Sheet,
 	SheetContent,
@@ -99,6 +100,7 @@ export function SiteTopBar({ className }: Props) {
 					{tHome("badge")}
 				</Link>
 
+				<div className="flex shrink-0 items-center gap-1 sm:gap-2">
 				{/* Desktop nav */}
 				<nav
 					className="hidden items-center gap-3 text-xs font-medium tracking-tight md:flex md:text-sm"
@@ -175,6 +177,8 @@ export function SiteTopBar({ className }: Props) {
 
 					<LanguageSwitcher variant="bar" className="ml-1" />
 				</nav>
+
+				{isAuthed ? <InboxBell /> : null}
 
 				{/* Mobile: register CTA + hamburger */}
 				<div className="flex items-center gap-2 md:hidden">
@@ -319,6 +323,7 @@ export function SiteTopBar({ className }: Props) {
 							</nav>
 						</SheetContent>
 					</Sheet>
+				</div>
 				</div>
 			</div>
 		</header>
