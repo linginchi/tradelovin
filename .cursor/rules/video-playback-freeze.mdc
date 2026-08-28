@@ -20,6 +20,7 @@ alwaysApply: true
 - `src/app/api/courses/[courseId]/videos/[videoId]/play/route.ts`
 - `src/app/api/admin/courses/[courseId]/videos/[videoId]/play/route.ts`
 - `src/components/video/VideoPlayerClient.tsx`
+- `public/partner-qr.png`
 - `wrangler.jsonc` 中的 `VIDEO_STORAGE_PROVIDER` / `VIDEO_STORAGE_BUCKET` / `VIDEO_STORAGE_ENDPOINT`
 - `.github/workflows/opennext-build.yml` 的 `wrangler deploy` 步骤（不得漏掉 jsonc 里的视频 vars）
 
@@ -30,6 +31,7 @@ alwaysApply: true
 3. 禁止把 `if (!isVideoStorageConfigured()) return 503` 重新加回公开 / 管理 play 路由的入口。必须先读 `storage_key`，再用 `objectStoreMissingFor(storageKey)`。
 4. 禁止改签名路径、桶名、`isLegacySupabaseVideoKey` 判定、播放器取 `playUrl` 的方式，除非用户明确批准。
 5. 口号、会员 CTA、通知、考核仪表等任务 **不得** 顺手改上述冻结文件。
+6. **广发证券二维码广告**：播放器下方必须保留 `/partner-qr.png`（alt「广发证券」）和 `public/partner-qr.png`。没有 CEO 指令不得删除、替换或改路由。恢复广告时只加展示层，不得改 `playUrl` 签发。
 
 ## 允许的例外
 
