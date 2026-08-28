@@ -8,7 +8,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { requireTradeUser } from "@/lib/trade/require-user";
 import { isMissingRelationError } from "@/lib/video/db";
 import { isPublishedAtLive } from "@/lib/video/publish-status";
-import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
+import { createSignedVideoUrl, objectStoreMissingFor } from "@/lib/video/storage";
 
 export const runtime = "nodejs";
 
@@ -172,10 +172,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
   const invalid = parseIds(courseId, videoId);
   if (invalid) return invalid;
 
-  if (!isVideoStorageConfigured()) {
-    return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
-  }
-
   const srv = getServiceSupabase();
   if (!srv) {
     return NextResponse.json({ error: "服务不可用" }, { status: 503 });
@@ -183,6 +179,13 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
   const video = await loadVideo(srv, courseId, videoId);
   if (video instanceof NextResponse) return video;
+
+  // R2/Aliyun is only required for admin uploads under `videos/`.
+  // Leo/AI clips (e.g. 豹哥·交易新銳) live in Supabase Storage and must keep
+  // playing when VIDEO_STORAGE_* is missing from the Worker.
+  if (objectStoreMissingFor(String(video.storage_key))) {
+    return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
+  }
 
   const adminPreview = await isAdminPreviewAllowed();
   if (!adminPreview && !isPublishedAtLive(video.published_at ?? null)) {

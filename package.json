@@ -20,7 +20,7 @@
 		"smoke:api": "node scripts/deploy/api-smoke.mjs",
 		"smoke:auth-magic-link": "node scripts/deploy/auth-magic-link-smoke.mjs",
 		"smoke:trade-v2": "npm run verify:trade-execution-messages && node scripts/deploy/trade-v2-e2e-smoke.mjs",
-		"test:contracts:xeoaxis": "node --test tests/lib/site-entries.contract.test.mjs tests/lib/site/resolve-asset-prefix.contract.test.mjs tests/lib/auth/magic-link-origin.contract.test.mjs tests/lib/auth/session-handoff.contract.test.mjs tests/lib/site/legacy-overseas-redirect.contract.test.mjs tests/middleware/legacy-overseas-redirect-wiring.contract.test.mjs tests/ci/xeoaxis-entry-smoke-gate.contract.test.mjs",
+		"test:contracts:xeoaxis": "node --test tests/lib/site-entries.contract.test.mjs tests/lib/site/resolve-asset-prefix.contract.test.mjs tests/lib/auth/magic-link-origin.contract.test.mjs tests/lib/auth/session-handoff.contract.test.mjs tests/lib/site/legacy-overseas-redirect.contract.test.mjs tests/middleware/legacy-overseas-redirect-wiring.contract.test.mjs tests/ci/xeoaxis-entry-smoke-gate.contract.test.mjs tests/api/courses/video-play-legacy-storage.contract.test.mjs tests/lib/video/storage-legacy-key.test.mjs",
 		"smoke:xeoaxis": "node scripts/deploy/xeoaxis-entry-smoke.mjs",
 		"sync:generated": "npm run sync:trade-execution-messages",
 		"sync:trade-execution-messages": "node scripts/shared/sync-trade-execution-messages.mjs",
