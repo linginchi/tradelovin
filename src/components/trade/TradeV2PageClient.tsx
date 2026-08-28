@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast, Toaster } from "sonner";
 
 import { FeedbackButton } from "@/components/common/FeedbackButton";
+import { ModuleAssessmentDashboard } from "@/components/assessment/ModuleAssessmentDashboard";
 import { CoachBadge } from "@/components/coach/CoachBadge";
 import { CoachExamResourcePanel } from "@/components/coach/CoachExamResourcePanel";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,10 @@ import { formatFailureDiagnostic } from "@/lib/trade-v2/failure-diagnostic";
 import {
 	buildExecutionResultView,
 } from "@/lib/trade-v2/execution-copy";
+import {
+	resolvePositionModeAfterSettingsLoad,
+	shouldFillPriceFromQuote,
+} from "@/lib/trade-v2/session-settings";
 import { buildFailureListHref, isFailedEventView } from "@/lib/trade-v2/failure-query";
 import type {
 	RiskMessagesApiResponse,
@@ -267,11 +272,15 @@ export function TradeV2PageClient() {
 	const [draftPrice, setDraftPrice] = useState("");
 	const [quickOrderPrefs, setQuickOrderPrefs] = useState<QuickOrderPrefs>(DEFAULT_QUICK_ORDER_PREFS);
 	const lastSyncedQueryRef = useRef(querySymbol);
+	const priceRef = useRef(price);
+	priceRef.current = price;
+	const positionModeRef = useRef(positionMode);
+	positionModeRef.current = positionMode;
+	const settingsHydratedRef = useRef(false);
 	const focusSymbolInput = useCallback(() => {
 		document.getElementById("symbolInput")?.focus();
 	}, []);
 	const { expired: membershipExpired, membership } = useMembershipCurrent(true);
-	const upgradePreview = membership?.upgradePreview ?? null;
 	const failureOnlyEvents = isFailedEventView(searchParams.get("eventView"));
 
 	const loadQuote = useCallback(
@@ -297,12 +306,12 @@ export function TradeV2PageClient() {
 					throw new Error(json.error ?? "行情暂不可用");
 				}
 				setQuote(json.data);
-				if (!price) setPrice(String(json.data.price));
+				if (shouldFillPriceFromQuote(priceRef.current)) setPrice(String(json.data.price));
 			} catch (error) {
 				setFetchError(explainOperationFailure(error instanceof Error ? error.message : "行情加载失败"));
 			}
 		},
-		[locale, price],
+		[locale],
 	);
 
 	const loadTradeData = useCallback(async () => {
@@ -409,10 +418,18 @@ export function TradeV2PageClient() {
 		if (!json.success || !json.data) {
 			throw new Error(json.error ?? "读取设置失败");
 		}
-		setQty(String(json.data.default_qty));
-		setAccountType(json.data.default_account_type);
-		setPositionMode(json.data.default_position_mode);
-		setSourceMode(json.data.default_source_mode);
+		const nextMode = resolvePositionModeAfterSettingsLoad({
+			hydrated: settingsHydratedRef.current,
+			current: positionModeRef.current,
+			loadedDefault: json.data.default_position_mode,
+		});
+		if (!settingsHydratedRef.current) {
+			setQty(String(json.data.default_qty));
+			setAccountType(json.data.default_account_type);
+			setSourceMode(json.data.default_source_mode);
+			settingsHydratedRef.current = true;
+		}
+		setPositionMode(nextMode);
 		setAutoLogoutNight(json.data.auto_logout_night);
 		setQuickOrderPrefs(parseQuickOrderPrefs(json.data.quick_order_prefs));
 	}, []);
@@ -1315,21 +1332,7 @@ export function TradeV2PageClient() {
 					{tMembership("expiredBanner")}
 				</Link>
 			) : null}
-			{upgradePreview ? (
-				<div className="rounded-xl border border-border/70 bg-card/40 px-3 py-2 text-sm">
-					<p className="text-muted-foreground text-xs">本月 TQ 考核进度</p>
-					<p>
-						成交 {upgradePreview.monthlyTradeCount}/{upgradePreview.minTradesForScore} 笔，分数{" "}
-						<span className="font-semibold tabular-nums">{upgradePreview.monthlyScore.toFixed(2)}</span>
-						{upgradePreview.nextPlan
-							? `；下一档 ${upgradePreview.nextPlan} 门槛 ${upgradePreview.planRequirements?.[upgradePreview.nextPlan]?.requiredScore ?? "—"}`
-							: "；已到最高档"}
-					</p>
-					<Link href="/membership" className="text-primary mt-1 inline-block text-xs underline underline-offset-2">
-						查看升级进度
-					</Link>
-				</div>
-			) : null}
+			<ModuleAssessmentDashboard module="t0" />
 
 			<Card id="panel-symbol-input" className="border-primary/20">
 				<CardContent className="space-y-2 pt-4">

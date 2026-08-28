@@ -956,5 +956,21 @@
 		"historyLoading": "載入中…",
 		"historyEmpty": "暫無診斷記錄。完成首次截圖診斷後將顯示在此。",
 		"historyItemFallback": "組合診斷"
+	},
+	"Assessment": {
+		"loading": "正在載入考核儀表…",
+		"loadFailed": "考核儀表暫時無法載入",
+		"scoredHint": "近 30 天模擬 TQ（本人）",
+		"coldStartHint": "還不能打分：本月成交 {count}/{min} 筆",
+		"labSessions": "實驗室診斷 {count} 次",
+		"labLocked": "升級至雲豹後可做組合診斷",
+		"showStart": "從哪開始",
+		"showStrengthen": "該加強哪項",
+		"hideNext": "收起提示",
+		"adviceLocked": "詳細訓練建議需升級會員後查看；上面的弱項提示對本人開放。",
+		"profitability": "盈利能力",
+		"riskControl": "風控能力",
+		"consistency": "穩定性",
+		"activeness": "活躍度"
 	}
 }

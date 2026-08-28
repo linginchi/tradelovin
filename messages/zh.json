@@ -956,5 +956,21 @@
 		"historyLoading": "加载中…",
 		"historyEmpty": "暂无诊断记录。完成首次截图诊断后将显示在此。",
 		"historyItemFallback": "组合诊断"
+	},
+	"Assessment": {
+		"loading": "正在加载考核仪表…",
+		"loadFailed": "考核仪表暂时无法加载",
+		"scoredHint": "近 30 天模拟 TQ（本人）",
+		"coldStartHint": "还不能打分：本月成交 {count}/{min} 笔",
+		"labSessions": "实验室诊断 {count} 次",
+		"labLocked": "升级至云豹后可做组合诊断",
+		"showStart": "从哪开始",
+		"showStrengthen": "该加强哪项",
+		"hideNext": "收起提示",
+		"adviceLocked": "详细训练建议需升级会员后查看；上面的弱项提示对本人开放。",
+		"profitability": "盈利能力",
+		"riskControl": "风控能力",
+		"consistency": "稳定性",
+		"activeness": "活跃度"
 	}
 }
