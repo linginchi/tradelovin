@@ -76,6 +76,10 @@ export function HomePageClient() {
 						{t("title")}
 					</h1>
 
+					<p className="max-w-xl text-base leading-relaxed text-white/90 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)] md:text-lg">
+						{t("subtitle")}
+					</p>
+
 					<div className="mt-2 flex flex-col flex-wrap items-stretch justify-center gap-3 sm:flex-row sm:items-center">
 						{entries.map(({ href, label, icon: Icon }) => (
 							<Link
