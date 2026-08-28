@@ -11,6 +11,7 @@ import {
 	STAFF_PAY_KIND,
 	STAFF_PAY_MAX_HKD,
 	STAFF_PAY_MIN_HKD,
+	isAllowedStaffPayBrowserOrigin,
 } from "@/lib/staff-pay/staff-pay";
 import {
 	isStaffPayPassword,
@@ -126,6 +127,24 @@ test("staff password gate accepts the configured password only", () => {
 	const token = signStaffPayCookie("staffpay");
 	assert.equal(verifyStaffPayCookie(token, "staffpay"), true);
 	assert.equal(verifyStaffPayCookie(token, "other"), false);
+});
+
+test("staff pay mutations allow xeoaxis origin behind mainland nginx", () => {
+	const proxied = new Request("https://tradelovin.mark-377.workers.dev/api/staff/pay/login", {
+		method: "POST",
+		headers: { origin: "https://xeoaxis.com" },
+	});
+	assert.equal(isAllowedStaffPayBrowserOrigin(proxied), true);
+	const www = new Request("https://tradelovin.mark-377.workers.dev/api/staff/pay", {
+		method: "POST",
+		headers: { origin: "https://www.xeoaxis.com", referer: "https://www.xeoaxis.com/staff/pay" },
+	});
+	assert.equal(isAllowedStaffPayBrowserOrigin(www), true);
+	const evil = new Request("https://tradelovin.mark-377.workers.dev/api/staff/pay/login", {
+		method: "POST",
+		headers: { origin: "https://evil.example" },
+	});
+	assert.equal(isAllowedStaffPayBrowserOrigin(evil), false);
 });
 
 test("isWeChatUserAgent detects MicroMessenger", () => {

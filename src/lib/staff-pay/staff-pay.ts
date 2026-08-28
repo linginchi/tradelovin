@@ -1,4 +1,4 @@
-import { MAINLAND_FALLBACK_ORIGIN } from "../site-entries.mjs";
+import { MAINLAND_FALLBACK_ORIGIN, SITE_ENTRIES } from "../site-entries.mjs";
 
 export const STAFF_PAY_KIND = "staff_tuition";
 export const STAFF_PAY_MIN_HKD = 1;
@@ -84,6 +84,18 @@ export function resolveStaffPayOrigin(
 		// fall through
 	}
 	return MAINLAND_FALLBACK_ORIGIN;
+}
+
+/** Mainland nginx proxies to the Worker host, so Origin (xeoaxis.com) will not match request.url. */
+export function isAllowedStaffPayBrowserOrigin(request: Request): boolean {
+	const raw = request.headers.get("origin") ?? request.headers.get("referer");
+	if (!raw) return false;
+	try {
+		const host = new URL(raw).hostname.toLowerCase();
+		return SITE_ENTRIES.some((entry) => entry.hostname === host);
+	} catch {
+		return false;
+	}
 }
 
 export function buildStaffCheckoutSessionParams(

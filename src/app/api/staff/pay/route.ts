@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 
 import { getStripeClient } from "@/lib/billing/stripe";
-import { requireSameOriginForMutation } from "@/lib/security/csrf";
 import { STAFF_PAY_CREATED_BY } from "@/lib/staff-pay/gate";
-import { requireStaffPaySession } from "@/lib/staff-pay/session";
+import { requireStaffPayCsrf, requireStaffPaySession } from "@/lib/staff-pay/session";
 import {
 	buildStaffCheckoutSessionParams,
 	checkoutExpiresAtUnix,
@@ -18,7 +17,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-	const csrf = requireSameOriginForMutation(request);
+	const csrf = requireStaffPayCsrf(request);
 	if (csrf) return csrf;
 
 	const gated = await requireStaffPaySession();

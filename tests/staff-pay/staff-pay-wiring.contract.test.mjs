@@ -75,4 +75,5 @@ test("staff pay page is a password gate not an admin email login", async () => {
 	);
 	assert.match(login, /STAFF_PAY_COOKIE/);
 	assert.match(login, /isStaffPayPassword/);
+	assert.match(login, /requireStaffPayCsrf/);
 });
