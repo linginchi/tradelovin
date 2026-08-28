@@ -26,15 +26,18 @@ test("published_at migration backfills existing rows and documents NULL=draft", 
 	assert.match(mig, /NULL=draft/);
 });
 
-test("home keeps four entries and uses home_hero_v1", () => {
-	const page = readFileSync(join(process.cwd(), "src/app/[locale]/page.tsx"), "utf8");
+test("home keeps four entries and uses optimized home_hero_v1 assets", () => {
+	const page = readFileSync(join(process.cwd(), "src/lib/site/home-hero-assets.ts"), "utf8");
+	const hero = readFileSync(join(process.cwd(), "src/components/home/HomeHeroBackground.tsx"), "utf8");
+	assert.match(page, /home_hero_v1\.webp/);
 	assert.match(page, /home_hero_v1\.png/);
-	assert.match(page, /object-\[center_35%\]/);
-	assert.match(page, /href: "\/courses"/);
-	assert.match(page, /href: "\/trade"/);
-	assert.match(page, /href: "\/lab"/);
-	assert.match(page, /href: "\/my-learning"/);
-	assert.doesNotMatch(page, /leopards-loop\.mp4/);
+	assert.match(hero, /object-\[center_35%\]/);
+	const client = readFileSync(join(process.cwd(), "src/components/home/HomePageClient.tsx"), "utf8");
+	assert.match(client, /href: "\/courses"/);
+	assert.match(client, /href: "\/trade"/);
+	assert.match(client, /href: "\/lab"/);
+	assert.match(client, /href: "\/my-learning"/);
+	assert.doesNotMatch(client, /leopards-loop\.mp4/);
 });
 
 test("leo-004 pipeline inserts draft published_at null with handoff voice", () => {

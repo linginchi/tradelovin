@@ -154,6 +154,8 @@
 		"honorTitle": "毕业学员荣誉榜",
 		"honorSubtitle": "毕业学员的优秀出路与岗位（示例展示）",
 		"honorInitial": "豹",
+		"upgradeCta": "升级会员",
+		"upgradeCtaTo": "升级到 {level}",
 		"honorGraduates": [
 			{
 				"name": "学员 · 青岚",

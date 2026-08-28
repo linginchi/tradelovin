@@ -8,6 +8,7 @@
 		"start": "next start",
 		"lint": "eslint",
 		"test:lab": "node --loader ./tests/lab/ts-loader.mjs --test tests/lab/p0.test.ts tests/lab/spike.test.ts",
+		"test:membership": "node --loader ./tests/lab/ts-loader.mjs --test tests/membership/home-upgrade-cta.test.ts",
 		"spike:lab:check": "npx tsx scripts/lab/spike-check.ts",
 		"clean:open-next": "node scripts/clean-open-next.mjs",
 		"build:cloudflare": "npm run clean:open-next && opennextjs-cloudflare build && npm run debug:opennext",
