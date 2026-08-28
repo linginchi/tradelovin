@@ -14,20 +14,28 @@ jobs:
       - name: Call bump-view-counts cron
         env:
           APP_URL: ${{ vars.TQ_CRON_BASE_URL }}
+          VIEW_COUNT_CRON_KEY: ${{ secrets.VIEW_COUNT_CRON_KEY }}
           INTERNAL_WEBHOOK_TOKEN: ${{ secrets.INTERNAL_WEBHOOK_TOKEN }}
           TQ_CRON_API_KEY: ${{ secrets.TQ_CRON_API_KEY }}
         run: |
           set -euo pipefail
-          BASE_URL="${APP_URL:-https://tradelovin.com}"
-          if [ -n "${INTERNAL_WEBHOOK_TOKEN:-}" ]; then
-            curl -fsS -X POST "${BASE_URL%/}/api/cron/bump-view-counts" \
+          if [ -z "${APP_URL:-}" ]; then
+            echo "ERROR: Missing production base URL (vars.TQ_CRON_BASE_URL). Cannot bump view counts."
+            exit 1
+          fi
+          if [ -n "${VIEW_COUNT_CRON_KEY:-}" ]; then
+            curl -fsS -X POST "${APP_URL%/}/api/cron/bump-view-counts" \
+              -H "Content-Type: application/json" \
+              -H "x-cron-key: ${VIEW_COUNT_CRON_KEY}"
+          elif [ -n "${INTERNAL_WEBHOOK_TOKEN:-}" ]; then
+            curl -fsS -X POST "${APP_URL%/}/api/cron/bump-view-counts" \
               -H "Content-Type: application/json" \
               -H "x-internal-token: ${INTERNAL_WEBHOOK_TOKEN}"
           elif [ -n "${TQ_CRON_API_KEY:-}" ]; then
-            curl -fsS -X POST "${BASE_URL%/}/api/cron/bump-view-counts" \
+            curl -fsS -X POST "${APP_URL%/}/api/cron/bump-view-counts" \
               -H "Content-Type: application/json" \
               -H "x-cron-key: ${TQ_CRON_API_KEY}"
           else
-            echo "Missing INTERNAL_WEBHOOK_TOKEN or TQ_CRON_API_KEY secret"
+            echo "Missing VIEW_COUNT_CRON_KEY, INTERNAL_WEBHOOK_TOKEN or TQ_CRON_API_KEY secret"
             exit 1
           fi
