@@ -26,7 +26,12 @@
 		"loggingOut": "退出中...",
 		"userFallback": "用户",
 		"lab": "AI量化实验室",
-		"coachDesk": "教练工作台"
+		"coachDesk": "教练工作台",
+		"inbox": "站内消息",
+		"inboxEmpty": "暂无消息",
+		"inboxLoading": "加载中…",
+		"inboxUnread": "{count} 条未读消息",
+		"markAllRead": "全部已读"
 	},
 	"LanguageSwitcher": {
 		"label": "语言",
@@ -890,7 +895,13 @@
 		"courseTopicNone": "不设置主题",
 		"courseTopicMissing": "主题已不可用",
 		"courseTopicUnavailable": "课程主题当前不可用，请先执行课程主题数据库迁移后再指派主题。",
-		"courseTopicColumn": "主题"
+		"courseTopicColumn": "主题",
+		"sendNotice": "发通知",
+		"sendNoticeTitle": "标题",
+		"sendNoticeBody": "正文",
+		"sendNoticeNeedAccount": "该学员尚未绑定登录账号",
+		"noticeSent": "通知已发送",
+		"noticeSendFailed": "发送失败"
 	},
 	"AdminAuth": {
 		"title": "管理员登录",
