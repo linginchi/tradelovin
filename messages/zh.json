@@ -1,7 +1,7 @@
 {
 	"Metadata": {
 		"siteTitle": "新紮學豹",
-		"siteDescription": "新紮學豹 — 交易训练与量化投研学习平台",
+		"siteDescription": "新紮學豹 — 跟豹叔豹哥，重温交易高手的成长之路",
 		"registerTitle": "注册 · 开启模拟交易 · 新紮學豹",
 		"registerDescription": "输入邮箱接收登录链接，点击即可登录或注册。"
 	},
@@ -144,7 +144,7 @@
 	"Home": {
 		"badge": "新紮學豹",
 		"title": "新紮學豹",
-		"subtitle": "以原创卡通豹角色讲述知名交易员的成败案例，课堂式干货拆解。",
+		"subtitle": "跟豹叔豹哥，重温交易高手的成长之路",
 		"ctaTrading": "模拟交易测试入口",
 		"ctaRegister": "注册 / 开始交易",
 		"entries": {
@@ -198,7 +198,7 @@
 	},
 	"Footer": {
 		"brand": "新紮學豹",
-		"tagline": "跟豹叔豹哥，领略交易高手的成与败",
+		"tagline": "跟豹叔豹哥，重温交易高手的成长之路",
 		"copyright": "© {year} 新紮學豹 · 保留所有权利。",
 		"productTitle": "产品",
 		"resourcesTitle": "资源",
