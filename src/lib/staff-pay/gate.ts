@@ -6,7 +6,7 @@ export const STAFF_PAY_COOKIE_MAX_AGE = 60 * 60 * 12;
 export const STAFF_PAY_CREATED_BY = "staff";
 
 export function resolveStaffPayPassword(
-	env: { STAFF_PAY_PASSWORD?: string } = process.env,
+	env: Record<string, string | undefined> = process.env,
 	nodeEnv: string | undefined = process.env.NODE_ENV,
 ): string | null {
 	const configured = env.STAFF_PAY_PASSWORD?.trim();
