@@ -1,7 +1,7 @@
 import { MAINLAND_FALLBACK_ORIGIN, SITE_ENTRIES } from "../site-entries.mjs";
 
 export const STAFF_PAY_KIND = "staff_tuition";
-export const STAFF_PAY_MIN_HKD = 1;
+export const STAFF_PAY_MIN_HKD = 4;
 export const STAFF_PAY_MAX_HKD = 200_000;
 export const STAFF_PAY_NAME_MAX = 80;
 export const STAFF_PAY_NOTE_MAX = 200;
@@ -128,6 +128,68 @@ export function buildStaffCheckoutSessionParams(
 			},
 		],
 	};
+}
+
+export function buildStaffCheckoutForm(input: StaffCheckoutCreateInput): URLSearchParams {
+	const params = buildStaffCheckoutSessionParams(input);
+	const item = params.line_items[0];
+	const form = new URLSearchParams();
+	form.set("mode", params.mode);
+	form.set("expires_at", String(params.expires_at));
+	form.set("success_url", params.success_url);
+	form.set("cancel_url", params.cancel_url);
+	form.set("line_items[0][quantity]", String(item.quantity));
+	form.set("line_items[0][price_data][currency]", item.price_data.currency);
+	form.set("line_items[0][price_data][unit_amount]", String(item.price_data.unit_amount));
+	form.set("line_items[0][price_data][product_data][name]", item.price_data.product_data.name);
+	form.set("metadata[kind]", params.metadata.kind);
+	form.set("metadata[token]", params.metadata.token);
+	form.set("metadata[created_by]", params.metadata.created_by);
+	form.set("metadata[payer_name]", params.metadata.payer_name);
+	form.set("metadata[note]", params.metadata.note);
+	return form;
+}
+
+export async function createStaffStripeCheckoutSession(
+	secretKey: string,
+	input: StaffCheckoutCreateInput,
+): Promise<{ id: string; url: string }> {
+	const form = buildStaffCheckoutForm(input);
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), 15_000);
+	try {
+		const response = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${secretKey}`,
+				"Content-Type": "application/x-www-form-urlencoded",
+			},
+			body: form.toString(),
+			signal: controller.signal,
+		});
+		const payload = (await response.json()) as {
+			id?: string;
+			url?: string;
+			error?: { message?: string };
+		};
+		if (!response.ok) {
+			throw new Error(payload.error?.message ?? `stripe_checkout_failed_${response.status}`);
+		}
+		if (!payload.id || !payload.url) {
+			throw new Error("Stripe 未返回支付链接");
+		}
+		return { id: payload.id, url: payload.url };
+	} catch (error) {
+		if (
+			(error instanceof DOMException && error.name === "AbortError") ||
+			(error instanceof Error && error.name === "AbortError")
+		) {
+			throw new Error("Stripe响应超时，请稍后重试。");
+		}
+		throw error;
+	} finally {
+		clearTimeout(timeoutId);
+	}
 }
 
 export function isStaffTuitionSession(session: {

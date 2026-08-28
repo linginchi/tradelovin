@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { getStripeClient } from "@/lib/billing/stripe";
 import { STAFF_PAY_CREATED_BY } from "@/lib/staff-pay/gate";
 import { requireStaffPayCsrf, requireStaffPaySession } from "@/lib/staff-pay/session";
 import {
-	buildStaffCheckoutSessionParams,
 	checkoutExpiresAtUnix,
+	createStaffStripeCheckoutSession,
 	parseStaffPayCreateBody,
 	publicPayUrl,
 	resolveStaffPayOrigin,
@@ -44,7 +43,7 @@ export async function POST(request: Request) {
 	const expiresAtUnix = checkoutExpiresAtUnix();
 	const origin = resolveStaffPayOrigin(request.url);
 	const payUrl = publicPayUrl(token, origin);
-	const params = buildStaffCheckoutSessionParams({
+	const checkoutInput = {
 		token,
 		amountCents: parsed.amountCents,
 		payerName: parsed.payerName,
@@ -52,16 +51,14 @@ export async function POST(request: Request) {
 		createdBy: STAFF_PAY_CREATED_BY,
 		expiresAtUnix,
 		origin,
-	});
+	};
 
 	try {
-		const stripe = getStripeClient();
-		const session = await stripe.checkout.sessions.create(params as Parameters<
-			typeof stripe.checkout.sessions.create
-		>[0]);
-		if (!session.url) {
-			return NextResponse.json({ success: false, error: "Stripe 未返回支付链接" }, { status: 502 });
+		const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
+		if (!secretKey) {
+			throw new Error("Missing required env: STRIPE_SECRET_KEY");
 		}
+		const session = await createStaffStripeCheckoutSession(secretKey, checkoutInput);
 
 		const inserted = await insertStaffPayLink(supabase, {
 			token,
