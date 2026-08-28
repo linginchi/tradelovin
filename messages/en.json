@@ -840,6 +840,7 @@
 		"feeBody": "Plain text (required)",
 		"feeHtml": "HTML body (optional)",
 		"feeCardDesc": "Compose the message, select students in the table below, then send.",
+		"feeQrLink": "Open tuition QR",
 		"sendFeeConfirmTitle": "Send fee notice emails?",
 		"sendFeeConfirmDesc": "This will email {count} selected student(s).",
 		"sendFee": "Send emails",

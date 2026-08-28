@@ -5,6 +5,8 @@ import { getStripeClient, resolvePlanByPriceId } from "@/lib/billing/stripe";
 import { activateMembership, cycleToPeriod } from "@/lib/membership/activate";
 import { recordPaymentTransaction } from "@/lib/membership/payments";
 import { evaluatePlanGraceState } from "@/lib/membership/upgrade-gate";
+import { isStaffTuitionSession } from "@/lib/staff-pay/staff-pay";
+import { markStaffPayLinkPaid } from "@/lib/staff-pay/store";
 import { getServiceSupabase } from "@/lib/supabase/service";
 
 export const runtime = "nodejs";
@@ -236,6 +238,30 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
+        if (isStaffTuitionSession(session)) {
+          const srv = getServiceSupabase()!;
+          await recordPaymentTransaction(srv, {
+            userId: null,
+            orderId: session.id,
+            gateway: "stripe",
+            amount: amountFromCents(session.amount_total),
+            currency: (session.currency ?? "hkd").toUpperCase(),
+            status: "completed",
+            metadata: {
+              kind: session.metadata?.kind,
+              token: session.metadata?.token,
+              created_by: session.metadata?.created_by,
+              payer_name: session.metadata?.payer_name,
+              note: session.metadata?.note,
+              checkoutSessionId: session.id,
+            },
+          });
+          await markStaffPayLinkPaid(srv, {
+            sessionId: session.id,
+            token: session.metadata?.token ?? null,
+          });
+          break;
+        }
         const userId = session.client_reference_id ?? session.metadata?.userId ?? null;
         const subscriptionId =
           typeof session.subscription === "string"

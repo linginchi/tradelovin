@@ -15,10 +15,24 @@ type FormValues = {
   password: string;
 };
 
-export function AdminPasswordLoginForm() {
+type Props = {
+  title?: string;
+  description?: string;
+  redirectTo?: string;
+  idPrefix?: string;
+};
+
+export function AdminPasswordLoginForm({
+  title = "数据分析后台",
+  description = "请使用管理员邮箱和密码登录",
+  redirectTo = "/admin/analytics",
+  idPrefix = "admin",
+}: Props) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const emailId = `${idPrefix}-email`;
+  const passwordId = `${idPrefix}-password`;
 
   const {
     register,
@@ -46,7 +60,7 @@ export function AdminPasswordLoginForm() {
         setError(data.error ?? "登录失败，请重试");
         return;
       }
-      router.push("/admin/analytics");
+      router.push(redirectTo);
       router.refresh();
     } catch {
       setError("网络错误，请稍后重试");
@@ -58,15 +72,15 @@ export function AdminPasswordLoginForm() {
   return (
     <Card className="mx-auto w-full max-w-md border-border/80 bg-card/45 shadow-sm backdrop-blur-md">
       <CardHeader>
-        <CardTitle className="text-xl">数据分析后台</CardTitle>
-        <CardDescription>请使用管理员邮箱和密码登录</CardDescription>
+        <CardTitle className="text-xl">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
-            <Label htmlFor="admin-email">邮箱</Label>
+            <Label htmlFor={emailId}>邮箱</Label>
             <Input
-              id="admin-email"
+              id={emailId}
               type="email"
               autoComplete="email"
               {...register("email", { required: "请输入邮箱" })}
@@ -78,9 +92,9 @@ export function AdminPasswordLoginForm() {
             ) : null}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="admin-password">密码</Label>
+            <Label htmlFor={passwordId}>密码</Label>
             <Input
-              id="admin-password"
+              id={passwordId}
               type="password"
               autoComplete="current-password"
               {...register("password", { required: "请输入密码" })}
