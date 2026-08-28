@@ -154,6 +154,8 @@
 		"honorTitle": "Alumni spotlight",
 		"honorSubtitle": "Sample outcomes and roles (demo content)",
 		"honorInitial": "T",
+		"upgradeCta": "Upgrade membership",
+		"upgradeCtaTo": "Upgrade to {level}",
 		"honorGraduates": [
 			{
 				"name": "Student · Qinglan",

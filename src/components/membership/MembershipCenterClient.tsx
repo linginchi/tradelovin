@@ -13,6 +13,7 @@ import {
   getLocalizedLevelDescription,
   getLocalizedLevelLabel,
 } from "@/lib/membership/level-mapping";
+import { cn } from "@/lib/utils";
 
 type Membership = {
   plan: "T0_trial" | "T0_paid" | "T1" | "T2" | "T3";
@@ -45,6 +46,11 @@ export function MembershipCenterClient() {
   const t = useTranslations("membership.level");
   const searchParams = useSearchParams();
   const checkoutSessionId = searchParams.get("session_id");
+  const suggestedPlanRaw = searchParams.get("plan");
+  const suggestedPlan =
+    suggestedPlanRaw === "T1" || suggestedPlanRaw === "T2" || suggestedPlanRaw === "T3"
+      ? suggestedPlanRaw
+      : null;
   const [loading, setLoading] = useState(true);
   const [submittingPlan, setSubmittingPlan] = useState<PaidPlan | null>(null);
   const [managingBilling, setManagingBilling] = useState(false);
@@ -334,7 +340,15 @@ export function MembershipCenterClient() {
         </div>
         <div className="mt-4 space-y-3">
           {planRows.map((row) => (
-            <div key={row.plan} className="rounded-xl border border-border/70 p-3">
+            <div
+              key={row.plan}
+              className={cn(
+                "rounded-xl border p-3",
+                suggestedPlan === row.plan
+                  ? "border-cyan-500/60 bg-cyan-500/8 shadow-[0_0_0_1px_oklch(0.72_0.12_195/0.22)]"
+                  : "border-border/70",
+              )}
+            >
               {(() => {
                 const level = getDisplayLevel(row.plan);
                 return (

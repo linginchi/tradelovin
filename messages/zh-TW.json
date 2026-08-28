@@ -154,6 +154,8 @@
 		"honorTitle": "畢業學員榮譽榜",
 		"honorSubtitle": "畢業學員的優秀出路與崗位（示例展示）",
 		"honorInitial": "豹",
+		"upgradeCta": "升級會員",
+		"upgradeCtaTo": "升級到 {level}",
 		"honorGraduates": [
 			{
 				"name": "學員 · 青嵐",
