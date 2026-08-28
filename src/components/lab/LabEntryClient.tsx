@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { ModuleAssessmentDashboard } from "@/components/assessment/ModuleAssessmentDashboard";
 import { Link } from "@/i18n/navigation";
 import { canAccessLabFromHint } from "@/lib/lab/access";
 import { useMembershipCurrent } from "@/lib/membership/client";
@@ -129,6 +130,8 @@ export function LabEntryClient() {
 			</section>
 
 			<p className="text-xs text-amber-200/80">{t("compliance")}</p>
+
+			<ModuleAssessmentDashboard module="lab" enabled={isAuthed} />
 
 			<div className="flex flex-wrap items-center gap-3">
 				{allowed ? (

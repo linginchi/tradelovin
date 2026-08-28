@@ -945,5 +945,21 @@
 		"historyLoading": "Loading…",
 		"historyEmpty": "No diagnoses yet. Your first screenshot session will appear here.",
 		"historyItemFallback": "Portfolio diagnosis"
+	},
+	"Assessment": {
+		"loading": "Loading your assessment…",
+		"loadFailed": "Could not load the assessment dashboard",
+		"scoredHint": "Your last-30-day sim TQ",
+		"coldStartHint": "Not ready to score: {count}/{min} trades this month",
+		"labSessions": "{count} lab diagnoses",
+		"labLocked": "Upgrade to Cloud Leopard to run a portfolio diagnosis",
+		"showStart": "Where to start",
+		"showStrengthen": "What to strengthen",
+		"hideNext": "Hide hints",
+		"adviceLocked": "Detailed coaching unlocks with membership. Weak-dimension hints above are still yours to see.",
+		"profitability": "Profitability",
+		"riskControl": "Risk control",
+		"consistency": "Consistency",
+		"activeness": "Activeness"
 	}
 }
