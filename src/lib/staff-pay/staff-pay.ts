@@ -1,7 +1,7 @@
 import { MAINLAND_FALLBACK_ORIGIN, SITE_ENTRIES } from "../site-entries.mjs";
 
 export const STAFF_PAY_KIND = "staff_tuition";
-export const STAFF_PAY_MIN_HKD = 1;
+export const STAFF_PAY_MIN_HKD = 4;
 export const STAFF_PAY_MAX_HKD = 200_000;
 export const STAFF_PAY_NAME_MAX = 80;
 export const STAFF_PAY_NOTE_MAX = 200;

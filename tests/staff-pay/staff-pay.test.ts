@@ -23,15 +23,17 @@ import {
 import { isWeChatUserAgent } from "@/lib/staff-pay/wechat";
 import { generateStaffPayToken } from "@/lib/staff-pay/token";
 
-test("parseTuitionAmountHkd accepts 1 to 200000 with two decimals", () => {
-	assert.deepEqual(parseTuitionAmountHkd("1"), { ok: true, amountCents: 100 });
-	assert.deepEqual(parseTuitionAmountHkd("1.5"), { ok: true, amountCents: 150 });
+test("parseTuitionAmountHkd accepts 4 to 200000 with two decimals", () => {
+	assert.deepEqual(parseTuitionAmountHkd("4"), { ok: true, amountCents: 400 });
+	assert.deepEqual(parseTuitionAmountHkd("4.5"), { ok: true, amountCents: 450 });
 	assert.deepEqual(parseTuitionAmountHkd(" 200000.00 "), { ok: true, amountCents: 20_000_000 });
-	assert.equal(STAFF_PAY_MIN_HKD, 1);
+	assert.equal(STAFF_PAY_MIN_HKD, 4);
 	assert.equal(STAFF_PAY_MAX_HKD, 200_000);
 });
 
 test("parseTuitionAmountHkd rejects invalid amounts", () => {
+	assert.equal(parseTuitionAmountHkd("1").ok, false);
+	assert.equal(parseTuitionAmountHkd("3.99").ok, false);
 	assert.equal(parseTuitionAmountHkd("0.99").ok, false);
 	assert.equal(parseTuitionAmountHkd("200000.01").ok, false);
 	assert.equal(parseTuitionAmountHkd("1.234").ok, false);
