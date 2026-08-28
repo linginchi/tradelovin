@@ -1,0 +1,38 @@
+---
+description: Freeze video playback — do not break working play without CEO approval
+globs:
+  - src/lib/video/storage.ts
+  - src/app/api/courses/**/play/route.ts
+  - src/app/api/admin/courses/**/play/route.ts
+  - src/components/video/**
+  - wrangler.jsonc
+  - .github/workflows/opennext-build.yml
+alwaysApply: true
+---
+
+# 视频播放冻结
+
+没有用户原文 **「CEO批准视频播放」**，禁止改动会破坏已能播放的视频路径。
+
+## 冻结文件（默认禁止改）
+
+- `src/lib/video/storage.ts`
+- `src/app/api/courses/[courseId]/videos/[videoId]/play/route.ts`
+- `src/app/api/admin/courses/[courseId]/videos/[videoId]/play/route.ts`
+- `src/components/video/VideoPlayerClient.tsx`
+- `public/partner-qr.png`
+- `wrangler.jsonc` 中的 `VIDEO_STORAGE_PROVIDER` / `VIDEO_STORAGE_BUCKET` / `VIDEO_STORAGE_ENDPOINT`
+- `.github/workflows/opennext-build.yml` 的 `wrangler deploy` 步骤（不得漏掉 jsonc 里的视频 vars）
+
+## 硬规则
+
+1. **Legacy 片（`storage_key` 不以 `videos/` 开头，例如 `leo-004/...`）走 Supabase Storage `Videos` 桶签名 URL。** 不得因为 Worker 缺 `VIDEO_STORAGE_PROVIDER` / `BUCKET` / `ENDPOINT` 就对全部 play 请求返回 503。
+2. **`videos/` 前缀（1–5 课等教学课）走 R2 `jianbao-videos`。** `wrangler.jsonc` 必须长期带 `VIDEO_STORAGE_PROVIDER=r2`、`VIDEO_STORAGE_BUCKET=jianbao-videos`、`VIDEO_STORAGE_ENDPOINT=https://3776aaf92edc5404ea26d4f815ac0c32.r2.cloudflarestorage.com`。密钥仍用 Worker secrets（`VIDEO_STORAGE_ACCESS_KEY_ID` / `VIDEO_STORAGE_SECRET_ACCESS_KEY`），禁止写进仓库。`wrangler deploy` 会覆盖未声明的 vars，所以这三项必须写在 jsonc 里，否则课时片会再次 503。
+3. 禁止把 `if (!isVideoStorageConfigured()) return 503` 重新加回公开 / 管理 play 路由的入口。必须先读 `storage_key`，再用 `objectStoreMissingFor(storageKey)`。
+4. 禁止改签名路径、桶名、`isLegacySupabaseVideoKey` 判定、播放器取 `playUrl` 的方式，除非用户明确批准。
+5. 口号、会员 CTA、通知、考核仪表等任务 **不得** 顺手改上述冻结文件。
+6. **广发证券二维码广告**：播放器下方必须保留 `/partner-qr.png`（alt「广发证券」）和 `public/partner-qr.png`。没有 CEO 指令不得删除、替换或改路由。恢复广告时只加展示层，不得改 `playUrl` 签发。
+
+## 允许的例外
+
+仅当用户消息含 **「CEO批准视频播放」**，或用户明确要求修复当前已证实的播放故障，且改动是恢复既有能播路径（不是新架构）。

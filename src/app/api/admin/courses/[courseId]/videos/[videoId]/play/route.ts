@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireAdminSession } from "@/lib/auth/admin-api-guard";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { isMissingRelationError } from "@/lib/video/db";
-import { createSignedVideoUrl, isVideoStorageConfigured } from "@/lib/video/storage";
+import { createSignedVideoUrl, objectStoreMissingFor } from "@/lib/video/storage";
 
 export const runtime = "nodejs";
 
@@ -20,10 +20,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
 	const { courseId, videoId } = await params;
 	if (!z.string().uuid().safeParse(courseId).success || !z.string().uuid().safeParse(videoId).success) {
 		return NextResponse.json({ error: "参数无效" }, { status: 400 });
-	}
-
-	if (!isVideoStorageConfigured()) {
-		return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
 	}
 
 	const srv = getServiceSupabase();
@@ -56,6 +52,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
 			if (!fallback.data) {
 				return NextResponse.json({ error: "视频不存在" }, { status: 404 });
 			}
+			if (objectStoreMissingFor(String(fallback.data.storage_key))) {
+				return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
+			}
 			const playUrl = await createSignedVideoUrl(String(fallback.data.storage_key), 15 * 60);
 			if (!playUrl) {
 				return NextResponse.json({ error: "播放地址生成失败" }, { status: 500 });
@@ -67,6 +66,10 @@ export async function GET(_request: Request, { params }: RouteContext) {
 
 	if (!video) {
 		return NextResponse.json({ error: "视频不存在" }, { status: 404 });
+	}
+
+	if (objectStoreMissingFor(String(video.storage_key))) {
+		return NextResponse.json({ error: "视频服务暂未配置" }, { status: 503 });
 	}
 
 	const playUrl = await createSignedVideoUrl(String(video.storage_key), 15 * 60);
