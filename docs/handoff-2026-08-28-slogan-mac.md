@@ -16,7 +16,7 @@
 |------|------|
 | `origin/main` **没有**新口号 | `Home.subtitle` / `Footer.tagline` / `Metadata.siteDescription` 仍是旧句。CI / Mac 从 `main` 构建就会发布旧文案。 |
 | Windows 2026-08-25 曾 `npm run deploy:cloudflare` | 从**未提交**的脏工作区直接打 Worker。版本当时是 `5ee6ca37-2d45-4e0f-af70-623c22374ed9`。 |
-| 首页英雄区在 `main` **根本不渲染** subtitle | `src/app/[locale]/page.tsx` 只有 `{t("title")}`。用户在首屏只看到「新紮學豹」，看不到口号。 |
+| 首页英雄区在 `main` **根本不渲染** subtitle | 现组件是 `src/components/home/HomePageClient.tsx`，只有 `{t("title")}`。用户在首屏只看到「新紮學豹」，看不到口号。`src/app/[locale]/page.tsx` 只做 preload + 挂客户端，**不要往那里塞文案**。 |
 | 页脚才是用户最容易对照的位置 | `SiteFooter` 已绑定 `Footer.tagline`。`main` 上简体仍是「跟豹叔豹哥，领略交易高手的成与败」。 |
 | Windows 脏树还混着播放栈 / 广发 QR 等 | **禁止**把那些文件一并提交或部署进这次口号任务。播放冻结见 `.cursor/rules/video-playback-freeze.mdc`。 |
 
@@ -57,13 +57,15 @@
 1. `messages/zh.json` — 上表三个键  
 2. `messages/zh-TW.json` — 上表三个键  
 3. `messages/en.json` — 上表三个键  
-4. `src/app/[locale]/page.tsx` — 在 `<h1>{t("title")}</h1>` **正下方**增加 subtitle（`main` 现在没有这段）：
+4. `src/components/home/HomePageClient.tsx` — 在 `<h1>{t("title")}</h1>` **正下方**增加 subtitle（`main` 现在没有这段）：
 
 ```tsx
 <p className="max-w-xl text-base leading-relaxed text-white/90 drop-shadow-[0_1px_8px_rgba(0,0,0,0.5)] md:text-lg">
 	{t("subtitle")}
 </p>
 ```
+
+**不要改** `src/app/[locale]/page.tsx`：2026-08 起它已是服务端薄封装（`preload` + `<HomePageClient />`）。Windows 旧会话曾把 subtitle 写进这个文件，那是过期结构。
 
 页脚 **不用改组件**：`src/components/shared/SiteFooter.tsx` 已渲染 `{tFooter("tagline")}`。  
 站点 SEO **不用改 layout**：`src/app/[locale]/layout.tsx` 已用 `Metadata.siteDescription`。
