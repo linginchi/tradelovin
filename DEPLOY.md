@@ -206,6 +206,7 @@ npm run deploy:cloudflare
   - `ALLOW_FIXED_ADMIN_OTP_IN_PRODUCTION`
   - `ENABLE_DEV_TEST_ACCOUNTS`
   - `ENABLE_DEV_TEST_ACCOUNTS_IN_PRODUCTION`
+- **课时视频 R2（冻结）**：`wrangler.jsonc` 必须包含 `VIDEO_STORAGE_PROVIDER=r2`、`VIDEO_STORAGE_BUCKET=jianbao-videos`、`VIDEO_STORAGE_ENDPOINT`（account R2 S3 API）。密钥只放 Worker secrets，不要写进 jsonc。从 jsonc 删掉这三项会导致 1–5 课 play 503。
 - **构建期**（未在 Variables 中设置时 workflow 默认 `0`）：`NEXT_PUBLIC_ENABLE_DEV_TEST_ACCOUNTS`、`NEXT_PUBLIC_SHOW_CJKZT_QUICK_LOGIN`。
 - **生产门禁**：workflow 新增 `Production safety gate`。若上述 debug 登录相关开关在 `main` 部署时不是 `0/false`，会直接失败；确需临时放开时，可显式设置 `ALLOW_PROD_DEBUG_AUTH=1` 后再部署，并在完成后立即回收。
 - **Pull Request**：只跑构建校验，不部署；合并进 `main` 后由推送触发部署。

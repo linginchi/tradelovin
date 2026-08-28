@@ -13,4 +13,5 @@ This version has breaking changes — APIs, conventions, and file structure may 
 没有用户原文 **「CEO批准视频播放」**，禁止改播放栈：`src/lib/video/storage.ts`、公开/管理 `play/route.ts`、`VideoPlayerClient.tsx`。
 
 - Legacy 片（`storage_key` 不以 `videos/` 开头）必须走 Supabase `Videos` 桶，不得因缺 `VIDEO_STORAGE_*` 对全部 play 返回 503。
+- 1–5 课（`videos/`）必须走 R2 `jianbao-videos`。`wrangler.jsonc` 必须保留 `VIDEO_STORAGE_PROVIDER` / `BUCKET` / `ENDPOINT`，否则下次 CI 部署会冲掉 Worker vars，课时再次不能播。
 - 详见 `.cursor/rules/video-playback-freeze.mdc`。
